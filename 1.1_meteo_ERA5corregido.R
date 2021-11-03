@@ -1,10 +1,8 @@
 rm(list = ls())
 gc()
-library(ggplot2)
-library(curl)
+
 library(dplyr)
 library(data.table)
-library(ncdf4)
 library(lubridate)
 setwd("~/GoogleDrive/CORFO_Maule_FJ/Pronostico_estacional/")
 

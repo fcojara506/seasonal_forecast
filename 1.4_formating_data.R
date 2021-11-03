@@ -1,21 +1,19 @@
 rm(list = ls())
 gc()
 
-library(ggplot2)
-library(curl)
+
 library(dplyr)
 library(data.table)
-library(ncdf4)
-library(lubridate)
 library(pbapply)
 
 setwd("~/GoogleDrive/CORFO_Maule_FJ/Pronostico_estacional")
 
-starting_wy       <- 1988
+starting_wy       <- 1988#81
 ending_wy         <- 2021
 cuencas_target    <- c("Achibueno","Ancoa","Melado","Maule","Lontue","Longavi")
 
-cuenca_target="Achibueno"
+#cuenca_target="Achibueno"
+
 get_predictors_basin <- function(cuenca_target,starting_wy,ending_wy) {
   message("Dando formato a ",cuenca_target)
 ##################################################################
