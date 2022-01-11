@@ -1,3 +1,4 @@
+# customised version of leave one out cross validation
 "fco_cv"<- function(x,y,theta.fit,theta.predict,...,ngroup=n){
   call <- match.call()
   x1 <- as.matrix(x)
