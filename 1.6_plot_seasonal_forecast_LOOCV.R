@@ -1,28 +1,12 @@
-# FREE ENVIRONMENT FILES
-rm(list = ls())
-gc()
-
-# LOAD LIBRARIES 
-load_silently <- function(lib_name) {suppressWarnings(suppressMessages(require(lib_name, character.only = TRUE)))}
-sapply(c("feather","ggplot2","dplyr","data.table"),load_silently)
-
-########## SET CURRENT DIRECTORY ###########################
-setwd("~/GoogleDrive/CORFO_Maule_FJ/Pronostico_estacional")
-##########FUNCTIONS#####################
+source("1.0_MAIN.R")
 
 ########## LOAD PREDICTED VOLUME ##################
 read_models <- function(tipo_predictando="predictando_dinamico") {
   
-  #modelo_v1               <-
-  #  read_feather("data_output/pronostico_vol_estacional_v1.feather") %>%
-  #  subset(predictando==tipo_predictando)
-  
   modelo_v2               <-
     read_feather("data_output/pronostico_vol_estacional_v2.feather")%>%
     subset(predictando==tipo_predictando)
-  
-  #vol_ensemble_predicted   <-modelo_v2#rbind(modelo_v1,modelo_v2) 
-  
+
   return(modelo_v2)
 }
 
@@ -151,7 +135,7 @@ reorderv2 <- function(x, X, FUN = mean, ..., order = is.ordered(x)){
 plot_timeseries_figure <- function(input_volume) {
   # predicted_vol_ensemble, vol.obs.shared, cuantiles_obs, scores$crpss, text_estimacion, figure_filename, years_colours
   #PLOT
-  
+  wy_target_display = ifelse(wym_target>8,wy_target+1,wy_target)  
   
   x_labels=input_volume$predicted_vol_ensembles$wy %>% as.character()
   
@@ -172,7 +156,7 @@ plot_timeseries_figure <- function(input_volume) {
     geom_abline(data=input_volume$cuantiles_obs,aes(slope=0,intercept=cuantiles_obs),linetype="dashed")+
     geom_text(data=input_volume$cuantiles_obs,aes(x=0.25,y=cuantiles_obs,label=probs_cuantiles),vjust = 0,hjust = 0.5)+
     #facet_wrap(~version)+
-    ggtitle(paste0("Pronóstico del ", subset(propiedades_cuencas,nombre_corto==cuenca_target)$nombre_completo,". Inicializado el 1° de ",wy_months_labels[wym_target+1]," ",wy_target))+
+    ggtitle(paste0("Pronóstico del ", subset(propiedades_cuencas,nombre_corto==cuenca_target)$nombre_completo,". Inicializado el 1° de ",wy_months_labels[wym_target+1]," ",wy_target_display))+
     labs( x="Año hidrológico",
           #subtitle = input_volume$regression_type,
           #y= as.expression(bquote("Volumen"~.(input_volume$ylabel_mes)~ "-mar (Millones"~m^3~")")),
@@ -255,22 +239,18 @@ plot_figure <- function(input_volume) {
 
 ######## USER OPTIONS #############################
 
-target_basins               <- c("Maule","Achibueno","Lontue","Melado","Longavi","Ancoa")
-wy_target                   <- 2021
-#wym_target                  <- 4  
 list_scores                 <- read_feather("data_output/list_scores_seasonal_volume.feather")
-tipo_predictando            <- "predictando_dinamico"
 propiedades_cuencas         <- read.csv("data_auxiliar/propiedades_cuencas.csv")
-vol_ensemble_predicted      <- read_models(tipo_predictando)
+vol_ensemble_predicted      <- read_models(tipos_predictando)
 vol_obs                     <- read_feather("data_input/MODELO_VOLUMENES_ESTACIONALES.feather")
 wy_months_labels            <- c("abr","may","jun","jul","ago","sep","oct","nov","dic","ene","feb","mar")
+
 ####### auxiliar variables #######################
 
 w                           <- 1
-
-for (wym_target in 6) {#1=apr,2=may,3=jun,4=jul,5=ago,6=sep,7=oct,8=nov,9=dic,10=ene,11=feb,12=mar seq(1,11)
+for (wym_target in wyms_inicio) {#al 1ro de cada mes : #seq(11,1) # 1=1° may,2=1° jun,3=1° jul,4=1° ago,5=1° sep,6=1° oct,7=1° nov,8=1° dic,9=1° ene,10=1° feb,11=1° mar
   
-  for (cuenca_target in target_basins) {
+  for (cuenca_target in cuencas_target) {
     
     version_and_regre <- vol_ensemble_predicted %>% 
       subset(cuenca   == cuenca_target) %>% 
@@ -293,7 +273,7 @@ for (wym_target in 6) {#1=apr,2=may,3=jun,4=jul,5=ago,6=sep,7=oct,8=nov,9=dic,10
                                                 vol_ensemble_predicted,
                                                 vol_obs,
                                                 regression_target,
-                                                tipo_predictando = tipo_predictando)
+                                                tipo_predictando = tipos_predictando)
         #stop()
         p1=plot_timeseries_figure(input_volume = input_volume)
         p2=plot_figure(input_volume = input_volume)

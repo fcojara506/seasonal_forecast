@@ -1,12 +1,5 @@
-rm(list = ls())
-gc()
-
-library(dplyr)
-library(data.table)
-library(lubridate)
-setwd("~/GoogleDrive/CORFO_Maule_FJ/Pronostico_estacional/")
-
-source("1.x_WYtime_functions.R")
+source("1.0_MAIN.R") # load configuration
+source("1.x_WYtime_functions.R") # load time related functions
 
 era_var           <- readRDS("data_input/forzERA5BC_hist1979-ACTUAL_qdm-ss_n40.RData") %>%
   reshape2::dcast(cuenca+date~variable,value.var = 'value') %>%
