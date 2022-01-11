@@ -7,4 +7,8 @@ hydrological variables (snow, soil storages) and meteorological variables (preci
 For each year, we performed a Leave-one-out cross validation using multiple linear regressions.
 
 To distribute the seasonal volume into monthly flows, we used kNN classification model to find the closest years to the current conditions.
+<<<<<<< HEAD
 The files 1.6 and 1.8 are designed to visualise in ggplot the permormance of the model from 1988-2021 and a prediction for the next months.
+=======
+The files 1.6 and 1.8 are designed to visualise in ggplot the permormance of the model from 1988-2021 and a prediction for the next months.
+>>>>>>> main
