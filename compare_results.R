@@ -5,7 +5,7 @@ setwd(directory)
 source("run_model_function.R")
 
 catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-attributes_catchments = feather::read_feather(catchments_attributes_filename)#[,c("cod_cuenca","gauge_name","gauge_lat","gauge_lon","mean_elev")]
+attributes_catchments = feather::read_feather(catchments_attributes_filename)
 
 cod_cuencas = attributes_catchments$cod_cuenca
 months_initialisation = c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
@@ -21,12 +21,6 @@ iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)
 
 library(foreach)
 library(doParallel)
-
-
-#pb <- txtProgressBar(max = iterations, style = 3)
-#progress <- function(n) setTxtProgressBar(pb, n)
-#opts <- list(progress = progress)
-#registerDoParallel(8)
 
 model <-
   foreach(catchment_code=cod_cuencas[1:4],.combine = "c") %:%
