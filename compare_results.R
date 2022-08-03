@@ -9,6 +9,7 @@ attributes_catchments = feather::read_feather(catchments_attributes_filename)#[,
 
 cod_cuencas = attributes_catchments$cod_cuenca
 months_initialisation = c('may','jul','sep','oct','nov','dic','ene','feb')#,'mar')
+
 regions = c(
   "ChileCentral_CR2MET",
   "ChileCentral_era5raw",
