@@ -39,8 +39,12 @@ verification_scores <- function(predicted_vol_ensembles,vol.obs) {
 ############## RMSE IN LEAVE.ONE.OUT #######################
 rmse_LOO <- function(sim,obs) {
   require(hydroGOF)
+  rmse_ = list()
+  
   if(length(sim)==length(obs)){
-    rmse_=sapply(seq_along(sim),function(iterator) rmse(sim=sim[-iterator],obs=obs[-iterator]))
+    for (iterator in seq_along(sim)) {
+      rmse_[[iterator]]=rmse(sim=sim[-iterator],obs=obs[-iterator])
+}
     rmse_=append(rmse_,rmse(sim,obs))
   }else{ message("Size of sim is NOT equal to obs's"); rmse_=c()}
   return(rmse_)
