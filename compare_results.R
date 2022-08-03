@@ -33,8 +33,6 @@ model <-
     )
   } %>% purrr::transpose()
 
-
-
 scores = rbindlist(model$scores)
 info = rbindlist(model$info)
 
