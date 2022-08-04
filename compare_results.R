@@ -1,6 +1,6 @@
 rm(list = ls())
-directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-setwd(directory)
+#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
+#setwd(directory)
 
 source("run_model_function.R")
 
