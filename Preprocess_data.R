@@ -64,7 +64,7 @@ data_filenames <- function(region = "ChileCentral") {
   
   if (region == "ChileCentral_ens30avg") {
     catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_catchments_ChileCentral.feather"
+    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
     meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens30avg.feather"
     hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
   }

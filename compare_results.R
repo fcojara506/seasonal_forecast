@@ -23,25 +23,27 @@ library(foreach)
 library(doParallel)
 
 model <-
-  foreach(catchment_code=cod_cuencas[1:4],.combine = "c") %:%
-  foreach(region=regions[1:2]) %:%
-  foreach(month_initialisation=months_initialisation[1:2]) %dopar% {
+  foreach(catchment_code=cod_cuencas,.combine = "c") %:%
+  foreach(region=regions,.combine = "c") %:%
+  foreach(month_initialisation=months_initialisation) %dopar% {
+    
     run_model(
       catchment_code = catchment_code,
       month_initialisation = month_initialisation,
       region = region
     )
+    
   } %>% purrr::transpose()
 
-scores = rbindlist(model$scores)
-info = rbindlist(model$info)
-
-data_input = cbind(info,scores) %>%
-  merge(attributes_catchments,
-        by.x = "catchment_code",
-        by.y = "cod_cuenca"
-        )
+# scores = rbindlist(model$scores)
+# info = rbindlist(model$info)
 # 
+# data_input = cbind(info,scores) %>%
+#   merge(attributes_catchments,
+#         by.x = "catchment_code",
+#         by.y = "cod_cuenca"
+#         )
+# # 
 # #order x axis
 # data_input$month_initialisation = factor(
 #   data_input$month_initialisation,
