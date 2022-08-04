@@ -541,13 +541,13 @@ plot_backtest_volume <- function(
   if (export) {
     library("icesTAF")
     # figure output folder
-    folder_output = glue("data_output/pronostico_volumen/Figures/ensemble_forecast/{data$args$catchment_code}/")
+    folder_output = glue("data_output/pronostico_volumen/Figures/ensemble_forecast/{data$info$catchment_code}/")
     # create folder if it does not exist
     mkdir(folder_output)
     # filename
     figure_vol_output = glue(
-      "{folder_output}EnsembleVolumeHindcast_{data$args$catchment_code}_",
-      "1st{data$args$month_initialisation}_{plot_text$predictor_list_join}_",
+      "{folder_output}EnsembleVolumeHindcast_{data$info$catchment_code}_",
+      "1st{data$info$month_initialisation}_{plot_text$predictor_list_join}_",
       "{plot_text$volume_span_text}{data$wy_holdout}.png")
     
     ggsave(figure_vol_output,plot = p3, width = width_p, height = height_p)
@@ -700,15 +700,15 @@ plot_knn_flow <- function(
   if (export) {
     library("icesTAF")
     # figure output folder
-    folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data$args$catchment_code}/")
+    folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data$info$catchment_code}/")
     # create folder if it does not exist
     mkdir(folder_output)
     width_p = 7.2
     height_p = 4
     #filename
     figure_q_output = glue(
-      "{folder_output}flow_ensemble_forecast_{data$args$catchment_code}_",
-      "1st{data$args$month_initialisation}_{plot_text$predictor_list_join}_",
+      "{folder_output}flow_ensemble_forecast_{data$info$catchment_code}_",
+      "1st{data$info$month_initialisation}_{plot_text$predictor_list_join}_",
       "{plot_text$volume_span_text}{data$wy_holdout}.png")
     
     ggsave(figure_q_output,plot = p2, width = width_p, height = height_p)

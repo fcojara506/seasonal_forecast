@@ -1,6 +1,6 @@
 rm(list = ls())
-directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-setwd(directory)
+#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
+#setwd(directory)
 
 source("Preprocess_data.R")
 source("Regression_model.R")
@@ -56,41 +56,41 @@ q_fore =
 df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
 df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
 
-# #### charts
-# #predictors vs target variable
-# p1=plot_X_y_train(
-#   data = data,
-#   export = F,
-#   show_chart = T
-#   )
-# 
-# #scatter volume of simulated vs observed in cross-validation
-# p2=
-#   plot_vol_sim_obs(
-#   data = data,
-#   data_fore = data_fore,
-#   export = F,
-#   show_chart = T
-# )
-# 
-# #ensemble volume in hindcast (cross-validation)
-# p3=plot_backtest_volume(
-#   data = data,
-#   data_fore = data_fore,
-#   subplot = F,
-#   export = F,
-#   show_chart = T
-#   )
-# 
-# 
-# #hydrogram of forecasted mean monthly flows
-# p4=plot_knn_flow(
-#   data = data,
-#   q_fore = q_fore,
-#   export = F,
-#   show_chart = T
-# )
-# 
+#### charts
+#predictors vs target variable
+p1=plot_X_y_train(
+  data = data,
+  export = T,
+  show_chart = T
+  )
+
+#scatter volume of simulated vs observed in cross-validation
+p2=
+  plot_vol_sim_obs(
+  data = data,
+  data_fore = data_fore,
+  export = T,
+  show_chart = T
+)
+
+#ensemble volume in hindcast (cross-validation)
+p3=plot_backtest_volume(
+  data = data,
+  data_fore = data_fore,
+  subplot = F,
+  export = T,
+  show_chart = T
+  )
+
+
+#hydrogram of forecasted mean monthly flows
+p4=plot_knn_flow(
+  data = data,
+  q_fore = q_fore,
+  export = T,
+  show_chart = T
+)
+
 # # export data
 # all_data = 
 #   merge_variables(

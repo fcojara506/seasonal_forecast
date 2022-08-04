@@ -1,6 +1,6 @@
 rm(list = ls())
-directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-setwd(directory)
+#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
+#setwd(directory)
 
 library(data.table)
 library(dplyr)
@@ -439,7 +439,8 @@ set_label_text <- function(info_list,forecast_horizon_) {
   volume_span_text_v2     = glue("{head(forecast_horizon_$months_forecast_period,1)} {year_init} - {tail(forecast_horizon_$months_forecast_period,1)} {year_end}")
   volume_span_text        = glue("[{head(forecast_horizon_$months_forecast_period,1)},{tail(forecast_horizon_$months_forecast_period,1)}]")
   
-  predictor_list_join = paste(as.character(info_list[['predictor_list']])[-1],collapse = "_AND_") ### check
+  
+  predictor_list_join = paste( info_list[['predictor_list']][[1]] ,collapse = "_AND_") ### check
   
   
   
@@ -540,15 +541,15 @@ preprocess_data <- function(catchment_code = '5410002',
 ############## MAIN ##############
 ##################################
 
-# data = preprocess_data(
-# catchment_code = '5410002',
-# region = "ChileCentral_ens30avg",
-# month_initialisation = "ene",
-# horizon_strategy = "dynamic",
-# predictor_list = c("pr_sum_-1months",
-#                    "tem_mean_-1months"),
-# wy_holdout = 2016
-# )
+data = preprocess_data(
+catchment_code = '5410002',
+region = "ChileCentral_ens30avg",
+month_initialisation = "ene",
+horizon_strategy = "dynamic",
+predictor_list = c("pr_sum_-1months",
+                   "tem_mean_-1months"),
+wy_holdout = 2016
+)
 
 # # print(data$info)
 # data2 = preprocess_data(

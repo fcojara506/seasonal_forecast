@@ -23,9 +23,9 @@ library(foreach)
 library(doParallel)
 
 model <-
-  foreach(catchment_code=cod_cuencas,.combine = "c") %:%
+  foreach(month_initialisation=months_initialisation,.combine = "c") %:%
   foreach(region=regions,.combine = "c") %:%
-  foreach(month_initialisation=months_initialisation) %dopar% {
+  foreach(catchment_code=cod_cuencas) %dopar% {
     
     run_model(
       catchment_code = catchment_code,
