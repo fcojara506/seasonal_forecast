@@ -15,12 +15,14 @@ regions = c(
   "ChileCentral_era5raw",
   "ChileCentral_era5QDM",
   "ChileCentral_ens30avg",
-  "ChileCentral_ens30"
+  "ChileCentral_ens30",
+  "ChileCentral_ens50"
   )
 iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)
 
 library(foreach)
 library(doParallel)
+registerDoParallel(cores=8)
 
 model <-
   foreach(month_initialisation=months_initialisation,.combine = "c") %:%
@@ -35,7 +37,7 @@ model <-
     
   } %>% purrr::transpose()
 
-saveRDS(model,"model_all_iterations.RDS")
+#saveRDS(model,"model_all_iterations.RDS")
 scores = rbindlist(model$scores)
 info = rbindlist(model$info)
 

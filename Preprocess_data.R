@@ -82,6 +82,13 @@ data_filenames <- function(region = "ChileCentral") {
     meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens30.feather"
     hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
   }
+  
+  if (region == "ChileCentral_ens50") {
+    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
+    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
+    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens50.feather"
+    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
+  }
 
     return(
       list(
