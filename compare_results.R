@@ -35,14 +35,17 @@ model <-
     
   } %>% purrr::transpose()
 
-# scores = rbindlist(model$scores)
-# info = rbindlist(model$info)
-# 
-# data_input = cbind(info,scores) %>%
-#   merge(attributes_catchments,
-#         by.x = "catchment_code",
-#         by.y = "cod_cuenca"
-#         )
+saveRDS(model,"model_all_iterations.RDS")
+scores = rbindlist(model$scores)
+info = rbindlist(model$info)
+
+data_input = cbind(info,scores) %>%
+  merge(attributes_catchments,
+        by.x = "catchment_code",
+        by.y = "cod_cuenca"
+        )
+
+saveRDS(data_input,"model_results.RDS")
 # # 
 # #order x axis
 # data_input$month_initialisation = factor(

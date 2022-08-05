@@ -1,6 +1,6 @@
 rm(list = ls())
-directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-setwd(directory)
+#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
+#setwd(directory)
 
 source("Preprocess_data.R")
 source("Regression_model.R")
