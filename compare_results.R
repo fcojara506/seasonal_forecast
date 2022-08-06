@@ -19,6 +19,7 @@ regions = c(
   "ChileCentral_ens50"
   )
 iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)
+print(iterations)
 
 library(foreach)
 library(doParallel)
