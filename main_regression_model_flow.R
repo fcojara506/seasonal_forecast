@@ -1,115 +1,91 @@
 rm(list = ls())
-directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-setwd(directory)
+#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
+#setwd(directory)
 
 source("Preprocess_data.R")
 source("Regression_model.R")
 source("Knn_model.R")
 source("Charts.R")
 source("Export_data.R")
-
+source("run_model_function.R")
 ### Forecasts
 # input data
 
-months_horizon = 
-  c('sep',
-    'oct',
-    'nov',
-    'dic',
-    'ene',
-    'feb',
-    'mar'
-    )
-month_target = "oct"
+month_initial = "sep"
 
-data = 
-  preprocess_data(
+
+forecast_flow = function(month_target) {
+  
+  data = preprocess_data(
     catchment_code = '5410002',
-    region = "ChileCentral_ens",
-    month_initialisation = "oct",
+    region = "ChileCentral_ens30avg",
+    month_initialisation = month_initial,
     horizon_month_start = month_target,
     horizon_month_end = month_target,
     horizon_strategy = "fixed",
     predictor_list = 
       c(
         "pr_sum_-1months"
-        #"tem_sum_-1months"
       ),
-    wy_holdout = 2019,
-    remove_wys = c(2020)
+    wy_holdout = 1992,
+    remove_wys = c(2020,2021)
     )
+  
+  # ensemble volume forecast
+  data_fore = 
+    forecast_vol_ensemble(
+      data = data,
+      method = "lm", #ridge, lm, rlm, simpls,
+      tuneLength = 10,
+      preProcess = c("center", "scale"), 
+      n_members = 1000
+    )
+  q_fore = data_fore$y_ens_fore
+  colnames(q_fore) = data$time_horizon$months_forecast_period
 
-# ensemble volume forecast
-data_fore = 
-  forecast_vol_ensemble(
-    data = data,
-    method = "lm", #ridge, lm, rlm, simpls,
-    tuneLength = 10,
-    preProcess = c("center", "scale"), 
-    n_members = 1000
+  return(
+    list(
+      q_fore = q_fore
+    )
   )
+}
 
-#### metrics
-scores_volume = 
-  y_scores(
-    data_fore = data_fore,
-    data = data)
+flow_to_vol <- function(month_initial) {
+  
+q_fore = month_initial %>%
+  forecast_horizon("dynamic") %$%
+  months_forecast_period %>% 
+  sapply(forecast_flow) %>%
+  do.call(cbind,.)
 
-# ensemble flow forecast
-q_fore =
-  q_ensemble(
-    data = data,
-    data_fore = data_fore,
-    n_neighbors = 6,
-    weight_method = 'distance'
+y_ens_fore = apply(q_fore, 1, sum) %>% 
+  as.matrix()
+return(
+  list(
+    q_fore = q_fore,
+    y_ens_fore = y_ens_fore
   )
+)
+}
 
-#### charts
-#predictors vs target variable
-p1=plot_X_y_train(
-  data = data,
-  export = F,
-  show_chart = T
+results_new = flow_to_vol(month_initial)
+
+results = run_model(
+  catchment_code = '5410002',
+  month_initialisation = month_initial,
+  region = "ChileCentral_ens30avg",
+  wy_holdout = 1992
 )
 
-#scatter volume of simulated vs observed in cross-validation
-p2=
-  plot_vol_sim_obs(
-    data = data,
-    data_fore = data_fore,
-    export = F,
-    show_chart = T
-  )
-
-#ensemble volume in hindcast (cross-validation)
-p3=plot_backtest_volume(
-  data = data,
-  data_fore = data_fore,
-  subplot = F,
-  export = F,
-  show_chart = T
+vol = data.frame(
+  results_new$y_ens_fore,
+  results$data_fore$y_ens_fore
 )
+colnames(vol) = c("q_to_v","v_to_q")
+vol = vol %>% reshape2::melt()
 
-
-#hydrogram of forecasted mean monthly flows
-p4=plot_knn_flow(
-  data = data,
-  q_fore = q_fore,
-  export = F,
-  show_chart = T
-)
-
-# export data
-all_data = 
-  merge_variables(
-    info = list(data$info),
-    #data_fore,
-    #q_fore = list(q_fore),
-    scores_volume = list(scores_volume)
-  )
-
-#library(performance)
-
-#final_model=data_fore$regression_model[[1]]$finalModel
-#performance::check_model(final_model)
+library(ggplot2)
+ggplot(data = vol)+ 
+  geom_boxplot(aes(x=variable,y=value))+
+  geom_hline(yintercept = results$data_input$y_test$volume_mm)
 

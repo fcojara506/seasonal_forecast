@@ -18,6 +18,7 @@ regions = c(
   "ChileCentral_ens30",
   "ChileCentral_ens50"
   )
+
 iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)
 print(iterations)
 

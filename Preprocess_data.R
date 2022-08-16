@@ -169,10 +169,13 @@ catchment_data <- function(catchment_code,
 }
 
 ### FORECASTING MONTHS HORIZON
-forecast_horizon <- function(month_initialisation,
-                            horizon_strategy,
-                            horizon_month_start = "oct",
-                            horizon_month_end =  "mar") {
+forecast_horizon <- function(
+    month_initialisation,
+    horizon_strategy,
+    horizon_month_start = "oct",
+    horizon_month_end =  "mar"
+    ) {
+  
   # indices within months_wy vector
   month_initialisation_index = match(month_initialisation, months_wy)
   init_target_index = match(horizon_month_start, months_wy)
@@ -548,15 +551,15 @@ preprocess_data <- function(catchment_code = '5410002',
 ############## MAIN ##############
 ##################################
 
-data = preprocess_data(
-catchment_code = '5410002',
-region = "ChileCentral_ens30avg",
-month_initialisation = "ene",
-horizon_strategy = "dynamic",
-predictor_list = c("pr_sum_-1months",
-                   "tem_mean_-1months"),
-wy_holdout = 2016
-)
+# data = preprocess_data(
+# catchment_code = '5410002',
+# region = "ChileCentral_ens30avg",
+# month_initialisation = "ene",
+# horizon_strategy = "dynamic",
+# predictor_list = c("pr_sum_-1months",
+#                    "tem_mean_-1months"),
+# wy_holdout = 2016
+# )
 
 # # print(data$info)
 # data2 = preprocess_data(

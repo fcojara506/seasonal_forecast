@@ -14,7 +14,8 @@ source("Export_data.R")
 run_model <- function(
     catchment_code = '5410002',
     month_initialisation = "nov",
-    region = "ChileCentral_ens30"
+    region = "ChileCentral_ens30avg",
+    wy_holdout = 2019
     ) {
   
 data = 
@@ -25,10 +26,10 @@ data =
     horizon_strategy = "dynamic",
     predictor_list = 
       c(
-        "pr_sum_-1months",
-        "tem_sum_-1months"
+        "pr_sum_-1months"#,
+        #"tem_sum_-1months"
       ),
-    wy_holdout = 2019,
+    wy_holdout = wy_holdout,
     remove_wys = c(2020,2021)
   )
 
@@ -68,6 +69,9 @@ return(list(
   df_platform_vol = df_platform_vol,
   df_platform_q   = df_platform_q,
   scores_volume = scores_volume,
-  info = data$info
+  info = data$info,
+  q_fore = q_fore,
+  data_fore = data_fore,
+  data_input = data
   ))
 }

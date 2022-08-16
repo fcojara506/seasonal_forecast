@@ -15,7 +15,7 @@ source("Export_data.R")
 data = 
   preprocess_data(
   catchment_code = '5410002',
-  region = "ChileCentral_ens20",
+  region = "ChileCentral_ens30avg",
   month_initialisation = "nov",
   horizon_strategy = "dynamic",
   predictor_list = 
