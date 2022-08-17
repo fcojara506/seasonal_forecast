@@ -1,6 +1,4 @@
 rm(list = ls())
-#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-#setwd(directory)
 
 source("run_model_function.R")
 
@@ -8,18 +6,17 @@ catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentra
 attributes_catchments = feather::read_feather(catchments_attributes_filename)
 
 cod_cuencas = attributes_catchments$cod_cuenca
-months_initialisation = c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
+months_initialisation = c("jun","oct")#c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
 
 regions = c(
-  "ChileCentral_CR2MET",
-  "ChileCentral_era5raw",
+  #"ChileCentral_CR2MET",
+  #"ChileCentral_era5raw",
   "ChileCentral_era5QDM",
-  "ChileCentral_ens30avg",
-  "ChileCentral_ens30",
-  "ChileCentral_ens50"
+  "ChileCentral_ens30avg"
   )
+directions = c("vol_to_flow","flow_to_vol")
 
-iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)
+iterations = length(cod_cuencas)*length(months_initialisation)*length(regions)*length(directions)
 print(iterations)
 
 library(foreach)
@@ -29,17 +26,19 @@ registerDoParallel(cores=8)
 model <-
   foreach(month_initialisation=months_initialisation,.combine = "c") %:%
   foreach(region=regions,.combine = "c") %:%
+  foreach(direction=directions,.combine = "c") %:%
   foreach(catchment_code=cod_cuencas) %dopar% {
     
     run_model(
       catchment_code = catchment_code,
       month_initialisation = month_initialisation,
-      region = region
+      region = region,
+      direction = direction
     )
     
   } %>% purrr::transpose()
 
-#saveRDS(model,"model_all_iterations.RDS")
+
 scores = rbindlist(model$scores)
 info = rbindlist(model$info)
 
@@ -49,35 +48,4 @@ data_input = cbind(info,scores) %>%
         by.y = "cod_cuenca"
         )
 
-saveRDS(data_input,"model_results.RDS")
-# # 
-# #order x axis
-# data_input$month_initialisation = factor(
-#   data_input$month_initialisation,
-#   levels = months_initialisation
-#   ) 
-# 
-# 
-# library(ggplot2)
-# 
-# ggplot(data=data_input)+
-#   geom_line(
-#     aes(
-#       x=month_initialisation,
-#       y=crpss_climatology,
-#       col=mean_elev,
-#       group=mean_elev
-#       )
-#     )+
-#   scale_color_viridis_b()
-# 
-# ggplot(data = data_input)+
-#   geom_point(
-#     aes(
-#       x=crpss_climatology,
-#       y =gauge_lat,
-#       col = month_initialisation,
-#     )
-#   )+
-#   scale_color_viridis_d()
-# 
+saveRDS(data_input,"model_results_v2.RDS")

@@ -469,14 +469,14 @@ set_label_text <- function(info_list,forecast_horizon_) {
 
 
 preprocess_data <- function(catchment_code = '5410002',
-                            region = "ChileCentral",
+                            region = "ChileCentral_ens30avg",
                             month_initialisation = "may",
                             horizon_strategy = "dynamic",
                             horizon_month_start = "oct",
                             horizon_month_end = "mar",
-                            predictor_list = c("pr_sum_-1months", "tem_mean_3months"),
+                            predictor_list = c("pr_sum_-1months"),
                             wy_holdout = 2016,
-                            remove_wys = NULL
+                            remove_wys = c(2020,2021)
                             ) {
 
   # catchment data (raw forcings, flows)
