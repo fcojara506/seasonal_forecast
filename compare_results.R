@@ -6,12 +6,12 @@ catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentra
 attributes_catchments = feather::read_feather(catchments_attributes_filename)
 
 cod_cuencas = attributes_catchments$cod_cuenca
-months_initialisation = c("jun","oct")#c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
+months_initialisation = c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
 
 regions = c(
   #"ChileCentral_CR2MET",
   #"ChileCentral_era5raw",
-  "ChileCentral_era5QDM",
+  #"ChileCentral_era5QDM",
   "ChileCentral_ens30avg"
   )
 directions = c("vol_to_flow","flow_to_vol")

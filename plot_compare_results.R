@@ -7,7 +7,7 @@ months_initialisation = c('may','jun','jul','ago','sep','oct','nov','dic','ene',
 months_initialisation_initials = sapply(months_initialisation, function(x) toupper(substr(x,1,1)))
 
 
-data_input = readRDS("model_results.RDS") %>% 
+data_input = readRDS("model_results_v2.RDS") %>% 
   mutate(short_gauge_name = short_river_name(gauge_name))
 
 # x-axis order
@@ -21,20 +21,25 @@ data_input$month_initialisation = factor(
 
 
 p=ggplot(data=data_input)+
-  geom_line(
+  geom_boxplot(
     aes(
-      x=month_initialisation,
+      x= month_initialisation,
       y=crpss_climatology,
-      col=region,
-      group=region
+      col=direction
+      #group=direction
       )
     )+
-  facet_wrap(catchment_code ~ short_gauge_name)+
+  labs(
+    title = "CRPSS seasonal volume, 49 catchments, 1981-2019",
+    subtitle = "Meteo: pre-processed, averaged 30 ensemble members",
+    x = "Mes de emisión",
+    y = "CRPSS (climatology)",
+    col = ""
+    )+
+  scale_color_brewer(palette="Set1")+
+  #facet_wrap(~catchment_code)+
   theme(legend.position = "bottom",
-        strip.text.x = element_text(size = 6))+
-  scale_x_discrete(
-    labels = months_initialisation_initials
-  )
+        strip.text.x = element_text(size = 6))
+  #scale_x_discrete(labels = months_initialisation_initials)
 print(p)
-#plotly::ggplotly(p)
-  #scale_color_viridis_b()
+ggplot2::ggsave("CRPSS_seasonal_volume_direction_flow_or_vol.png",dpi=500)    
