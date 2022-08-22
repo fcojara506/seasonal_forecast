@@ -1,6 +1,4 @@
 rm(list = ls())
-#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-#setwd(directory)
 
 library(data.table)
 library(dplyr)
@@ -23,73 +21,15 @@ months_wy = c('abr',
               'feb',
               'mar')
 
-data_filenames <- function(region = "ChileCentral") {
+data_filenames <- function(region = "ChileCentral_ens30") {
   
+  meteo_version = strsplit(region,split='_', fixed=TRUE)[[1]][2]
   
-  if (region=="Maule") {
-  catchments_attributes_filename = "data_input/attributes_catchments_RegionMaule.feather"
-  flows_filename                 = "data_input/flows_mm_monthly_catchments_RegionMaule.feather"
-  meteo_filename                 = "data_input/meteo_monthly_catchments_RegionMaule.feather"
-  hydro_filename                 = "data_input/hydro_variables_monthly_catchments_RegionMaule.feather"
-  }
-  
-  if (region == "ChileCentral") {
-    catchments_attributes_filename = "data_input/attributes_catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
- 
-   if (region == "ChileCentral_CR2MET") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_era5raw.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  if (region == "ChileCentral_era5raw") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_era5raw.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  if (region == "ChileCentral_era5QDM") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_era5QDM.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  
-  if (region == "ChileCentral_ens30avg") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens30avg.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  if (region == "ChileCentral_ens20") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens20.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  if (region == "ChileCentral_ens30") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens30.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-  
-  if (region == "ChileCentral_ens50") {
-    catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "data_input/flows_mm_monthly_49catchments_ChileCentral.feather"
-    meteo_filename                 = "data_input/meteo_monthly_catchments_ChileCentral_ens50.feather"
-    hydro_filename                 = "data_input/hydro_variables_monthly_catchments_ChileCentral.feather"
-  }
-
+  catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
+  flows_filename                 = "base/data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
+  hydro_filename                 = "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_TUW_EVDSep.feather"
+  meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{meteo_version}.feather")
+    
     return(
       list(
         catchments_attributes_filename = catchments_attributes_filename,
@@ -155,13 +95,15 @@ catchment_data <- function(catchment_code,
   ################# modify this matrix accordingly
   raw_data_df = merge(monthly_meteo,
                       monthly_hydro,
-                      all.x=TRUE,
-                      by= c("cod_cuenca","wy_simple","wym","wym_str")) 
+                      #all=TRUE,
+                      by= c("cod_cuenca","wy_simple","wym","wym_str")
+                      ) 
   
   return(
     list(
       monthly_flows = monthly_flows,
       monthly_meteo = monthly_meteo,
+      monthly_hydro = monthly_hydro,
       raw_data_df = raw_data_df,
       attributes_catchment = attributes_catchment
     )
@@ -551,15 +493,15 @@ preprocess_data <- function(catchment_code = '5410002',
 ############## MAIN ##############
 ##################################
 
-# data = preprocess_data(
-# catchment_code = '5410002',
-# region = "ChileCentral_ens30avg",
-# month_initialisation = "ene",
-# horizon_strategy = "dynamic",
-# predictor_list = c("pr_sum_-1months",
-#                    "tem_mean_-1months"),
-# wy_holdout = 2016
-# )
+data = preprocess_data(
+catchment_code = '5410002',
+region = "ChileCentral_ens30avg",
+month_initialisation = "ene",
+horizon_strategy = "dynamic",
+predictor_list = c("pr_sum_-1months",
+                   "tem_mean_-1months"),
+wy_holdout = 2016
+)
 
 # # print(data$info)
 # data2 = preprocess_data(
