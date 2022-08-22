@@ -98,29 +98,33 @@ ensemble_generator <- function(y,rmse,n_members=1000){
 
 
 ensemble_post <- function(vol_det,data, n_members) {
+  
+  vol_det_unique = vol_det[[1]]
   # historical period
-  y_ens_cv = ensemble_generator(y = vol_det$y_cv,
-                                rmse = vol_det$rmse_cv,
+  y_ens_cv = ensemble_generator(y = vol_det_unique$y_cv,
+                                rmse = vol_det_unique$rmse_cv,
                                 n_members = n_members)
   
   colnames(y_ens_cv) = data$wy_train
   # prediction period
-  y_ens_fore = ensemble_generator(y = vol_det$y_fore,
-                                  rmse = vol_det$rmse_model,
+  y_ens_fore = ensemble_generator(y = vol_det_unique$y_fore,
+                                  rmse = vol_det_unique$rmse_model,
                                   n_members = n_members)
+  
   colnames(y_ens_fore) = data$wy_holdout
+  
   return(
   c(list(
     y_ens_cv = y_ens_cv,
     y_ens_fore = y_ens_fore),
-    vol_det
+    purrr::transpose(vol_det)
   )
   )
 }
 
 ensemble_pre <- function(vol_det,data) {
   
-  
+  vol_det = purrr::transpose(vol_det)
   # historical period
   y_ens_cv = data.frame(vol_det$y_cv,check.names = F) %>% t
   colnames(y_ens_cv) = data$wy_train
@@ -172,9 +176,9 @@ forecast_vol_ensemble <- function(data,
   }
   
   if (length(ensemble_names)==1) {
-    y_forecast = ensemble_post(vol_det[[1]], data,n_members)
+    y_forecast = ensemble_post(vol_det, data,n_members)
   }else{
-    vol_det = purrr::transpose(vol_det)
+    
     y_forecast = ensemble_pre(vol_det,data)
     }
   

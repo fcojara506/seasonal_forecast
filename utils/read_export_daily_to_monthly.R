@@ -1,13 +1,20 @@
 rm(list = ls())
 source("base/Transform_variables_to_monthly.R")
 
-storage_filenames = storage_variables_filename(
-  hydrological_model = "TUW",
-  objective_function = "EVDSep",
-  folder_storage_variables = "base/data_input/storage_variables"
-)
-
-var = export_hydro(files_list = storage_filenames)
+for (model in c("GR4J","TUW","SAC")) {
+for (fo in c("EVDSep","KGE","KGE+logNSE","NSE","SKGE")) {
+  
+  #filenames list
+  storage_filenames = storage_variables_filename(
+    hydrological_model = model,
+    objective_function = fo,
+    folder_storage_variables = "base/data_input/storage_variables"
+  )
+  # transform and export to use in model
+  export_hydro(files_list = storage_filenames)
+  
+}  
+}
 
 # function
 

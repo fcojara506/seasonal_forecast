@@ -317,13 +317,13 @@ vol_subplot <- function(
     theme_light()+
     labs(y = "Volumen (mm)",
          x = xlabel,
-         fill = "Sesgo mediana vs obs"
+         fill = "Error (obs-med)/obs"
          )+
     theme(
-      axis.text.x=element_markdown(angle=90,
-                                   hjust=3,
-                                   colour = xticks_colours),
-      legend.background = element_blank()
+      axis.text.x=element_text(angle=90,
+                               hjust=0,
+                               colour = xticks_colours)
+
     )+
     ylim(0,NA)
   
@@ -333,12 +333,12 @@ vol_subplot <- function(
                aes(
                  x = wy_simple,
                  y = obs,
-                 col="Observaciones"
+                 col=" "
                  ),
                shape=4,
                size = 1
     )+
-    scale_color_manual(values = c("Observaciones" = "black"),name="")
+    scale_color_manual(values = c(" " = "black"),name="Medido/Natural")
   
   
   # add observed quantiles 
@@ -361,7 +361,14 @@ vol_subplot <- function(
                      yend = quantiles_obs),
                  linetype="dashed")
   p6 = p5+
-    theme(legend.position="bottom")
+    theme(legend.title = element_text(size = 5))+
+    theme(legend.text = element_text(size = 5))+
+    theme(legend.position = c(0.2,0.85),
+          legend.box = "horizontal",
+          legend.background = element_blank(),
+          legend.key.size = unit(0.3,"cm"))
+    
+  
   return(p6)
 }
 
@@ -389,7 +396,6 @@ data_plot_backtest_volume <- function(data,data_fore) {
   #      )
   #abline(v=median(y_ens_fore))
   #abline(h=quantile_target(median(y_ens_fore)))
-  
   
   # compute uncertainty error as max between the median and the interquantile limits
   error_range_fore = (quantiles_fore - median(y_ens_fore))
@@ -465,7 +471,8 @@ plot_backtest_volume <- function(
   
 
   title =  glue("Pronóstico retrospectivo de volumen {plot_text$volume_span_text}")
-  subcaption =glue("Pronóstico de volumen {plot_text$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\nEmisión {data$plot_text$date_initialisation}")
+  subcaption = #glue("Pronóstico de volumen {plot_text$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
+               glue("Emisión {data$plot_text$date_initialisation}")
   
   p = vol_subplot(
     y_ens = y_ens,
@@ -474,9 +481,6 @@ plot_backtest_volume <- function(
     xticks_colours = xticks_colours,
     quantiles_obs = quantiles_obs
     )
-  
-  
-  
   
     p1 = p
   
@@ -602,8 +606,8 @@ data_plot_knn_flow <- function(data,q_fore) {
     group_by(wym) %>%
     summarise(mean=mean(Q_mm),
               median = median(Q_mm),
-              percentile_5 = quantile(Q_mm,0.1),
-              percentile_95 = quantile(Q_mm,0.9)) %>%
+              percentile_5 = quantile(Q_mm,0.05),
+              percentile_95 = quantile(Q_mm,0.95)) %>%
     data.table() %>%
     melt.data.table(id.vars = "wym")
   
@@ -619,8 +623,8 @@ data_plot_knn_flow <- function(data,q_fore) {
     c(glue('Medido/Natural ({data$wy_holdout})'),
       glue('Promedio [{wy_init},{wy_end}]'),
       glue('Mediana [{wy_init},{wy_end}]'),
-      glue('Percentil 10% [{wy_init},{wy_end}]'),
-      glue('Percentil 90% [{wy_init},{wy_end}]'))
+      glue('Percentil 5% [{wy_init},{wy_end}]'),
+      glue('Percentil 95% [{wy_init},{wy_end}]'))
   
   
   return(
@@ -651,7 +655,8 @@ plot_knn_flow <- function(
     #geom_line(aes(group=ens))
     #geom_jitter()+
     geom_violin(
-      draw_quantiles = c(0.25, 0.5, 0.75)
+      draw_quantiles = c(0.25, 0.5, 0.75),
+      lwd=0.1
       #color='skyblue'
       )
     

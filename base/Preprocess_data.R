@@ -21,13 +21,14 @@ months_wy = c('abr',
               'feb',
               'mar')
 
-data_filenames <- function(region = "ChileCentral_ens30") {
+data_filenames <- function(region) {
   
-  meteo_version = strsplit(region,split='_', fixed=TRUE)[[1]][2]
+  meteo_version = region[2]
+  hydro_version = region[3]
   
   catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
   flows_filename                 = "base/data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
-  hydro_filename                 = "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_TUW_EVDSep.feather"
+  hydro_filename                 = glue::glue("base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_{hydro_version}.feather")
   meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{meteo_version}.feather")
     
     return(
@@ -95,9 +96,11 @@ catchment_data <- function(catchment_code,
   ################# modify this matrix accordingly
   raw_data_df = merge(monthly_meteo,
                       monthly_hydro,
-                      #all=TRUE,
+                      #all.x =TRUE,
                       by= c("cod_cuenca","wy_simple","wym","wym_str")
-                      ) 
+                      ) %>% 
+    unite("ens",c(ens.x,ens.y),remove=T,sep=".") %>% 
+    mutate(ens = as.numeric(ens))
   
   return(
     list(
@@ -411,7 +414,7 @@ set_label_text <- function(info_list,forecast_horizon_) {
 
 
 preprocess_data <- function(catchment_code = '5410002',
-                            region = "ChileCentral_ens30avg",
+                            region = c("ChileCentral","ens30avg","TUW_EVDSep"),
                             month_initialisation = "may",
                             horizon_strategy = "dynamic",
                             horizon_month_start = "oct",
@@ -493,15 +496,15 @@ preprocess_data <- function(catchment_code = '5410002',
 ############## MAIN ##############
 ##################################
 
-data = preprocess_data(
-catchment_code = '5410002',
-region = "ChileCentral_ens30avg",
-month_initialisation = "ene",
-horizon_strategy = "dynamic",
-predictor_list = c("pr_sum_-1months",
-                   "tem_mean_-1months"),
-wy_holdout = 2016
-)
+# data = preprocess_data(
+# catchment_code = '5410002',
+# region = "ChileCentral_ens30avg",
+# month_initialisation = "ene",
+# horizon_strategy = "dynamic",
+# predictor_list = c("pr_sum_-1months",
+#                    "tem_mean_-1months"),
+# wy_holdout = 2016
+# )
 
 # # print(data$info)
 # data2 = preprocess_data(
@@ -518,13 +521,21 @@ wy_holdout = 2016
 #   wy_holdout = 2021,
 #   remove_wys = seq(1979,1981)
 # )
-# 
+#
+
 # data3 = preprocess_data(
 #   catchment_code = '5410002',
-#   region = "ChileCentral_ens",
+#   region = c("ChileCentral","ens30","TUW_EVDSep"),
 #   month_initialisation = "nov",
 #   horizon_strategy = "dynamic",
 #   predictor_list = c("pr_sum_-1months",
-#                      "tem_mean_-1months"),
-#   wy_holdout = 2016
+#                      "tem_mean_-1months",
+#                      "AE_sum_-1months",
+#                      "SLZ_last_1months",
+#                      "SM_last_1months",
+#                      "SP_last_1months",
+#                      "SUZ_last_1months"
+#                      ),
+#   wy_holdout = 2016,
+#   remove_wys = 2000
 # )

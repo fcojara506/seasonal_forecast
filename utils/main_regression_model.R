@@ -1,30 +1,42 @@
 rm(list = ls())
-#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-#setwd(directory)
 
-source("Preprocess_data.R")
-source("Regression_model.R")
-source("Knn_model.R")
-source("Charts.R")
-source("Export_data.R")
+source("base/Preprocess_data.R")
+source("base/Regression_model.R")
+source("base/Knn_model.R")
+source("base/Charts.R")
+source("base/Export_data.R")
 
 ### Forecasts
+
 # input data
-
-
 data = 
   preprocess_data(
   catchment_code = '5410002',
-  region = "ChileCentral_ens30avg",
-  month_initialisation = "nov",
+  region = c("ChileCentral",
+             "ens30avg",
+             "SAC_EVDSep"),#EVDSep
+  month_initialisation = "ene",
   horizon_strategy = "dynamic",
   predictor_list = 
   c(
-   "pr_sum_-1months"
-    #"tem_sum_-1months"
+   "pr_sum_-1months",
+   #"AE_sum_1months",
+   #"PROD_sum_1months",
+   #"ROUT_sum_1months",
+   #"SLZ_last_1months",
+   #"SM_last_1months",
+   "SP_sum_3months"
+   #"SUZ_last_1months"
     ),
-  wy_holdout = 2019,
+  wy_holdout = 2012,
   remove_wys = c(2020)
+)
+
+#predictors vs target variable
+p1=plot_X_y_train(
+  data = data,
+  export = T,
+  show_chart = T
 )
 
 # ensemble volume forecast
@@ -53,23 +65,18 @@ q_fore =
   )
 
 
-df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
-df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
+#df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
+#df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
 
 #### charts
-#predictors vs target variable
-p1=plot_X_y_train(
-  data = data,
-  export = T,
-  show_chart = T
-  )
+
 
 #scatter volume of simulated vs observed in cross-validation
 p2=
   plot_vol_sim_obs(
   data = data,
   data_fore = data_fore,
-  export = T,
+  export = F,
   show_chart = T
 )
 
@@ -78,7 +85,7 @@ p3=plot_backtest_volume(
   data = data,
   data_fore = data_fore,
   subplot = F,
-  export = T,
+  export = F,
   show_chart = T
   )
 
@@ -87,7 +94,7 @@ p3=plot_backtest_volume(
 p4=plot_knn_flow(
   data = data,
   q_fore = q_fore,
-  export = T,
+  export = F,
   show_chart = T
 )
 
