@@ -14,7 +14,7 @@ data =
   catchment_code = '5410002',
   region = c("ChileCentral",
              "ens30avg",
-             "SAC_EVDSep"),#EVDSep
+             "SAC_EVDSep"),
   month_initialisation = "ene",
   horizon_strategy = "dynamic",
   predictor_list = 
@@ -32,12 +32,7 @@ data =
   remove_wys = c(2020)
 )
 
-#predictors vs target variable
-p1=plot_X_y_train(
-  data = data,
-  export = T,
-  show_chart = T
-)
+
 
 # ensemble volume forecast
 data_fore = 
@@ -69,7 +64,12 @@ q_fore =
 #df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
 
 #### charts
-
+#predictors vs target variable
+p1=plot_X_y_train(
+  data = data,
+  export = T,
+  show_chart = T
+)
 
 #scatter volume of simulated vs observed in cross-validation
 p2=
@@ -98,16 +98,7 @@ p4=plot_knn_flow(
   show_chart = T
 )
 
-# # export data
-# all_data = 
-#   merge_variables(
-#   info = list(data$info),
-#  #data_fore,
-#  #q_fore = list(q_fore),
-#  scores_volume = list(scores_volume)
-# )
 
-#library(performance)
 #final_model=data_fore$regression_model[[1]]$finalModel
 #performance::check_model(final_model)
 
