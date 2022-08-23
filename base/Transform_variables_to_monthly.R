@@ -5,7 +5,7 @@ library(data.table)
 #directory = "/Users/fco/CAPTA/Pronostico_estacional/"
 #setwd(directory)
 
-wy_simple         <- function(x) {
+wy         <- function(x) {
   fifelse(lubridate::month(x) > 3,
           lubridate::year(x),
           lubridate::year(x) - 1)
@@ -46,7 +46,7 @@ aggregate_variable <- function(filename,
     ) %>% 
     mutate(cod_cuenca = as.character(cod_cuenca)) %>%
     mutate(wym = month_to_wym(lubridate::month(date))) %>%
-    mutate(wy_simple = wy_simple(date)) %>%
+    mutate(wy_simple = wy(date)) %>%
     select(-date) %>%
     .[, .(var = round(fx(var), 3)),
       by = list(cod_cuenca, wym, wy_simple, i_ens)]
@@ -116,4 +116,16 @@ export_hydro <- function(files_list,
   message("Monthly data successfully exported ")
   return(df)
   
+}
+
+# join files
+join_files <- function(df_list,filename_export) {
+  
+  var = Reduce(function(x, y) merge(x, y, all=TRUE), df_list)
+  var = as.data.table(var)[order(wy_simple)]
+    
+    
+    
+  feather::write_feather(x=var,path = filename_export )
+  return(var)
 }

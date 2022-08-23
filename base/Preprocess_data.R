@@ -29,7 +29,7 @@ data_filenames <- function(region) {
   catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
   flows_filename                 = "base/data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
   hydro_filename                 = glue::glue("base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_{hydro_version}.feather")
-  meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{meteo_version}.feather")
+  meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{meteo_version}_1979_2022.feather")
     
     return(
       list(
@@ -40,9 +40,6 @@ data_filenames <- function(region) {
       )
     )
 
-  
-
-  
 }
 
 read_and_subset_variable <- function(filename,catchment_code) {
@@ -96,11 +93,12 @@ catchment_data <- function(catchment_code,
   ################# modify this matrix accordingly
   raw_data_df = merge(monthly_meteo,
                       monthly_hydro,
-                      #all.x =TRUE,
-                      by= c("cod_cuenca","wy_simple","wym","wym_str")
-                      ) %>% 
-    unite("ens",c(ens.x,ens.y),remove=T,sep=".") %>% 
-    mutate(ens = as.numeric(ens))
+                      all =TRUE,
+                      by= c("cod_cuenca","wy_simple","wym","wym_str","ens")
+                      )
+    
+    #unite("ens",c(ens.x,ens.y),remove=T,sep=".") 
+    #mutate(ens = as.numeric(ens))
   
   return(
     list(
@@ -183,25 +181,33 @@ predictor_generator <-
     
     var_name = glue::glue('{variable}_{operator}_{period_before}months')
     
-
     input_data = catchment_data$raw_data_df
     num_ensembles = unique(input_data$ens)
     
-    if (is.null(num_ensembles)) {
-      input_data$ens = 1
-    }
+    if (is.null(num_ensembles)) {input_data$ens = 1}
     
     var = input_data %>%
       subset(wym < forecast_horizon_$month_initialisation_index) %>%
       subset(wym > forecast_horizon_$month_initialisation_index - period_before-1) %>% 
-      select(c("wy_simple", all_of(variable), ens)) %>% 
+      select(c("wy_simple", all_of(variable), "ens"))
+    
+    num_records_per_wy = var %>%
+      group_by(wy_simple) %>%
+      summarise(num=n()) %>%
+      data.frame()
+    
+    kickout_wy = num_records_per_wy[num_records_per_wy$num!=period_before,"wy_simple"]
+    message(glue::glue("REMOVED PREDICTOR: Incomplete {variable} records for wateryear(s): {kickout_wy}"))
+    
+    
+    var = var %>% 
+      subset(!(wy_simple %in% kickout_wy)) %>% 
       aggregate(
         FUN = operator,
         by = list(wy_simple = .$"wy_simple",ens = .$"ens"),
         drop = T
       ) %>%
-      select(c("wy_simple","ens", all_of(variable))) %>%
-      drop_na()
+      select(c("wy_simple","ens", all_of(variable)))
     
     names(var)[names(var) == variable] <- var_name
     
@@ -217,22 +223,25 @@ predictors_generator <- function(predictor_list,
   predictors = lapply(predictor_list,
                       function(var_name)
                         
-                      
                         var = predictor_generator(
                           var_name = var_name,
                           forecast_horizon_ = forecast_horizon_,
                           catchment_data = catchment_data
-                        ))
+                        )
+                      )
   
-  predictors = data.table(Reduce(merge, predictors),key="wy_simple,ens")
+  
+  
+  predictors = data.table(Reduce(merge, predictors),key="wy_simple,ens") %>% 
+    tidyr::drop_na()
+  
+  #print(predictors)
   
   return(predictors)
 }
 
 # target variable : volume and streamflow
 predictant_generator <- function(forecast_horizon_,catchment_data) {
-  
-
   
   cond1 = catchment_data$monthly_flows$wym >= forecast_horizon_$init_forecast_index
   cond2 = catchment_data$monthly_flows$wym <= forecast_horizon_$end_forecast_index
@@ -317,7 +326,7 @@ testing_data <- function(predictor, predictant,wy_holdout) {
     
   }else{
     X_test = NULL
-    stop("You need predictors for the testing period (see wy_holdout).")
+    stop("YOU NEED VALID PREDICTORS FOR THE TARGET PERIOD (SEE DATA FOR WY_HOLDOUT)")
   }
   
   if (wy_holdout %in% predictant$q$wy_simple) {
@@ -421,9 +430,9 @@ preprocess_data <- function(catchment_code = '5410002',
                             horizon_month_end = "mar",
                             predictor_list = c("pr_sum_-1months"),
                             wy_holdout = 2016,
-                            remove_wys = c(2020,2021)
+                            remove_wys = NA
                             ) {
-
+  
   # catchment data (raw forcings, flows)
   catchment_data = catchment_data(
     catchment_code = catchment_code,
@@ -467,7 +476,7 @@ preprocess_data <- function(catchment_code = '5410002',
   
   info_list = data.table(
     catchment_code = catchment_code,
-    region = region,
+    region = list(region),
     month_initialisation = month_initialisation,
     horizon_strategy = horizon_strategy,
     predictor_list = list(predictor_list),
@@ -523,19 +532,18 @@ preprocess_data <- function(catchment_code = '5410002',
 # )
 #
 
-# data3 = preprocess_data(
-#   catchment_code = '5410002',
-#   region = c("ChileCentral","ens30","TUW_EVDSep"),
-#   month_initialisation = "nov",
-#   horizon_strategy = "dynamic",
-#   predictor_list = c("pr_sum_-1months",
-#                      "tem_mean_-1months",
-#                      "AE_sum_-1months",
-#                      "SLZ_last_1months",
-#                      "SM_last_1months",
-#                      "SP_last_1months",
-#                      "SUZ_last_1months"
-#                      ),
-#   wy_holdout = 2016,
-#   remove_wys = 2000
-# )
+data3 = preprocess_data(
+  catchment_code = '5410002',
+  region = c("ChileCentral","ens30avg","TUW_EVDSep"),
+  month_initialisation = "jun",
+  horizon_strategy = "dynamic",
+  predictor_list = c("pr_sum_-1months",
+                     "tem_mean_-1months"
+                     #"AE_sum_-1months"
+                     #"SLZ_last_1months",
+                     #"SM_last_1months",
+                     #"SP_last_1months",
+                     #"SUZ_last_1months"
+                     ),
+  wy_holdout = 2022
+)

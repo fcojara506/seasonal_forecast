@@ -1,7 +1,9 @@
 
 ############## RMSE IN LEAVE.ONE.OUT #######################
 rmse_LOO <- function(sim,obs) {
+  
   require(hydroGOF)
+  
   len_obs = length(obs)
   len_sim = length(sim)
   
