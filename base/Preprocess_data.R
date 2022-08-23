@@ -285,20 +285,30 @@ subset_years <- function(variable,wy_train) {
   return(variable_train)
 }
 
+interval_wys <- function(wy_train) {
+  lapply(split(wy_train,c(0,cumsum(diff(wy_train)!=1))),
+         function(y) if(length(y)>0) c(head(y,1),tail(y,1)) else y) 
+}
+
+
 dataframe_to_list <- function(df) {
   
 ensemble_names = unique(df$ens)
-df_list = lapply(ensemble_names, function(ens_i) subset(df,ens == ens_i,select = - ens))
+df_list = lapply(ensemble_names, 
+                 function(ens_i) 
+                   subset(df,ens == ens_i,select = - ens))
 names(df_list) = ensemble_names
 return(df_list)
 }
-
 
 
 training_data <- function(predictor, predictant,wy_holdout) {
   wy_train = intersect(predictor$wy_simple,predictant$q$wy_simple)
   wy_train = wy_train[wy_train != wy_holdout]
   
+  wy_train_intervals=interval_wys(wy_train)
+  
+  #print(wy_train_intervals)
   ### training period
   X_train = predictor %>%
     dataframe_to_list %>%
@@ -545,5 +555,6 @@ data3 = preprocess_data(
                      #"SP_last_1months",
                      #"SUZ_last_1months"
                      ),
-  wy_holdout = 2022
+  wy_holdout = 1989,
+  remove_wys = c(2000,1996)
 )
