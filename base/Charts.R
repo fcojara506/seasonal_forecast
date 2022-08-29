@@ -50,7 +50,7 @@ plot_X_y_train <- function(
                col = wy_simple)
       )+
       geom_point()+
-      facet_wrap(~variable, scales = "free_x")+
+      facet_wrap(~variable, scales = "free_x",nrow = 1)+
       scale_color_viridis_b()
    
     ## add smooth line and metrics

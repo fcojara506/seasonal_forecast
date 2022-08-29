@@ -1,16 +1,13 @@
 rm(list = ls())
-#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-#setwd(directory)
 
-source("Preprocess_data.R")
-source("Regression_model.R")
-source("Knn_model.R")
-source("Charts.R")
-source("Export_data.R")
+source("base/Preprocess_data.R")
+source("base/Regression_model.R")
+source("base/Knn_model.R")
+source("base/Charts.R")
+source("base/Export_data.R")
 
 ### Forecasts
 # input data
-
 
 forecast_vol_to_flow <- function(...) {
   
@@ -168,6 +165,7 @@ run_model <- function(...,month_initialisation,direction = "vol_to_flow") {
   
 }
 
+#tests
 #a=run_model(month_initialisation = "oct",wy_holdout=1990,direction = "vol_to_flow")
 #b=run_model(month_initialisation = "oct",wy_holdout=1990,direction = "flow_to_vol")
 

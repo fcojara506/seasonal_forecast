@@ -1,4 +1,4 @@
-rm(list = ls())
+#rm(list = ls())
 
 library(data.table)
 library(dplyr)
@@ -21,15 +21,12 @@ months_wy = c('abr',
               'feb',
               'mar')
 
-data_filenames <- function(region) {
-  
-  meteo_version = region[2]
-  hydro_version = region[3]
+dataset_filenames <- function(dataset_region,dataset_meteo,dataset_hydro) {
   
   catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
   flows_filename                 = "base/data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
-  hydro_filename                 = glue::glue("base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_{hydro_version}.feather")
-  meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{meteo_version}_1979_2022.feather")
+  hydro_filename                 = glue::glue("base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_{dataset_hydro}.feather")
+  meteo_filename                 = glue::glue("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_{dataset_meteo}_1979_2022.feather")
     
     return(
       list(
@@ -62,11 +59,15 @@ read_and_subset_variable <- function(filename,catchment_code) {
 }
 
 catchment_data <- function(catchment_code,
-                           region,
+                           dataset_region,
+                           dataset_meteo,
+                           dataset_hydro,
                            remove_wys
                            ) {
   
-  data_filenames_ = data_filenames(region=region)
+  data_filenames_ = dataset_filenames(dataset_region,
+                                      dataset_meteo,
+                                      dataset_hydro)
   
   attributes_catchment = data_filenames_$catchments_attributes_filename %>% 
     feather::read_feather() %>%
@@ -170,6 +171,8 @@ predictor_generator <-
            forecast_horizon_,
            catchment_data) {
     
+    
+    
     word = strsplit(var_name, "_")[[1]]
     variable = word[1]
     operator = word[2]
@@ -186,6 +189,8 @@ predictor_generator <-
     
     if (is.null(num_ensembles)) {input_data$ens = 1}
     
+    tryCatch(
+      {
     var = input_data %>%
       subset(wym < forecast_horizon_$month_initialisation_index) %>%
       subset(wym > forecast_horizon_$month_initialisation_index - period_before-1) %>% 
@@ -210,9 +215,11 @@ predictor_generator <-
       select(c("wy_simple","ens", all_of(variable)))
     
     names(var)[names(var) == variable] <- var_name
-    
-    
     return(var)
+      }
+    ,
+    error=function(e) {NULL})
+    
   }
 ## predictor dataframe
 predictors_generator <- function(predictor_list,
@@ -223,19 +230,20 @@ predictors_generator <- function(predictor_list,
   predictors = lapply(predictor_list,
                       function(var_name)
                         
-                        var = predictor_generator(
+                        predictor_generator(
                           var_name = var_name,
                           forecast_horizon_ = forecast_horizon_,
                           catchment_data = catchment_data
                         )
+                      
                       )
   
+  predictors[sapply(predictors, is.null)] <- NULL
   
   
-  predictors = data.table(Reduce(merge, predictors),key="wy_simple,ens") %>% 
+  predictors = Reduce(merge, predictors) %>% 
+    data.table(key="wy_simple,ens") %>% 
     tidyr::drop_na()
-  
-  #print(predictors)
   
   return(predictors)
 }
@@ -306,9 +314,9 @@ training_data <- function(predictor, predictant,wy_holdout) {
   wy_train = intersect(predictor$wy_simple,predictant$q$wy_simple)
   wy_train = wy_train[wy_train != wy_holdout]
   
-  wy_train_intervals=interval_wys(wy_train)
-  
+  #wy_train_intervals=interval_wys(wy_train)
   #print(wy_train_intervals)
+  
   ### training period
   X_train = predictor %>%
     dataframe_to_list %>%
@@ -432,21 +440,26 @@ set_label_text <- function(info_list,forecast_horizon_) {
 
 
 
-preprocess_data <- function(catchment_code = '5410002',
-                            region = c("ChileCentral","ens30avg","TUW_EVDSep"),
-                            month_initialisation = "may",
-                            horizon_strategy = "dynamic",
-                            horizon_month_start = "oct",
-                            horizon_month_end = "mar",
-                            predictor_list = c("pr_sum_-1months"),
-                            wy_holdout = 2016,
-                            remove_wys = NA
-                            ) {
+preprocess_data <- function(
+    catchment_code = '5410002',
+    dataset_region = "ChileCentral",
+    dataset_meteo  = "ens30avg",
+    dataset_hydro  = "GR4J_EVDSep",
+    month_initialisation = "may",
+    horizon_strategy = "dynamic",
+    horizon_month_start = "oct",
+    horizon_month_end = "mar",
+    predictor_list = c("pr_sum_-1months"),
+    wy_holdout = 2016,
+    remove_wys = NA
+    ) {
   
   # catchment data (raw forcings, flows)
   catchment_data = catchment_data(
     catchment_code = catchment_code,
-    region = region,
+    dataset_region = dataset_region,
+    dataset_meteo = dataset_meteo,
+    dataset_hydro = dataset_hydro,
     remove_wys = remove_wys
     )
   
@@ -486,7 +499,9 @@ preprocess_data <- function(catchment_code = '5410002',
   
   info_list = data.table(
     catchment_code = catchment_code,
-    region = list(region),
+    dataset_region = dataset_region,
+    dataset_meteo = dataset_meteo,
+    dataset_hydro = dataset_hydro,
     month_initialisation = month_initialisation,
     horizon_strategy = horizon_strategy,
     predictor_list = list(predictor_list),
@@ -541,20 +556,35 @@ preprocess_data <- function(catchment_code = '5410002',
 #   remove_wys = seq(1979,1981)
 # )
 #
+# 
+# data3 = preprocess_data(
+#   catchment_code = '4301002',
+#   dataset_region = "ChileCentral",
+#   dataset_meteo = "ens30avg",
+#   dataset_hydro = "GR4J_KGE",
+#   month_initialisation = "jun",
+#   horizon_strategy = "dynamic",
+#   predictor_list = c("pr_sum_-1months",
+#                      "tem_mean_-1months"
+#                      #"SP_last_1months"
+#                      # GR4J
+#                      #"PROD_last_1months", 
+#                      #"ROUT_last_1months",
+#                      #TUW
+#                      #"SM_last_1months",
+#                      #"SUZ_last_1months",
+#                      #"SLZ_last_1months",
+#                      #SACRAMENTO
+#                      #"UZT_last_1months",
+#                      #"UZF_last_1months",
+#                      #"LZT_last_1months",
+#                      #"LZS_last_1months",
+#                      #"LZP_last_1months"
+#                      ),
+#   wy_holdout = 1989,
+#   remove_wys = NULL
+# )
 
-data3 = preprocess_data(
-  catchment_code = '5410002',
-  region = c("ChileCentral","ens30avg","TUW_EVDSep"),
-  month_initialisation = "jun",
-  horizon_strategy = "dynamic",
-  predictor_list = c("pr_sum_-1months",
-                     "tem_mean_-1months"
-                     #"AE_sum_-1months"
-                     #"SLZ_last_1months",
-                     #"SM_last_1months",
-                     #"SP_last_1months",
-                     #"SUZ_last_1months"
-                     ),
-  wy_holdout = 1989,
-  remove_wys = c(2000,1996)
-)
+### NOT FINISHED
+# generate combination of predictors or variables. EJ: SP+PROD
+

@@ -12,23 +12,19 @@ source("base/Export_data.R")
 data = 
   preprocess_data(
   catchment_code = '5410002',
-  region = c("ChileCentral",
-             "ens30avg",
-             "SAC_EVDSep"),
-  month_initialisation = "ene",
+  month_initialisation = "nov",
   horizon_strategy = "dynamic",
   predictor_list = 
   c(
    "pr_sum_-1months",
-   #"AE_sum_1months",
-   #"PROD_sum_1months",
-   #"ROUT_sum_1months",
+   "PROD_sum_1months",
+   "ROUT_sum_1months",
    #"SLZ_last_1months",
    #"SM_last_1months",
    "SP_sum_3months"
    #"SUZ_last_1months"
     ),
-  wy_holdout = 2012,
+  wy_holdout = 2019,
   remove_wys = c(2020)
 )
 
@@ -70,35 +66,35 @@ p1=plot_X_y_train(
   export = T,
   show_chart = T
 )
-
+#ggsave("xy_5410002_GR4J_KGE.png",width=9,height = 9,plot = p1)
 #scatter volume of simulated vs observed in cross-validation
-p2=
-  plot_vol_sim_obs(
-  data = data,
-  data_fore = data_fore,
-  export = F,
-  show_chart = T
-)
-
-#ensemble volume in hindcast (cross-validation)
-p3=plot_backtest_volume(
-  data = data,
-  data_fore = data_fore,
-  subplot = F,
-  export = F,
-  show_chart = T
-  )
-
-
-#hydrogram of forecasted mean monthly flows
-p4=plot_knn_flow(
-  data = data,
-  q_fore = q_fore,
-  export = F,
-  show_chart = T
-)
-
-
-#final_model=data_fore$regression_model[[1]]$finalModel
-#performance::check_model(final_model)
-
+# p2=
+#   plot_vol_sim_obs(
+#   data = data,
+#   data_fore = data_fore,
+#   export = F,
+#   show_chart = T
+# )
+# 
+# #ensemble volume in hindcast (cross-validation)
+# p3=plot_backtest_volume(
+#   data = data,
+#   data_fore = data_fore,
+#   subplot = F,
+#   export = F,
+#   show_chart = T
+#   )
+# 
+# 
+# #hydrogram of forecasted mean monthly flows
+# p4=plot_knn_flow(
+#   data = data,
+#   q_fore = q_fore,
+#   export = F,
+#   show_chart = T
+# )
+# 
+# 
+# #final_model=data_fore$regression_model[[1]]$finalModel
+# #performance::check_model(final_model)
+# 
