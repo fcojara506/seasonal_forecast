@@ -802,8 +802,8 @@ plot_knn_flow2 <- function(
   q_plot_data = data_plot_knn_flow2(data = data,q_fore=q_fore)
 
   q_plot_data$q_obs_stats$wym_str <- factor(q_plot_data$q_obs_stats$wym_str , levels=unique(q_plot_data$q_obs_stats$wym_str))
-
-  # observation stats
+  
+    # observation stats
   p=ggplot()+ 
     geom_area(
       data = q_plot_data$q_obs_stats,
@@ -887,9 +887,11 @@ plot_knn_flow2 <- function(
    
   #print(p)
   
+
   
   # idea add an inset plot with forecast period
   library(patchwork)
+  
   p2 = (p/p1)+
     plot_annotation(
          title=glue("Pronóstico del caudal medio mensual"),
@@ -899,6 +901,16 @@ plot_knn_flow2 <- function(
     plot_layout(guides='collect') &
     theme(legend.position='bottom')
 
+  # library(png)
+  # library(RCurl)
+  # library(cowplot)
+  # library(magick)
+  # img <- readPNG(getURLContent(url = "https://i.imgur.com/EOc2V.png"))
+  # 
+  # p3 = ggdraw()+
+  #   draw_image(img,x = 0.3, y = 0.4, scale = .2)+
+  #   draw_plot(p2)
+  
   # p2 = p +
   #   inset_element(p1,
   #                 left = -0.02,

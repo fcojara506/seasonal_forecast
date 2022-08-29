@@ -16,15 +16,15 @@ data =
   horizon_strategy = "dynamic",
   predictor_list = 
   c(
-   "pr_sum_-1months",
-   "PROD_sum_1months",
-   "ROUT_sum_1months",
+   "pr_sum_-1months"
+   #"PROD_sum_1months",
+   #"ROUT_sum_1months",
    #"SLZ_last_1months",
    #"SM_last_1months",
-   "SP_sum_3months"
+   #"SP_sum_3months"
    #"SUZ_last_1months"
     ),
-  wy_holdout = 2019
+  wy_holdout = 2022
 )
 
 
