@@ -12,7 +12,7 @@ source("base/Export_data.R")
 data = 
   preprocess_data(
   catchment_code = '5410002',
-  month_initialisation = "nov",
+  month_initialisation = "jun",
   horizon_strategy = "dynamic",
   predictor_list = 
   c(
@@ -24,8 +24,7 @@ data =
    "SP_sum_3months"
    #"SUZ_last_1months"
     ),
-  wy_holdout = 2019,
-  remove_wys = c(2020)
+  wy_holdout = 2019
 )
 
 
@@ -86,13 +85,13 @@ p1=plot_X_y_train(
 #   )
 # 
 # 
-# #hydrogram of forecasted mean monthly flows
-# p4=plot_knn_flow(
-#   data = data,
-#   q_fore = q_fore,
-#   export = F,
-#   show_chart = T
-# )
+#hydrogram of forecasted mean monthly flows
+p4=plot_knn_flow2(
+  data = data,
+  q_fore = q_fore,
+  export = F,
+  show_chart = T
+)
 # 
 # 
 # #final_model=data_fore$regression_model[[1]]$finalModel
