@@ -130,7 +130,7 @@ facet_grid(catchment_code ~ predictor_name,
   )
 
 ggsave(glue::glue("utils/data_output/figuras/xy_{dataset_hydro}.png"),
-       width = 9,
+       width = 12,
        height = 18)
 }
 
