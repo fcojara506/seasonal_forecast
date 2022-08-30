@@ -2,9 +2,6 @@ rm(list = ls())
 library(dplyr)
 library(data.table)
 
-#directory = "/Users/fco/CAPTA/Pronostico_estacional/"
-#setwd(directory)
-
 wy         <- function(x) {
   fifelse(lubridate::month(x) > 3,
           lubridate::year(x),
@@ -74,9 +71,11 @@ export_meteo <- function(filename_pr,
 }
 
 #### storage
-storage_variables_filename <- function(hydrological_model = "TUW",
-                                       objective_function = "EVDSep",
-                                       folder_storage_variables = "data_input/storage_variables") {
+storage_variables_filename <- function(
+    hydrological_model = "TUW",
+    objective_function = "EVDSep",
+    folder_storage_variables = "data_input/storage_variables") {
+  
   target_folder =
     glue::glue("{folder_storage_variables}/",
                "{hydrological_model}/",
@@ -91,12 +90,14 @@ storage_variables_filename <- function(hydrological_model = "TUW",
     filenames = files_list,
     hydrological_model = hydrological_model,
     objective_function = objective_function,
-    folder = folder_storage_variables
+    folder = folder_storage_variables,
+    variables = lapply(files_list, get_var_name) %>% unlist()
   ))
 }
 
-export_hydro <- function(files_list,
-                         filename_export = glue::glue('hydro_variables_monthly_catchments_ChileCentral_{files_list$hydrological_model}_{files_list$objective_function}.feather')) {
+aggregate_hydro <- function(files_list,
+                            filename_export = glue::glue('hydro_variables_monthly_catchments_ChileCentral_{files_list$hydrological_model}_{files_list$objective_function}.feather')
+                            ) {
   
   df  =
   files_list$filenames %>% 
@@ -107,15 +108,34 @@ export_hydro <- function(files_list,
     var_name = get_var_name(filename),
     fx = last
   )
+  
   )
   
   df = Reduce(function(x, y) merge(x, y, all=TRUE), df)
   
-  feather::write_feather(df, glue::glue("{files_list$folder}/{filename_export}"))
+  fullname_filename_export = glue::glue("{files_list$folder}/{filename_export}")
   
-  message("Monthly data successfully exported ")
+  return(
+    list(
+      df = df,
+      fullname_filename_export = fullname_filename_export
+    )
+  )
+  
+}
+
+new_hydro_variable <- function(df,selected_variables,FUN,var_name) {
+  
+  df2 = df %>% 
+    select(all_of(selected_variables)) %>% 
+    apply(1, FUN) %>% 
+    data.frame()
+  
+  colnames(df2) = var_name
+  
+  df = cbind(df,df2)
+  
   return(df)
-  
 }
 
 # join files

@@ -57,12 +57,10 @@ join_x_info <- function(x) {
 plot_input <- function(dataset_hydro) {
 
   model_data <-
-    #foreach(dataset_hydro=datasets_hydro,.combine = "c") %:%
     foreach(catchment_code=cod_cuencas) %dopar% {
-      
       preprocess_data(
         catchment_code = catchment_code,
-        month_initialisation = "oct",
+        month_initialisation = "sep",
         dataset_hydro = dataset_hydro,
         dataset_region = "ChileCentral",
         dataset_meteo  = "ens30avg",
@@ -73,6 +71,7 @@ plot_input <- function(dataset_hydro) {
           "pr_sum_-1months",
           #"tem_mean_-1months",
           "SP_last_1months",
+          "STORAGE_last_1months",
           # GR4J
           "PROD_last_1months",
           "ROUT_last_1months",
@@ -87,12 +86,11 @@ plot_input <- function(dataset_hydro) {
           "LZS_last_1months",
           "LZP_last_1months"
         ),
-        wy_holdout = 2018,
+        wy_holdout = 2000,
         remove_wys = NA
       )
-      
     }  
-
+  
 data_input = 
   lapply(model_data,  join_x_info) %>% 
   rbindlist() %>% 
@@ -103,10 +101,13 @@ data_input =
   mutate(short_gauge_name = short_river_name(gauge_name))
 
 #saveRDS(data_input,"utils/data_output/model_data_input_49catchments.RDS")
+data_input_mean = 
+  aggregate(
+    formula = predictor_value  ~ catchment_code + predictor_name ,
+      data  = data_input,
+        FUN = mean
+    )
 
-data_input_mean = data_input %>% 
-  group_by(catchment_code,predictor_name) %>% 
-  summarise(mean = mean(predictor_value))
 
 ggplot(data = data_input,
        aes(x = predictor_value, y=volume_mm)) +
@@ -118,7 +119,7 @@ geom_smooth(formula = y ~ x,
             size = 0.5
               ) +
 geom_vline(data = data_input_mean,
-           aes(xintercept = mean))+
+           aes(xintercept = predictor_value))+
 facet_grid(catchment_code ~ predictor_name,
            scales = "free")+
   labs(

@@ -176,18 +176,17 @@ plot_vol_sim_obs <- function(
   
   v_line = t(as.data.frame(data_fore$y_fore)) %>%
     data.frame(y_fore=.)
-  
-  p=
+  #geom_jitter(data = v_line, aes(x=y_fore,y=data$y_test$volume_mm), col="red")+ 
+p = 
     ggplot(data = y_df, aes(x=y_sim,y=y_true,col=wy))+
     geom_point()+
     geom_abline(slope = 1)+
-    geom_jitter(data = v_line, aes(x=y_fore,y=data$y_test$volume_mm), col="red")+
     geom_vline(xintercept =  mean(v_line$y_fore))+
   scale_color_viridis_b()+
     labs(
-      x = "Volumen simulado (mm)",
-      y = "Volumen observado (mm)",
-      title = glue("Volumen observado vs simulado {data$plot_text$volume_span_text}"),
+      x = glue("Volumen simulado {data$plot_text$volume_span_text} (mm)"),
+      y = glue("Volumen observado {data$plot_text$volume_span_text} (mm)"),
+      title = "Volumen observado vs simulado en validación cruzada",
       subtitle = paste("Cuenca:", data$raw_data$attributes_catchment$gauge_name),
       col = "Año Hidrológico",
       caption = glue("Emisión {data$plot_text$date_initialisation}")
@@ -198,9 +197,7 @@ plot_vol_sim_obs <- function(
     )+
     coord_equal()+
     expand_limits(y=0,x=0)
-  
-  
-  
+ 
   p = p +
     stat_poly_eq(aes(label = paste(..rr.label..)),
                  label.x.npc = 0.95,
@@ -235,6 +232,11 @@ plot_vol_sim_obs <- function(
       y=min(y_df$y_sim)*0.2,
       col='black'
     )
+  
+  if (!(is.null(data$y_test$volume_mm))) {
+    p =p+geom_jitter(data = v_line, aes(x=y_fore,y=data$y_test$volume_mm), col="red")
+  }
+  
   # # add coefficients
   # coeff = data.frame(
   #   val=round(coef(data_fore$regression_model$finalModel),2)) %>% 
@@ -305,7 +307,7 @@ vol_subplot <- function(
                    ),
                  width=0.7,
                  color="black",
-                 outlier.shape = NA,
+                 #outlier.shape = NA,
                  lwd=0.1)+
     scale_fill_gradient2(
       low="red",
@@ -582,77 +584,6 @@ data_plot_knn_flow <- function(data,q_fore) {
                           variable.factor = F,
                           measure.vars = months_wy_forecast,
                           id.vars = "ens"
-                          )
-  
-  q_ens = merge.data.table(q_ens,
-                           months_wy_df,
-                           by = "wym_str",
-                           all.y = T) %>% 
-    setkey(wym)
-  
-  q_ens$wym_str <- factor(q_ens$wym_str , levels=data$time_horizon$months_wy)
-  
-  # flow observations
-  q_flows = data$raw_data$monthly_flows[,c("wy_simple", "wym", "Q_mm")]
-  
-  # flow observations only water year hold.out (if exists)
-  q = subset(q_flows, wy_simple == data$wy_holdout)[,c("wym", "Q_mm")] %>%
-    mutate(variable = 'wy_holdout')
-  
-  colnames(q) = c("wym","value","variable")
-  
-  # flow observations
-  FUN = function(x){c(mean = mean(x), len = median(x))}
-  
-  q_obs_stats = subset(q_flows, wy_simple != data$wy_holdout)[,c("wym", "Q_mm")] %>%
-    group_by(wym) %>%
-    summarise(
-              median = quantile(Q_mm,0.5),
-              
-              percentile_5 = quantile(Q_mm,0.05),
-              percentile_95 = quantile(Q_mm,0.95)
-              ) %>%
-    data.table() %>%
-    melt.data.table(id.vars = "wym")
-  
-  # merge observation data
-  q_obs = rbind(q,q_obs_stats) %>%
-    mutate(wym_str = data$time_horizon$months_wy[wym])
-  ## text
-  library(glue)
-  wy_init = min(data$wy_train)
-  wy_end = max(data$wy_train)
-  
-  legend_labels = 
-    c(glue('Medido/Natural ({data$wy_holdout})'),
-      glue('Mediana [{wy_init},{wy_end}]'),
-      glue('Percentil 5% [{wy_init},{wy_end}]'),
-      glue('Percentil 95% [{wy_init},{wy_end}]'))
-  
-  
-  return(
-    list(
-      q_ens = q_ens,
-      q_obs = q_obs,
-      legend_labels = legend_labels
-    )
-  )
-}
-
-data_plot_knn_flow2 <- function(data,q_fore) {
-  
-  months_wy_forecast = colnames(q_fore)
-  months_wy_df = data.frame(wym_str = months_wy) %>% 
-    mutate(wym = row_number())
-  # ensemble flow forecast
-  q_fore = data.table(q_fore) %>%
-    rowid_to_column("ens")
-  
-  q_ens = melt.data.table(q_fore,
-                          variable.name = "wym_str",
-                          variable.factor = F,
-                          measure.vars = months_wy_forecast,
-                          id.vars = "ens"
   )
   
   q_ens = merge.data.table(q_ens,
@@ -710,101 +641,19 @@ plot_knn_flow <- function(
     show_chart = FALSE) {
   
   library(ggplot2)
-  plot_text = data$plot_text
-  q_plot_data = data_plot_knn_flow(data = data,q_fore=q_fore)
-  
-  
-  p=ggplot(
-    data = q_plot_data$q_ens,
-    mapping =  aes(x=wym_str,y=value)
-    )+
-    #geom_line(aes(group=ens))
-    #geom_jitter()+
-    geom_violin(
-      draw_quantiles = c(0.25, 0.5, 0.75),
-      lwd=0.1
-      #color='skyblue'
-      )
-    
-  # add observations
-  p = p + 
-    geom_line(
-      data = q_plot_data$q_obs,
-      aes(x=wym_str,y = value,color = variable, group=variable)
-    )+
-    geom_point(
-      data = q_plot_data$q_obs,
-      aes(x=wym_str,y = value,color = variable, group=variable)
-    )
-  # add aestetics
-  p = p + scale_color_discrete(
-    name = "Caudal Estación Fluviométrica",
-    labels = q_plot_data$legend_labels
-  )+
-    labs(x= ("Periodo del pronóstico"),
-         y = ("Caudal medio mensual (mm)"),
-         title=glue("Caudal medio mensual pronosticado"),
-         subtitle = data$attributes_catchment$gauge_name,
-         caption = glue("Emisión {plot_text$date_initialisation}")
-         )+
-    theme(legend.position = 'bottom')+
-    guides(color=guide_legend(nrow=3,byrow=F))
-  
-  # idea add an inset plot with forecast period
-  #library(patchwork)
-  # p1 = p +
-  #   scale_x_discrete(limits=data$time_horizon$months_forecast_period,
-  #                    expand = c(0,0))+
-  #   theme(legend.position = "")+
-  #   labs(x="",y="",title="")+
-  #   theme(rect = element_rect(fill = "transparent"))
-  # 
-  # p2 = p +
-  #   inset_element(p1,
-  #                 left = -0.02,
-  #                 bottom = 0.3,
-  #                 right = 0.5,
-  #                 top = 1.1)
-  
-  #plot(p2)
-  
-  if (export) {
-    library("icesTAF")
-    # figure output folder
-    folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data$info$catchment_code}/")
-    # create folder if it does not exist
-    mkdir(folder_output)
-    width_p = 7.2
-    height_p = 4
-    #filename
-    figure_q_output = glue(
-      "{folder_output}flow_ensemble_forecast_{data$info$catchment_code}_",
-      "1st{data$info$month_initialisation}_{plot_text$predictor_list_join}_",
-      "{plot_text$volume_span_text}{data$wy_holdout}.png")
-    
-    ggsave(figure_q_output,plot = p2, width = width_p, height = height_p)
-  }
-  if (show_chart) {
-    plot(p)
-    return(p)
-  }
-  
-  
-}
-
-plot_knn_flow2 <- function(
-    data,
-    q_fore,
-    export = FALSE,
-    show_chart = FALSE) {
-  
-  library(ggplot2)
   library(see) # halfviolin
   
   plot_text = data$plot_text
-  q_plot_data = data_plot_knn_flow2(data = data,q_fore=q_fore)
-
+  
+  q_plot_data = data_plot_knn_flow(data = data,q_fore=q_fore)
   q_plot_data$q_obs_stats$wym_str <- factor(q_plot_data$q_obs_stats$wym_str , levels=unique(q_plot_data$q_obs_stats$wym_str))
+  
+  median_q_ens = apply(q_fore, 2, median) %>%
+    t %>%
+    data.table() %>%
+    melt.data.table(id.vars = NULL,
+                    measure.vars = all_of(colnames(q_fore)) ,
+                    variable.name = "wym_str",value.name = "median_flow")
   
     # observation stats
   p=ggplot()+ 
@@ -821,7 +670,8 @@ plot_knn_flow2 <- function(
       scale = "width",
       flip = T,
       lwd = 0.1,
-      width=0.5
+      width=0.5,
+      alpha=0.2
     )+
     geom_boxplot(
       data = q_plot_data$q_ens,
@@ -831,11 +681,10 @@ plot_knn_flow2 <- function(
       width = 0.1,
       outlier.size = 0.5
     )+
-    stat_summary(
-      data = q_plot_data$q_ens,
-      mapping =  aes(x=wym_str,y=value,color="mediana"),
-      geom = "point",
-      fun = "median",
+    geom_point(
+      data = median_q_ens,
+      mapping = aes(x = wym_str, y = median_flow, color = "mediana"),
+      
       size = 1,
       shape = 3
     )+
@@ -874,17 +723,27 @@ plot_knn_flow2 <- function(
         nrow=2
         )
       )+
-    scale_x_discrete(expand = c(0.01 ,0))+
+    scale_x_discrete(expand = c(0,0))+
     labs(
-     x= ("Periodo del pronóstico"),
-     y = ("Caudal (mm)")
+     x= "",
+     y = "Caudal (mm)"
     )
   
+  max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+  
   p1 = p +
+    geom_text(
+      data = median_q_ens,
+      mapping = aes(x = wym_str,y = max_y*1.02,label= sprintf("%.1f",median_flow) ),
+      size=3
+    )+
     scale_x_discrete(
       limits=data$time_horizon$months_forecast_period,
-      expand = c(0.01 ,0)
-      )
+      expand = c(0.05 ,0)
+      )+
+    scale_y_continuous(
+      limits = c(NA,max_y*1.02)
+    )
     
 
    
