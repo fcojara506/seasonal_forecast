@@ -1,21 +1,21 @@
 rm(list = ls())
 source("base/Transform_variables_to_monthly.R")
 
-#storage
-for (model in c("GR4J","TUW","SAC")) {
-for (fo in c("EVDSep","KGE","KGE+logNSE","NSE","SKGE")) {
-
-  #filenames list
-  storage_filenames = storage_variables_filename(
-    hydrological_model = model,
-    objective_function = fo,
-    folder_storage_variables = "base/data_input/storage_variables"
-  )
-  # transform and export to use in model
-  export_hydro(files_list = storage_filenames)
-
-}
-}
+# #storage
+# for (model in c("GR4J","TUW","SAC")) {
+# for (fo in c("EVDSep","KGE","KGE+logNSE","NSE","SKGE")) {
+# 
+#   #filenames list
+#   storage_filenames = storage_variables_filename(
+#     hydrological_model = model,
+#     objective_function = fo,
+#     folder_storage_variables = "base/data_input/storage_variables"
+#   )
+#   # transform and export to use in model
+#   export_hydro(files_list = storage_filenames)
+# 
+# }
+# }
 
 # function
 
@@ -97,30 +97,52 @@ for (fo in c("EVDSep","KGE","KGE+logNSE","NSE","SKGE")) {
 #   filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_2020_2022.feather"
 # )
 
+## 2022-present
+# ERA5-raw
+export_meteo(
+  filename_pr = "base/data_input/meteo_variables/2022-presente/precip_ERA5-raw_2022-presente_fondef-dga.csv",
+  filename_tem = "base/data_input/meteo_variables/2022-presente/temp_ERA5-raw_2022-presente_fondef-dga.csv",
+  filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2022_present.feather"
+)
+# ERA5- ensemble promedio N=30
+export_meteo(
+  filename_pr = "base/data_input/meteo_variables/2022-presente/precip_ERA5-BC-ensemble-prom_N30_2022-presente_fondef-dga.csv",
+  filename_tem = "base/data_input/meteo_variables/2022-presente/temp_ERA5-BC-ensemble-prom_N30_2022-presente_fondef-dga.csv",
+  filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_2022_present.feather"
+)
+# ERA5- ensemble-pre-processed 30 ensembles
+export_meteo(
+  filename_pr = "base/data_input/meteo_variables/2022-presente/precip_ERA5-BC-ensemble-miembros_N30_2022-presente_fondef-dga.csv",
+  filename_tem = "base/data_input/meteo_variables/2022-presente/temp_ERA5-BC-ensemble-miembros_N30_2022-presente_fondef-dga.csv",
+  filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_2022_present.feather"
+)
 
-# #join files
-# 
-# # # ERA5-raw
-# list(
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2020.feather"),
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2020_2022.feather")
-# ) %>%
-#   join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2022.feather")
-# 
-# 
-# 
-# # # ERA5- ensemble promedio N=30
-# list(
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_1979_2020.feather"),
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_2020_2022.feather")
-# ) %>%
-#   join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_1979_2022.feather")
-# 
-# 
-# # # ERA5- ensemble-pre-processed 30 ensembles
-# list(
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_1979_2020.feather"),
-#   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_2020_2022.feather")
-# ) %>%
-#   join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_1979_2022.feather")
-# 
+
+#join files
+
+# # ERA5-raw
+list(
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2020.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2020_2022.feather")
+) %>%
+  join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2022.feather")
+
+
+
+# # ERA5- ensemble promedio N=30
+list(
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_1979_2020.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_2020_2022.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_2022_present.feather")
+) %>%
+  join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30avg_1979_2022.feather")
+
+
+# # ERA5- ensemble-pre-processed 30 ensembles
+list(
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_1979_2020.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_2020_2022.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_2022_present.feather")
+  ) %>%
+  join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_ens30_1979_2022.feather")
+

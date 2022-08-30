@@ -124,8 +124,6 @@ join_files <- function(df_list,filename_export) {
   var = Reduce(function(x, y) merge(x, y, all=TRUE), df_list)
   var = as.data.table(var)[order(wy_simple)]
     
-    
-    
   feather::write_feather(x=var,path = filename_export )
   return(var)
 }

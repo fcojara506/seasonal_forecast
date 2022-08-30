@@ -81,7 +81,7 @@ plot_X_y_train <- function(
                       size=3,
                       parse = F)
     
-
+  
     ## add test/current predictors
 
 
@@ -124,12 +124,13 @@ plot_X_y_train <- function(
         label.padding = unit(0.1, "lines"),
         size=3
       )
-  
-  
+    
+  if (!(is.null(data$y_test$volume_mm))) {
+    
   p=p+
     geom_label(
       aes(x = Inf),
-      y = data$y_test$volume_mm,
+      y = ,
       label= paste("volumen \n wy",data$wy_holdout),
       col='black',
       label.padding = unit(0.1, "lines"),
@@ -137,7 +138,7 @@ plot_X_y_train <- function(
       hjust   = 1
     )+
     geom_hline(yintercept = data$y_test$volume_mm)
-  
+  }
     plot(p)
     
     return(p)
@@ -688,7 +689,7 @@ data_plot_knn_flow2 <- function(data,q_fore) {
   ) %>% 
     data.table() %>%
     melt.data.table(id.vars = "wym") %>%
-    mutate(Percentile  = as.numeric(str_extract_all(variable,"(?<=Q_mm.).+(?=.)"))) %>% 
+    mutate(Percentile  = as.numeric(stringr::str_extract_all(variable,"(?<=Q_mm.).+(?=.)"))) %>% 
     mutate(wym_str = data$time_horizon$months_wy[wym])
   
   
@@ -798,6 +799,8 @@ plot_knn_flow2 <- function(
     show_chart = FALSE) {
   
   library(ggplot2)
+  library(see) # halfviolin
+  
   plot_text = data$plot_text
   q_plot_data = data_plot_knn_flow2(data = data,q_fore=q_fore)
 
@@ -823,9 +826,9 @@ plot_knn_flow2 <- function(
     geom_boxplot(
       data = q_plot_data$q_ens,
       mapping =  aes(x=wym_str,y=value),
-      scale = "width",
+      #scale = "width",
       lwd = 0.1,
-      width = 0.07,
+      width = 0.1,
       outlier.size = 0.5
     )+
     stat_summary(
@@ -867,7 +870,7 @@ plot_knn_flow2 <- function(
       ),
       color=guide_legend(
         title = "Caudal ",
-        title.vjust = 0.6,
+        title.vjust = 0.8,
         nrow=2
         )
       )+
