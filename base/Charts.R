@@ -124,13 +124,13 @@ plot_X_y_train <- function(
         label.padding = unit(0.1, "lines"),
         size=3
       )
-    
+  print(p)
   if (!(is.null(data$y_test$volume_mm))) {
     
   p=p+
     geom_label(
       aes(x = Inf),
-      y = ,
+      y = data$y_test$volume_mm,
       label= paste("volumen \n wy",data$wy_holdout),
       col='black',
       label.padding = unit(0.1, "lines"),
@@ -138,6 +138,7 @@ plot_X_y_train <- function(
       hjust   = 1
     )+
     geom_hline(yintercept = data$y_test$volume_mm)
+  
   }
     plot(p)
     
@@ -295,38 +296,52 @@ vol_subplot <- function(
   
   x_labels = unique(y_ens$wy_simple)
   x_limits = length(x_labels)
-  
+  library(see)
   # plot ensembles
   p1 = ggplot() + 
-    geom_violin(data = y_ens,
-                 aes(
-                   x=wy_simple,
-                   y=volume,
-                   fill = error_median,
-                   #fill = volume#as.numeric(as.character(wy_simple))
-                   ),
-                 width=0.7,
-                 color="black",
-                 #outlier.shape = NA,
-                 lwd=0.1)+
-    scale_fill_gradient2(
-      low="red",
-      mid = "white",
-      high = "blue",
-      na.value=NA)
-  
+    geom_violinhalf(
+      data = y_ens,
+      aes(x = wy_simple,
+          y = volume,
+          fill = error_median
+          ),
+          #fill = volume#as.numeric(as.character(wy_simple))),
+          width = 0.9,
+          color = "black",
+          lwd = 0.1,
+      scale = "width"
+      ) +
+    geom_boxplot(
+      data = y_ens,
+      aes(x = wy_simple,
+          y = volume,
+          fill = error_median),
+      color = "black",
+      lwd = 0.1,
+      width = 0.2,
+      outlier.size = 0.5
+    )+
+        scale_fill_gradient2(
+          guide = "legend",
+          low = "blue",
+          mid = "white",
+          high = "red",
+          na.value = NA,
+          breaks = seq(-100,100,10)
+        )
+      
   # change labels
   p2 = p1+
     theme_light()+
     labs(y = "Volumen (mm)",
-         x = xlabel,
-         fill = "Error (obs-med)/obs"
+         x = xlabel
          )+
     theme(
-      axis.text.x=element_text(angle=90,
-                               hjust=0,
-                               colour = xticks_colours)
-
+      axis.text.x=element_text(
+        angle=90,
+        vjust = 0.5, hjust=1,
+        colour = xticks_colours
+        )
     )+
     ylim(0,NA)
   
@@ -338,10 +353,12 @@ vol_subplot <- function(
                  y = obs,
                  col=" "
                  ),
-               shape=4,
-               size = 1
+               shape = 4,
+               size  = 2
     )+
-    scale_color_manual(values = c(" " = "black"),name="Medido/Natural")
+    scale_color_manual(
+      values = c(" " = "black"),
+      name="Medido/Natural")
   
   
   # add observed quantiles 
@@ -349,9 +366,10 @@ vol_subplot <- function(
     theme(plot.margin = unit(c(1,5,1,0.5), "lines"))+
     geom_text(data = quantiles_text,
               aes(x = x_limits+2,
-                  y=quantiles_obs,
+                  y = quantiles_obs,
                   label = glue("{quantiles} ({round(quantiles_obs,1)} mm)")),
-              vjust = 0.4,hjust = 0,
+              vjust = 0.4,
+              hjust = 0,
               size=2)+
     coord_cartesian(xlim = c(0, x_limits+1), clip = "off")
   
@@ -363,13 +381,28 @@ vol_subplot <- function(
                      y=quantiles_obs,
                      yend = quantiles_obs),
                  linetype="dashed")
-  p6 = p5+
-    theme(legend.title = element_text(size = 5))+
-    theme(legend.text = element_text(size = 5))+
-    theme(legend.position = c(0.2,0.85),
-          legend.box = "horizontal",
-          legend.background = element_blank(),
-          legend.key.size = unit(0.3,"cm"))
+  
+  p6 = p5 +
+    theme(legend.position="bottom",
+          legend.spacing.x = unit(0, 'cm'))+
+    guides(
+      fill = guide_legend(
+        label.position = "bottom",
+        nrow = 1,
+        title = "Error: (obs-sim)/obs (%)",
+        title.vjust = 0.8
+      ),
+      color=guide_legend(
+        title.vjust = 0.8,
+        nrow=2
+      )
+    )
+    #theme(legend.title = element_text(size = 5))+
+    #theme(legend.text = element_text(size = 5))+
+    #theme(legend.position = c(0.2,0.85))
+    #      legend.box = "horizontal",
+    #      legend.background = element_blank(),
+    #      legend.key.size = unit(0.3,"cm"))
     
   
   return(p6)
@@ -377,6 +410,7 @@ vol_subplot <- function(
 
 data_plot_backtest_volume <- function(data,data_fore) {
   library(glue)
+  
   y_ens_cv = data_fore$y_ens_cv
   y_ens_fore = data_fore$y_ens_fore
   y_train = data$y_train$volume_mm
@@ -388,32 +422,20 @@ data_plot_backtest_volume <- function(data,data_fore) {
   quantiles_fore = quantile(y_ens_fore, probs = c(0.25, 0.5, 0.75) )
   quantile_target = ecdf(y_train)
   
-  # plot(quantile_target,
-  #      xlab='Volume (mm)',
-  #      ylab='CDF',
-  #      main='CDF del volumen',
-  #      verticals = FALSE,
-  #      col.points = "blue",
-  #      col.hor = "red",
-  #      col.vert = "bisque"
-  #      )
-  #abline(v=median(y_ens_fore))
-  #abline(h=quantile_target(median(y_ens_fore)))
-  
   # compute uncertainty error as max between the median and the interquantile limits
   error_range_fore = (quantiles_fore - median(y_ens_fore))
   error_range_fore = max(abs(error_range_fore[error_range_fore != 0]))
   
   # median and range into string
-  median = sprintf("%0.1f", median(y_ens_fore))
-  error = sprintf("%0.1f", error_range_fore)
-  text_forecast_range = glue( '{median} ± {error} mm')
+  median_vol = sprintf("%0.1f", median(y_ens_fore))
+  error_vol = sprintf("%0.1f", error_range_fore)
+  text_forecast_range = glue( '{median_vol} ± {error_vol} mm')
   
   # create dataframe to insert data in charts
   # water years dataframe
-  
   y_ens = cbind(y_ens_cv,y_ens_fore)
   y_ens = y_ens[ , order(colnames(y_ens))] %>% data.table()
+  
   y_ens = melt.data.table(y_ens,
                           variable.name = "wy_simple",
                           value.name = "volume",
@@ -427,10 +449,24 @@ data_plot_backtest_volume <- function(data,data_fore) {
   df_train = df_train[order(df_train$wy_simple),]
   df_train$wy_simple = as.character(df_train$wy_simple)
   
+  y_ens_medians =
+    aggregate(
+    formula = volume ~ wy_simple,
+    data = y_ens,
+    FUN = median
+    )
+  
+  df_train =
+    merge(df_train,y_ens_medians) %>%
+    rename(sim_median = volume) %>% 
+    mutate(error_median = round((obs-sim_median)/obs*100,2))
+  
+  y_ens = merge(y_ens,df_train)
   
   return(list(
+    y_ens = y_ens,
     df_train = df_train,
-    y_ens = data.frame(y_ens,check.names = F),
+    y_ens_medians = y_ens_medians,
     text_forecast_range = text_forecast_range,
     quantiles_obs = data.frame(quantiles_obs),
     quantile_target = quantile_target
@@ -449,46 +485,32 @@ plot_backtest_volume <- function(
     data = data,
     data_fore = data_fore)
   
-  plot_text = data$plot_text
-  
-  y_ens = plot_data$y_ens
-  
-  quantiles_obs = plot_data$quantiles_obs
-  
-  # median
-  medians_forecast = aggregate(volume ~ wy_simple,
-                               data = y_ens,
-                               FUN = median)
-  
-  df_train = plot_data$df_train %>%
-    merge(medians_forecast) %>%
-    rename(sim_median = volume) %>% 
-    mutate(error_median = round((obs-sim_median)/obs*100,2))
+   y_ens = plot_data$y_ens
+   df_train = plot_data$df_train
+   medians_forecast = plot_data$y_ens_medians
   
   
-  y_ens = merge(y_ens,df_train)
-  
+  ##################### cronological order
   xticks_colours  <- unique(y_ens$wy_simple) %>%
     {(.== data$wy_holdout)} %>%
     ifelse("red","black")
-  
-
-  title =  glue("Pronóstico retrospectivo de volumen {plot_text$volume_span_text}")
-  subcaption = #glue("Pronóstico de volumen {plot_text$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
-               glue("Emisión {data$plot_text$date_initialisation}")
   
   p = vol_subplot(
     y_ens = y_ens,
     df_train = df_train,
     xlabel = "Año hidrológico (orden cronológico)",
     xticks_colours = xticks_colours,
-    quantiles_obs = quantiles_obs
+    quantiles_obs = plot_data$quantiles_obs
     )
   
     p1 = p
-  
- 
-    # compute new order of x-axis based on median of the forecast
+    
+    title =  glue("Pronóstico retrospectivo de volumen {data$plot_text$volume_span_text}")
+    subcaption = #glue("Pronóstico de volumen {data$plot_text$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
+      glue("Emisión {data$plot_text$date_initialisation}")
+    
+  ##############
+  # compute new order of x-axis based on median of the forecast
 
     medians_forecast_order = arrange(medians_forecast,volume)
     y_ens$wy_simple <- factor(y_ens$wy_simple , levels=medians_forecast_order$wy_simple)
@@ -497,31 +519,27 @@ plot_backtest_volume <- function(
       {(.== data$ wy_holdout)} %>%
       ifelse("red","black")
     
-  
-    
     p2 = vol_subplot(y_ens = y_ens,
                         df_train = df_train,
                         xlabel =  "Año hidrológico (orden por mediana del pronóstico)",
                         xticks_colours = xticks_colours,
-                        quantiles_obs = quantiles_obs)
+                        quantiles_obs = plot_data$quantiles_obs)
     
-    
-        
       if (subplot) {
-    #p1 = p1 + labs(title = title)
+    
     p2 = p2 + 
       labs(caption  = subcaption)+
       theme(plot.caption = element_text(hjust = 0))
     
     library(patchwork)
-    p3=p1/p2 + 
+    p3 = (p1/p2) + 
       plot_annotation(
         title = title,
         subtitle = data$raw_data$attributes_catchment$gauge_name,
         tag_levels = "a"
         )+
       plot_layout(
-        ncol = 1,
+        #ncol = 1,
         guides = "collect"
         ) & 
       theme(legend.position = 'bottom')
@@ -554,8 +572,8 @@ plot_backtest_volume <- function(
     # filename
     figure_vol_output = glue(
       "{folder_output}EnsembleVolumeHindcast_{data$info$catchment_code}_",
-      "1st{data$info$month_initialisation}_{plot_text$predictor_list_join}_",
-      "{plot_text$volume_span_text}{data$wy_holdout}.png")
+      "1st{data$info$month_initialisation}_{data$plot_text$predictor_list_join}_",
+      "{data$plot_text$volume_span_text}{data$wy_holdout}.png")
     
     ggsave(figure_vol_output,plot = p3, width = width_p, height = height_p)
   }
@@ -660,7 +678,8 @@ plot_knn_flow <- function(
     geom_area(
       data = q_plot_data$q_obs_stats,
       aes(x=wym_str,y = value,fill = as.factor(Percentile),group = rev(Percentile)),
-      alpha=0.7
+      alpha=0.6,
+      position = position_identity()
     )+
     scale_fill_brewer(palette = "RdBu",direction = -1)+
   # add forecast
@@ -729,12 +748,33 @@ plot_knn_flow <- function(
      y = "Caudal (mm)"
     )
   
-  max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+  
+  #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+  ceiling10 <- function(x) {x = ceiling(x/10)*10}
+  
+  max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
+  #max_y =  max_y_info$value %>% ceiling10
+  
+  max_perce= merge(
+    x=q_plot_data$q_obs_stats,
+    y=max_y_info,
+    by = c("wym","wym_str")
+  ) %>% 
+    mutate(x_Larger_y = value.x>value.y) %>% 
+    mutate(cumsum = cumsum(x_Larger_y))
+  
+  position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
+  max_y_percentile = q_plot_data$q_obs_stats %>% 
+    subset(Percentile == max_perce[position_max_perce]$Percentile) %$% value %>% 
+    max(na.rm = T)
+  
+  #print(max_y_info$value,"_",max_y_percentile)
+  max_y = max(max_y_info$value,max_y_percentile) %>% ceiling10
   
   p1 = p +
     geom_text(
       data = median_q_ens,
-      mapping = aes(x = wym_str,y = max_y*1.02,label= sprintf("%.1f",median_flow) ),
+      mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
       size=3
     )+
     scale_x_discrete(
@@ -742,7 +782,7 @@ plot_knn_flow <- function(
       expand = c(0.05 ,0)
       )+
     scale_y_continuous(
-      limits = c(NA,max_y*1.02)
+      limits = c(NA,max_y*1.05)
     )
     
 
@@ -758,7 +798,8 @@ plot_knn_flow <- function(
     plot_annotation(
          title=glue("Pronóstico del caudal medio mensual"),
          subtitle = data$raw_data$attributes_catchment$gauge_name,
-         caption = glue("Emisión {plot_text$date_initialisation}")
+         caption = glue("Emisión {plot_text$date_initialisation}"),
+         tag_levels = "a"
     )+
     plot_layout(guides='collect') &
     theme(legend.position='bottom')

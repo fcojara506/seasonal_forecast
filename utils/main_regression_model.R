@@ -12,31 +12,20 @@ source("base/Export_data.R")
 data = 
   preprocess_data(
   catchment_code = '7115001', #7115001, 5410002
-  month_initialisation = "sep",
+  month_initialisation = "oct",
   horizon_strategy = "dynamic",
   predictor_list = 
-  c(
-   "pr_sum_-1months",
-   "tem_mean_-1months"
-   #"PROD_sum_1months",
-   #"ROUT_sum_1months",
-   #"SLZ_last_1months",
-   #"SM_last_1months",
-   #"SP_sum_3months"
-   #"SUZ_last_1months"
-    ),
-  wy_holdout = 2022
+  c("pr_sum_-1months"),
+  wy_holdout = 2016
 )
-
-
 
 # ensemble volume forecast
 data_fore = 
   forecast_vol_ensemble(
   data = data,
-  method = "lm", #ridge, lm, rlm, simpls,
-  tuneLength = 100,
-  preProcess = c("center", "scale"), 
+  method = "lm", #ridge, lm, rlm, simpls,gamLoess
+  tuneLength = 10,
+  preProcess = c("center", "scale"), #"range" 
   n_members = 1000
   )
 
@@ -44,14 +33,15 @@ data_fore =
 scores_volume = 
   y_scores(
     data_fore = data_fore,
-    data = data)
+    data = data
+    )
 
 # ensemble flow forecast
 q_fore =
   q_ensemble(
   data = data,
   data_fore = data_fore,
-  n_neighbors = 10,
+  n_neighbors = 6,
   weight_method = 'distance'
   )
 
@@ -66,6 +56,7 @@ p1=plot_X_y_train(
   export = T,
   show_chart = T
 )
+
 #ggsave("xy_5410002_GR4J_KGE.png",width=9,height = 9,plot = p1)
 #scatter volume of simulated vs observed in cross-validation
 p2=
@@ -80,7 +71,7 @@ p2=
 p3=plot_backtest_volume(
   data = data,
   data_fore = data_fore,
-  subplot = F,
+  subplot = T,
   export = F,
   show_chart = T
   )
@@ -94,6 +85,6 @@ p4=plot_knn_flow(
   show_chart = T
 )
 # 
-final_model=data_fore$regression_model[[1]]$finalModel
-performance::check_model(final_model)
+#final_model=data_fore$regression_model[[1]]$finalModel
+#performance::check_model(final_model)
 # 

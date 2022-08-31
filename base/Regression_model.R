@@ -171,8 +171,8 @@ forecast_vol_ensemble <- function(data,
         y_train,
         X_test,
         method = method,
-        preProcess = preProcess
-        #...
+        preProcess = preProcess,
+        ...
       )
     
   }

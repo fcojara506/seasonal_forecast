@@ -1,13 +1,17 @@
 rm(list = ls())
 
+library(ggplot2)
+
 source("utils/run_model_function.R")
 short_river_name <- function(var) {stringr::word(var,start = 1,end = 2)}
 
 #test catchments
-attributes_catchments = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather" %>% 
+attributes_catchments = 
+  "base/data_input/attributes/attributes_49catchments_ChileCentral.feather" %>% 
   feather::read_feather()
 
-cod_cuencas1 = "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_GR4J_KGE.feather" %>% 
+cod_cuencas1 = 
+  "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_GR4J_KGE.feather" %>% 
   feather::read_feather() %>%
   select(cod_cuenca) %>% 
   unique() %>% 
@@ -38,9 +42,13 @@ library(doParallel)
    
 
 join_x_info <- function(x) {
-  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy")
-  y_train = rownames_to_column(x[["y_train"]],var = "wy")
+  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy") %>% minmax()
+  y_train = rownames_to_column(x[["y_train"]],var = "wy") %>% minmax()
+  
+  
+  
   xy_train = merge(x_train,y_train)
+  
   
   df = xy_train %>% 
     data.table() %>% 
@@ -54,10 +62,11 @@ join_x_info <- function(x) {
   
 }
 
-plot_input <- function(dataset_hydro) {
+dataset_data_input <- function(dataset_hydro) {
 
   model_data <-
     foreach(catchment_code=cod_cuencas) %dopar% {
+      
       preprocess_data(
         catchment_code = catchment_code,
         month_initialisation = "sep",
@@ -89,6 +98,7 @@ plot_input <- function(dataset_hydro) {
         wy_holdout = 2000,
         remove_wys = NA
       )
+      
     }  
   
 data_input = 
@@ -100,7 +110,23 @@ data_input =
   ) %>%
   mutate(short_gauge_name = short_river_name(gauge_name))
 
+return(data_input)
+}
+
+minmax <- function(df,method = "range" ) {
+  library(caret)
+  library(dplyr)
+  
+  df2 =  df %>% 
+    preProcess(method = method) %>% 
+    predict(df)
+  
+}
 #saveRDS(data_input,"utils/data_output/model_data_input_49catchments.RDS")
+plot_input <- function(dataset_hydro= "TUW_EVDSep") {
+
+data_input = dataset_data_input(dataset_hydro)
+
 data_input_mean = 
   aggregate(
     formula = predictor_value  ~ catchment_code + predictor_name ,
@@ -108,13 +134,12 @@ data_input_mean =
         FUN = mean
     )
 
-
 ggplot(data = data_input,
        aes(x = predictor_value, y=volume_mm)) +
 geom_point()+
 geom_smooth(formula = y ~ x,
               fullrange=F,
-              method = "lm",
+              method = "loess",
               se = F, 
             size = 0.5
               ) +
@@ -127,6 +152,9 @@ facet_grid(catchment_code ~ predictor_name,
     y = "Volumen estacional [mm]",
     title = "Volumen vs Predictores (forma: Variable_FuncionAgregacion_MesesAgregracion )",
     subtitle = dataset_hydro
+  )+
+  scale_y_continuous(
+    limits = c(0,1)
   )
 
 ggsave(glue::glue("utils/data_output/figuras/xy_{dataset_hydro}.png"),

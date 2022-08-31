@@ -15,7 +15,7 @@ distance_p <- function(matrix, reference_vector) {
     )
 }
 
-neighbors <- function(X_train,X_test,n_neighbors=10) {
+nearest_neighbors <- function(X_train,X_test,n_neighbors=10) {
   
   dis_ind = distance_p(X_train,X_test)
   
@@ -35,11 +35,15 @@ neighbors <- function(X_train,X_test,n_neighbors=10) {
 idw <- function(x){(1/x)/sum(1/x)} 
 
 #weight function given a distance vector and menthod
-weighting_method <- function(neigh_dist,weight_method='distance') {
+weighting_method <- function(neigh_dist,
+                             weight_method=c('distance','ranking','uniform')
+                             ) {
+  
  if (weight_method=='distance') {weight = neigh_dist}
  if (weight_method=='ranking') {weight = rank(neigh_dist)}
  if (weight_method=='uniform') {weight = rep(1, length(neigh_dist))}
-return(idw(weight))
+
+  return(idw(weight))
 }
    
 #predict new variable given X (predictor) and f (target variable)
@@ -47,19 +51,25 @@ knn_predict <- function(X_train,
                         X_test,
                         f_train,
                         n_neighbors=10,
-                        weight_method = 'distance'
+                        weight_method = c('distance','ranking','uniform')
                         ){
   
-  neigh_distance = neighbors(X_train,X_test,n_neighbors = n_neighbors)
-  weight = weighting_method(neigh_distance$neigh_dist,weight_method = weight_method)
+  neigh_distance = nearest_neighbors(X_train,
+                                     X_test,
+                                     n_neighbors = n_neighbors)
+  
+  weights = weighting_method(neigh_distance$neigh_dist,
+                            weight_method = weight_method)
+  
+  ## "f" only for nearest neighbours
   f_neigh = f_train[neigh_distance$neigh_ind,]
-  f_predict = weight%*%f_neigh 
+  f_predict = weights %*% f_neigh 
   rownames(f_predict) = rownames(X_test)
   
   return(
     list(
       neigh_distance = neigh_distance,
-      weight = weight,
+      weight = weights,
       f_neigh = f_neigh,
       f_predict = f_predict
   )
@@ -81,17 +91,12 @@ ensemble_generator_q <- function(f,y_ens) {
   y_ens_i = y_i %*% f_i
   }
   
-
-  
-  
-  #
-  
   return(y_ens_i)
 }
 
 knn_model <- function(data,
                       n_neighbors = 10,
-                      weight_method = 'distance'
+                      weight_method = c('distance','ranking','uniform')
                       ) {
   library(caret)
   
@@ -124,14 +129,17 @@ knn_model <- function(data,
   return(f_fore)
   }
 
-q_ensemble <- function(data,data_fore,...) {
+q_ensemble <- function(data,
+                       data_fore,
+                       n_neighbors = 6,
+                       weight_method = 'distance') {
   
   # we use q = f*V to get q ensemble
   f_fore = 
     knn_model(
     data = data,
-    n_neighbors = 6,
-    weight_method = 'distance'
+    n_neighbors = n_neighbors,
+    weight_method = weight_method
     )
   
   # volume forecast

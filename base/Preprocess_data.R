@@ -184,16 +184,13 @@ predictor_generator <-
     input_data = catchment_data$raw_data_df
     num_ensembles = unique(input_data$ens)
     
-    if (is.null(num_ensembles)) {
-      input_data$ens = 1
-    }
+    if (is.null(num_ensembles)) {input_data$ens = 1}
     
     tryCatch({
       
       var = input_data %>%
         subset(wym < forecast_horizon_$month_initialisation_index) %>%
-        subset(wym > forecast_horizon_$month_initialisation_index - period_before -
-                 1) %>%
+        subset(wym > forecast_horizon_$month_initialisation_index - period_before -1) %>%
         select(all_of(c("wy_simple", all_of(variable), "ens")))
       
       num_records_per_wy = var %>%
@@ -202,10 +199,10 @@ predictor_generator <-
         data.frame()
       
       kickout_wy = num_records_per_wy[num_records_per_wy$num != period_before, "wy_simple"]
-      print(
+      message(
         glue::glue(
           "REMOVED PREDICTOR: Incomplete {variable} records for wateryear(s): {kickout_wy}",
-          ),
+          )
       )
       
       var = var %>%
@@ -449,17 +446,18 @@ set_label_text <- function(info_list, forecast_horizon_) {
   )
 }
 
-preprocess_data <- function(catchment_code = '5410002',
+preprocess_data <- function(catchment_code = '5410002',#  
                             dataset_region = "ChileCentral",
                             dataset_meteo  = "ens30avg",
                             dataset_hydro  = "GR4J_EVDSep",
-                            month_initialisation = "may",
+                            month_initialisation = "jun",
                             horizon_strategy = "dynamic",
                             horizon_month_start = "oct",
                             horizon_month_end = "mar",
                             predictor_list = c("pr_sum_-1months"),
                             wy_holdout = 2016,
                             remove_wys = NA) {
+  
   # catchment data (raw forcings, flows)
   catchment_data = catchment_data(
     catchment_code = catchment_code,
@@ -485,17 +483,23 @@ preprocess_data <- function(catchment_code = '5410002',
   )
   
   # create the target variable
-  predictant = predictant_generator(forecast_horizon_ = forecast_horizon_,
-                                    catchment_data = catchment_data)
+  predictant = predictant_generator(
+    forecast_horizon_ = forecast_horizon_,
+    catchment_data = catchment_data
+    )
   
   # separate into training and testing period
-  train_data = training_data(predictor = predictor,
-                             predictant = predictant,
-                             wy_holdout = wy_holdout)
+  train_data = training_data(
+    predictor = predictor,
+    predictant = predictant,
+    wy_holdout = wy_holdout
+    )
   
-  test_data  = testing_data(predictor = predictor,
-                            predictant = predictant,
-                            wy_holdout = wy_holdout)
+  test_data  = testing_data(
+    predictor = predictor,
+    predictant = predictant,
+    wy_holdout = wy_holdout
+    )
   
   
   info_list = data.table(
@@ -510,9 +514,10 @@ preprocess_data <- function(catchment_code = '5410002',
     remove_wys = list(remove_wys)
   )
   
-  plot_text =
-    set_label_text(info_list = info_list,
-                   forecast_horizon_ = forecast_horizon_)
+  plot_text = set_label_text(
+    info_list = info_list,
+    forecast_horizon_ = forecast_horizon_
+    )
   
   return(
     c(
@@ -527,33 +532,29 @@ preprocess_data <- function(catchment_code = '5410002',
 }
 
 
-data3 = preprocess_data(
-  catchment_code = '5410002',
-  dataset_region = "ChileCentral",
-  dataset_meteo = "ens30avg",
-  dataset_hydro = "GR4J_KGE",
-  month_initialisation = "sep",
-  horizon_strategy = "dynamic",
-  predictor_list = c("pr_sum_-1months",
-                     "tem_mean_-1months",
-                     "SP_last_1months",
-                     ##GR4J
-                     "PROD_last_1months",
-                     "ROUT_last_1months",
-                     ##TUW
-                     "SM_last_1months",
-                     "SUZ_last_1months",
-                     "SLZ_last_1months",
-                     ##SACRAMENTO
-                     "UZT_last_1months",
-                     "UZF_last_1months",
-                     "LZT_last_1months",
-                     "LZS_last_1months",
-                     "LZP_last_1months"),
-                     wy_holdout = 2000,
-                     remove_wys = NULL
-  )
-  
-  ### NOT FINISHED
-  # generate combination of predictors or variables. EJ: SP+PROD
-  
+# data3 = preprocess_data(
+#   catchment_code = '5410002',
+#   dataset_region = "ChileCentral",
+#   dataset_meteo = "ens30avg",
+#   dataset_hydro = "GR4J_KGE",
+#   month_initialisation = "sep",
+#   horizon_strategy = "dynamic",
+#   predictor_list = c("pr_sum_-1months",
+#                      "tem_mean_-1months",
+#                      "SP_last_1months",
+#                      ##GR4J
+#                      "PROD_last_1months",
+#                      "ROUT_last_1months",
+#                      ##TUW
+#                      "SM_last_1months",
+#                      "SUZ_last_1months",
+#                      "SLZ_last_1months",
+#                      ##SACRAMENTO
+#                      "UZT_last_1months",
+#                      "UZF_last_1months",
+#                      "LZT_last_1months",
+#                      "LZS_last_1months",
+#                      "LZP_last_1months"),
+#                      wy_holdout = 2000,
+#                      remove_wys = NULL
+#   )
