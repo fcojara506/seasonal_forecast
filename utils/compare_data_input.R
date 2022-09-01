@@ -3,7 +3,6 @@ rm(list = ls())
 library(ggplot2)
 
 source("utils/run_model_function.R")
-short_river_name <- function(var) {stringr::word(var,start = 1,end = 2)}
 
 #test catchments
 attributes_catchments = 
@@ -41,10 +40,14 @@ library(doParallel)
    
    
 
-join_x_info <- function(x) {
-  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy") %>% minmax()
-  y_train = rownames_to_column(x[["y_train"]],var = "wy") %>% minmax()
+join_x_info <- function(x,normalised = T) {
+  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy") 
+  y_train = rownames_to_column(x[["y_train"]],var = "wy")
   
+  if (normalised) {
+    x_train = x_train %>% minmax(method = "range")
+    y_train = y_train %>% minmax(method = "range")
+  }
   
   
   xy_train = merge(x_train,y_train)
@@ -62,7 +65,7 @@ join_x_info <- function(x) {
   
 }
 
-dataset_data_input <- function(dataset_hydro) {
+dataset_data_input <- function(dataset_hydro,normalised = T) {
 
   model_data <-
     foreach(catchment_code=cod_cuencas) %dopar% {
@@ -102,7 +105,7 @@ dataset_data_input <- function(dataset_hydro) {
     }  
   
 data_input = 
-  lapply(model_data,  join_x_info) %>% 
+  lapply(model_data, function(x) join_x_info(x,normalised = normalised)) %>% 
   rbindlist() %>% 
   merge(attributes_catchments,
         by.x = "catchment_code",
@@ -122,10 +125,12 @@ minmax <- function(df,method = "range" ) {
     predict(df)
   
 }
+
 #saveRDS(data_input,"utils/data_output/model_data_input_49catchments.RDS")
 plot_input <- function(dataset_hydro= "TUW_EVDSep") {
 
-data_input = dataset_data_input(dataset_hydro)
+data_input = dataset_data_input(dataset_hydro,normalised = F)
+
 
 data_input_mean = 
   aggregate(

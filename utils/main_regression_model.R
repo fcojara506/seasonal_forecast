@@ -11,12 +11,12 @@ source("base/Export_data.R")
 # input data
 data = 
   preprocess_data(
-  catchment_code = '7115001', #7115001, 5410002
-  month_initialisation = "oct",
+  catchment_code = '5410002', #7115001, 5410002
+  month_initialisation = "sep",
   horizon_strategy = "dynamic",
   predictor_list = 
   c("pr_sum_-1months"),
-  wy_holdout = 2016
+  wy_holdout = 2022
 )
 
 # ensemble volume forecast
@@ -66,7 +66,7 @@ p2=
   export = F,
   show_chart = T
 )
-# 
+ 
 # #ensemble volume in hindcast (cross-validation)
 p3=plot_backtest_volume(
   data = data,
@@ -75,8 +75,8 @@ p3=plot_backtest_volume(
   export = F,
   show_chart = T
   )
-# 
-# 
+ 
+ 
 #hydrogram of forecasted mean monthly flows
 p4=plot_knn_flow(
   data = data,

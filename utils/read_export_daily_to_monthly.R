@@ -132,7 +132,8 @@ export_meteo(
 # # ERA5-raw
 list(
   feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2020.feather"),
-  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2020_2022.feather")
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2020_2022.feather"),
+  feather::read_feather("base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_2022_present.feather")
 ) %>%
   join_files(filename_export = "base/data_input/meteo_variables/meteo_monthly_catchments_ChileCentral_era5raw_1979_2022.feather")
 

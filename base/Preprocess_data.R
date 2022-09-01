@@ -199,11 +199,11 @@ predictor_generator <-
         data.frame()
       
       kickout_wy = num_records_per_wy[num_records_per_wy$num != period_before, "wy_simple"]
-      message(
-        glue::glue(
-          "REMOVED PREDICTOR: Incomplete {variable} records for wateryear(s): {kickout_wy}",
-          )
-      )
+      # message(
+      #   glue::glue(
+      #     "REMOVED PREDICTOR: Incomplete {variable} records for wateryear(s): {kickout_wy}",
+      #     )
+      # )
       
       var = var %>%
         subset(!(wy_simple %in% kickout_wy)) %>%
@@ -219,7 +219,6 @@ predictor_generator <-
     }
     ,
     error = function(e) {NULL})
-    
   }
 ## predictor dataframe
 predictors_generator <- function(predictor_list,
@@ -531,6 +530,18 @@ preprocess_data <- function(catchment_code = '5410002',#
   )
 }
 
+# x = preprocess_data(
+#   catchment_code = '5410002',
+#   month_initialisation = "sep",
+#   dataset_region = "ChileCentral",
+#   dataset_meteo  = "ens30avg",
+#   horizon_strategy = "dynamic",
+#   horizon_month_start = "oct",
+#   horizon_month_end = "mar",
+#   predictor_list = c("pr_sum_-1months"),
+#   wy_holdout = 2022,
+#   remove_wys = NA
+# )
 
 # data3 = preprocess_data(
 #   catchment_code = '5410002',
