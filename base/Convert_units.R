@@ -1,38 +1,15 @@
 rm(list = ls())
 library(lubridate)
 library(hydromad)
-# partially inspired by
+# script inspired by
 # https://github.com/josephguillaume/hydromad/blob/master/R/convertFlow.R
 
 area_km2 = 2113.423
-days_per_month_horizon = readRDS(file = "days_horizon.RDS")
-q_mm = readRDS(file = "q.RDS")
-#v_mm = readRDS(file = "vol.RDS")
+days_per_month_horizon = readRDS(file = "base/data_input/tests/days_horizon.RDS")
+q_mm = readRDS(file = "base/data_input/tests/q.RDS")
+v_mm = readRDS(file = "base/data_input/tests/vol.RDS")
 
 convert_flow <- function(q,
-                         from = "mm/month",
-                         to="m^3/s",
-                         area_km2 = area_km2,
-                         days_per_month = 365.25/12
-                         ) {
-  
-  # to monthly cubic meters 
-q_m3 = 
-  hydromad::convertFlow(
-    x = q, 
-    from =from,
-    to = "m3/month",
-    area.km2 = area_km2)## q_mm*area_km2*1000
-
-q_final = sweep(x = q_m3,
-              MARGIN =  2,
-              STATS =  1/days_per_month/86400,
-              FUN= "*") #https://stackoverflow.com/questions/51110216/how-to-multiply-each-column-by-each-scalar-in-r
-
-return(q_final)
-}
-
-convert_flow2 <- function(q,
                          from = "mm/month",
                          to = "m^3/s",
                          area_km2 = area_km2,
@@ -83,7 +60,7 @@ convert_flow2 <- function(q,
   return(q_final)
 }
 
-q_m3s_v1 = convert_flow(
+q_m3s = convert_flow(
   q = q_mm,
   from = "mm/month",
   to = "m^3/s",
@@ -91,16 +68,8 @@ q_m3s_v1 = convert_flow(
   days_per_month = days_per_month_horizon
 )
 
-q_m3s_v2 = convert_flow(
-  q = q_mm,
-  from = "mm/month",
-  to = "m^3/s",
-  area_km2 = area_km2,
-  days_per_month = days_per_month_horizon
-)
-
-q_mm_v2 = convert_flow2(
-  q = q_m3s_v1,
+q_mm = convert_flow(
+  q = q_m3s,
   from = "m^3/s",
   to = "mm/month",
   area_km2 = area_km2,
