@@ -199,11 +199,6 @@ predictor_generator <-
         data.frame()
       
       kickout_wy = num_records_per_wy[num_records_per_wy$num != period_before, "wy_simple"]
-      # message(
-      #   glue::glue(
-      #     "REMOVED PREDICTOR: Incomplete {variable} records for wateryear(s): {kickout_wy}",
-      #     )
-      # )
       
       var = var %>%
         subset(!(wy_simple %in% kickout_wy)) %>%
@@ -387,8 +382,9 @@ set_label_text <- function(info_list, forecast_horizon_) {
   # useful text for charts
   year_init = wy_to_year(info_list[['wy_holdout']], forecast_horizon_$init_forecast_index)
   year_end =  wy_to_year(info_list[['wy_holdout']], forecast_horizon_$end_forecast_index)
-  year_initialisation = wy_to_year(info_list[['wy_holdout']],
-                                   forecast_horizon_$month_initialisation_index + 1)
+  year_initialisation = wy_to_year(
+    info_list[['wy_holdout']],
+    forecast_horizon_$month_initialisation_index + 1)
   
   month_initialisation = wy_month_to_month(forecast_horizon_[['month_initialisation_index']])
   
@@ -416,7 +412,7 @@ set_label_text <- function(info_list, forecast_horizon_) {
   
   forecast_horizon_months = seq.Date(from = date_init_forecast, to = date_end_forecast, by = "1 months")
   wy_holdout_months       = seq.Date(from = date_init_wy, to = date_end_wy,  by = "1 months")
-  
+  days_per_month_horizon  = lubridate::days_in_month(forecast_horizon_months)
   
   date_initialisation     = glue("1 {info_list[['month_initialisation']]} {year_initialisation}")
   datetime_initialisation = as.Date(glue("{year_initialisation}/{month_initialisation}/01"))
@@ -427,9 +423,7 @@ set_label_text <- function(info_list, forecast_horizon_) {
     "[{head(forecast_horizon_$months_forecast_period,1)},{tail(forecast_horizon_$months_forecast_period,1)}]"
   )
   
-  
   predictor_list_join = paste(info_list[['predictor_list']][[1]] , collapse = "_AND_") ### check
-  
   
   
   return(
@@ -440,6 +434,7 @@ set_label_text <- function(info_list, forecast_horizon_) {
       volume_span_text_v2 = volume_span_text_v2,
       predictor_list_join = predictor_list_join,
       forecast_horizon_months = forecast_horizon_months,
+      days_per_month_horizon = days_per_month_horizon,
       wy_holdout_months = wy_holdout_months
     )
   )
@@ -530,18 +525,18 @@ preprocess_data <- function(catchment_code = '5410002',#
   )
 }
 
-# x = preprocess_data(
-#   catchment_code = '5410002',
-#   month_initialisation = "sep",
-#   dataset_region = "ChileCentral",
-#   dataset_meteo  = "ens30avg",
-#   horizon_strategy = "dynamic",
-#   horizon_month_start = "oct",
-#   horizon_month_end = "mar",
-#   predictor_list = c("pr_sum_-1months"),
-#   wy_holdout = 2022,
-#   remove_wys = NA
-# )
+x = preprocess_data(
+  catchment_code = '5410002',
+  month_initialisation = "sep",
+  dataset_region = "ChileCentral",
+  dataset_meteo  = "ens30avg",
+  horizon_strategy = "dynamic",
+  horizon_month_start = "oct",
+  horizon_month_end = "mar",
+  predictor_list = c("pr_sum_-1months"),
+  wy_holdout = 2022,
+  remove_wys = NA
+)
 
 # data3 = preprocess_data(
 #   catchment_code = '5410002',
