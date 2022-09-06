@@ -30,8 +30,8 @@ convert_flow <- function(q,
   from.days <- do.call(switch, c(from.step, timefactors))
   to.days <- do.call(switch, c(to.step, timefactors))
   
-  #print(from.days)
-  #print(to.days)
+  print(from.days)
+  print(to.days)
 
   # to monthly cubic meters 
   q_temporal = 
@@ -41,17 +41,14 @@ convert_flow <- function(q,
       to = to,
       area.km2 = area_km2)
   
-  f = days_per_month_horizon/(365.25/12)
   f_to = to.days/(365.25/12)
   f_from = from.days/(365.25/12)
   
-  print(f_to)
-  print(f_from)
-  
+  #https://stackoverflow.com/questions/51110216/how-to-multiply-each-column-by-each-scalar-in-r
   q_final = sweep(x = q_temporal,
                   MARGIN =  2,
                   STATS =  f_from/f_to,
-                  FUN= "*") #https://stackoverflow.com/questions/51110216/how-to-multiply-each-column-by-each-scalar-in-r
+                  FUN= "*") 
 
   return(q_final)
 }
@@ -76,47 +73,47 @@ convert_vol <- function(
 
 
 
-# 
-# ######### test
-# library(dplyr)
-# ### flow
-# area_km2 = 2113.423
-# days_per_month_horizon = readRDS(file = "base/data_input/tests/days_horizon.RDS")
-# q_mm = readRDS(file = "base/data_input/tests/q.RDS") %>% data.frame()
-# 
-# q_m3s = convert_flow(
-#   q = q_mm,
-#   from = "mm/month",
-#   to = "m^3/s",
-#   area_km2 = area_km2,
-#   days_per_month = days_per_month_horizon
-# )
-# 
-# q_mm_test = convert_flow(
-#   q = q_m3s,
-#   from = "m^3/s",
-#   to = "mm/month",
-#   area_km2 = area_km2,
-#   days_per_month = days_per_month_horizon
-# )
-# message(all.equal(q_mm,q_mm_test))
+
+######### test
+library(dplyr)
+### flow
+area_km2 = 2113.423
+days_per_month_horizon = readRDS(file = "base/data_input/tests/days_horizon.RDS")
+q_mm = readRDS(file = "base/data_input/tests/q.RDS") %>% data.frame()
+
+q_m3s = convert_flow(
+  q = q_mm,
+  from = "mm/month",
+  to = "m^3/s",
+  area_km2 = area_km2,
+  days_per_month = days_per_month_horizon
+)
+
+q_mm_test = convert_flow(
+  q = q_m3s,
+  from = "m^3/s",
+  to = "mm/month",
+  area_km2 = area_km2,
+  days_per_month = days_per_month_horizon
+)
+message(all.equal(q_mm,q_mm_test))
 # 
 # ####### volume
-# v_mm = readRDS(file = "base/data_input/tests/vol.RDS")
-# 
-# v_GL = convert_vol(
-#   v = v_mm,
-#   from = "mm/yr",
-#   to = "GL/yr",
-#   area_km2 = area_km2
-# )
-# 
-# v_mm_test = convert_vol(
-#   v = v_GL,
-#   to = "mm/yr",
-#   from = "GL/yr",
-#   area_km2 = area_km2
-# )
-# 
-# message(all.equal(v_mm,v_mm_test))
+v_mm = readRDS(file = "base/data_input/tests/vol.RDS")
+
+v_GL = convert_vol(
+  v = v_mm,
+  from = "mm/yr",
+  to = "GL/yr",
+  area_km2 = area_km2
+)
+
+v_mm_test = convert_vol(
+  v = v_GL,
+  to = "mm/yr",
+  from = "GL/yr",
+  area_km2 = area_km2
+)
+
+message(all.equal(v_mm,v_mm_test))
 # 

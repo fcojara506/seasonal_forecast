@@ -1,13 +1,13 @@
-####
+
 rm(list = ls())
 library(dplyr)
 library(data.table)
 
 
-directory = "~/CAPTA/Pronostico_estacional/CAMELS_preproceso/"
-directory_export = "~/CAPTA/Pronostico_estacional/"
+#directory = "~/CAPTA/Pronostico_estacional/CAMELS_preproceso/"
 
-setwd(directory)
+
+
 #return relevant dates related to CAMELS-CL's availability
 relevant_dates <- function(t_ini.chr,t_fin.chr) {
   t_ini     <- t_ini.chr %>% as.Date(format = "%Y-%m-%d")
@@ -31,7 +31,8 @@ fracCob <- function(x){sum(!is.na(x)) / length(x)}
 
 ## fill flows
 
-fill_data_daily_pca_to_monthly<- function(Data_Q,limits_dates,codes_catchments,umbral_dias = 0.8) {
+fill_data_daily_pca_to_monthly <- 
+  function(Data_Q,limits_dates,codes_catchments,umbral_dias = 0.8) {
   library(missMDA)
   # meses sobre 80% data se consideran completos,
   #meses bajo 80% se declaran faltantes y se rellenan
@@ -138,6 +139,7 @@ Data_Q_mes.f = Data_Q %>%
   mutate(wy_simple = as.numeric(as.character(wy_simple)))
 
 # export useful file for the next steps
+#directory_export = "~/CAPTA/Pronostico_estacional/"
 setwd(directory_export)
 feather::write_feather(Data_attr,"data_input/attributes_49catchments_ChileCentral.feather")
 feather::write_feather(Data_Q_mes.f,"data_input/flows_mm_monthly_49catchments_ChileCentral.feather")
