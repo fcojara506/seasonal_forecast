@@ -99,7 +99,7 @@ ensemble_generator <- function(y,rmse,n_members=1000){
 }
 
 
-ensemble_post <- function(vol_det,data, n_members) {
+ensemble_post <- function(vol_det,data_input, n_members) {
   
   vol_det_unique = vol_det[[1]]
   # historical period
@@ -107,13 +107,13 @@ ensemble_post <- function(vol_det,data, n_members) {
                                 rmse = vol_det_unique$rmse_cv,
                                 n_members = n_members)
   
-  colnames(y_ens_cv) = data$wy_train
+  colnames(y_ens_cv) = data_input$wy_train
   # prediction period
   y_ens_fore = ensemble_generator(y = vol_det_unique$y_fore,
                                   rmse = vol_det_unique$rmse_model,
                                   n_members = n_members)
   
-  colnames(y_ens_fore) = data$wy_holdout
+  colnames(y_ens_fore) = data_input$wy_holdout
   
   return(
   c(list(
@@ -124,16 +124,16 @@ ensemble_post <- function(vol_det,data, n_members) {
   )
 }
 
-ensemble_pre <- function(vol_det,data) {
+ensemble_pre <- function(vol_det,data_input) {
   
   vol_det = purrr::transpose(vol_det)
   # historical period
   y_ens_cv = data.frame(vol_det$y_cv,check.names = F) %>% t
-  colnames(y_ens_cv) = data$wy_train
+  colnames(y_ens_cv) = data_input$wy_train
   
   # prediction period
   y_ens_fore = data.frame(vol_det$y_fore,check.names = F) %>% t %>%  as.matrix()
-  colnames(y_ens_fore) = data$wy_holdout
+  colnames(y_ens_fore) = data_input$wy_holdout
   
   
   return(
@@ -145,14 +145,14 @@ ensemble_pre <- function(vol_det,data) {
   )
 }
 
-forecast_vol_ensemble <- function(data,
+forecast_vol_ensemble <- function(data_input,
                                   n_members=1000,
                                   method='lm',
                                   preProcess = c("center", "scale"),
                                   ...
                                   ){
   # get ensemble names 
-  ensemble_names = names(data$X_train)
+  ensemble_names = names(data_input$X_train)
   
   #initialise volume_regression vector for each ensemble
   vol_det = vector(mode = "list",length = length(ensemble_names))
@@ -161,9 +161,9 @@ forecast_vol_ensemble <- function(data,
   for (ens_i in ensemble_names) {
       #print(ens_i)
     
-      X_train = data$X_train[[ens_i]]
-      y_train = data$y_train$volume_mm
-      X_test  = data$X_test[[ens_i]] 
+      X_train = data_input$X_train[[ens_i]]
+      y_train = data_input$y_train$volume
+      X_test  = data_input$X_test[[ens_i]] 
       
       vol_det[[ens_i]] =
       forecast_vol_determinist(
@@ -178,10 +178,10 @@ forecast_vol_ensemble <- function(data,
   }
   
   if (length(ensemble_names)==1) {
-    y_forecast = ensemble_post(vol_det, data,n_members)
+    y_forecast = ensemble_post(vol_det, data_input,n_members)
   }else{
     
-    y_forecast = ensemble_pre(vol_det,data)
+    y_forecast = ensemble_pre(vol_det,data_input)
     }
   
   
@@ -229,8 +229,8 @@ ensemble_scores <- function(y_train,y_ens) {
   
 }
 
-y_scores <- function(data_fore,data) {
-  y_train = data$y_train$volume_mm %>% as.matrix()
+y_scores <- function(data_fore,data_input) {
+  y_train = data_input$y_train$volume %>% as.matrix()
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()
   

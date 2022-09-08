@@ -94,26 +94,36 @@ ensemble_generator_q <- function(f,y_ens) {
   return(y_ens_i)
 }
 
-knn_model <- function(data,
+knn_model <- function(data_input,
                       n_neighbors = 10,
                       weight_method = c('distance','ranking','uniform')
                       ) {
   library(caret)
   
   # target variables is f_i = Q_i/V of the forecast period (month i)
-  f_train = t(apply(data$q_train,1, function(x) x/sum(x)))
+  #f_train = t(apply(data_input$q_train,1, function(x) x/sum(x)))
+  f_train = lapply(
+    rownames(data_input$q_train),
+    function(x){data_input$q_train[x,]/data_input$y_train[x,]}
+    ) %>% rbindlist() %>% as.matrix()
   
-  # normalise predictor data
-  ensemble_names = names(data$X_train)
+  rownames(f_train) = rownames(data_input$q_train)
   
-  f_fore         = vector(mode = "list",length = length(ensemble_names))
+  
+  
+
+  # normalise predictor data_input
+  ensemble_names = names(data_input$X_train)
+  
+  f_fore         = vector(mode = "list",
+                          length = length(ensemble_names))
   names(f_fore)  = ensemble_names
   
   for (ens_i in ensemble_names) {
     
-  pp = caret::preProcess(data$X_train[[ens_i]], method = "range")
-  X_train_minmax = predict(pp,data$X_train[[ens_i]])
-  X_test_minmax  = predict(pp,data$X_test[[ens_i]])
+  pp = caret::preProcess(data_input$X_train[[ens_i]], method = "range")
+  X_train_minmax = predict(pp,data_input$X_train[[ens_i]])
+  X_test_minmax  = predict(pp,data_input$X_test[[ens_i]])
   
   f_fore[[ens_i]] = 
     knn_predict(
@@ -129,7 +139,7 @@ knn_model <- function(data,
   return(f_fore)
   }
 
-q_ensemble <- function(data,
+q_ensemble <- function(data_input,
                        data_fore,
                        n_neighbors = 6,
                        weight_method = 'distance') {
@@ -137,7 +147,7 @@ q_ensemble <- function(data,
   # we use q = f*V to get q ensemble
   f_fore = 
     knn_model(
-    data = data,
+    data_input = data_input,
     n_neighbors = n_neighbors,
     weight_method = weight_method
     )
