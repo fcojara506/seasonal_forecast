@@ -333,7 +333,7 @@ vol_subplot <- function(
   # change labels
   p2 = p1+
     theme_light()+
-    labs(y = glue::glue("Volumen ({data_input$info$units_y})"),
+    labs(y =  glue("Volumen ({data_input$info$units_y})"),
          x = xlabel
          )+
     theme(
@@ -745,7 +745,7 @@ plot_knn_flow <- function(
     scale_x_discrete(expand = c(0,0))+
     labs(
      x= "",
-     y = glue::glue("Caudal ({data_input$info$units_q})")
+     y = glue("Caudal ({data_input$info$units_q})")
     )
   
   #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
@@ -793,7 +793,7 @@ plot_knn_flow <- function(
   # idea add an inset plot with forecast period
   library(patchwork)
   
-  p2 = (p/p1)+
+  p2 = (p)+
     plot_annotation(
          title=glue("Pronóstico del caudal medio mensual"),
          subtitle = data_input$raw_data$attributes_catchment$gauge_name,

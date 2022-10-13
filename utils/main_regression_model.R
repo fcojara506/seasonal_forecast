@@ -6,13 +6,15 @@ source("base/Knn_model.R")
 source("base/Charts.R")
 source("base/Export_data.R")
 #source("base/Convert_units.R")
-### Forecasts
 
+### Forecasts
+for (catchment_code in c(7321002, 5410002, 5710001,3820001)) {
+  
 # input data
 data_input = 
   preprocess_data(
-  catchment_code = '5410002', #7321002, 5410002, 5710001,3820001
-  month_initialisation = "sep",
+  catchment_code = catchment_code, #7321002, 5410002, 5710001,3820001
+  month_initialisation = "oct",
   horizon_strategy = "dynamic",
   predictor_list = c("pr_sum_-1months"),
   horizon_month_start = "sep",
@@ -32,7 +34,7 @@ data_fore =
   n_members = 1000
   )
 
-monthly_flow = data_input$raw_data$monthly_flows
+#monthly_flow = data_input$raw_data$monthly_flows
 #### metrics
 scores_volume =
   y_scores(
@@ -60,7 +62,7 @@ p1=
   export = T,
   show_chart = T
 )
-ggsave(glue("{data_input$info$catchment_code}_scatter_xy.png"),plot=p1,width=10,height=8,dpi=400)
+ggsave(glue("{data_input$info$catchment_code}_scatter_xy.png"),plot=p1,width=6,height=4,dpi=400)
 
 
 #scatter volume of simulated vs observed in cross-validation
@@ -71,7 +73,7 @@ p2=
   export = F,
   show_chart = T
 )
-ggsave(glue("{data_input$info$catchment_code}_scatter_SimObs.png"),plot=p2,width=10,height=8,dpi=400)
+ggsave(glue("{data_input$info$catchment_code}_scatter_SimObs.png"),plot=p2,width=8,height=6,dpi=400)
 
 # #ensemble volume in hindcast (cross-validation)
 p3=
@@ -95,3 +97,9 @@ p4 =
 )
 
 ggsave(glue("{data_input$info$catchment_code}_q_fore.png"),plot=p4,width=10,height=8,dpi=400)
+
+}
+
+
+
+
