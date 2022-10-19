@@ -1,7 +1,6 @@
 rm(list = ls())
 
-source("run_model_function.R")
-short_river_name <- function(var) {stringr::word(var,start = 1,end = 2)}
+source("utils/run_model_function.R")
 #test catchments
 catchments_attributes_filename = "data_input/attributes_49catchments_ChileCentral.feather"
 attributes_catchments = feather::read_feather(catchments_attributes_filename)

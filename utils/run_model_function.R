@@ -8,6 +8,7 @@ source("base/Export_data.R")
 
 ### Forecasts
 # input data
+short_river_name <- function(var) {stringr::word(var,start = 1,end = 2)}
 
 forecast_vol_to_flow <- function(...) {
   

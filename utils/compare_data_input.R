@@ -10,7 +10,7 @@ attributes_catchments =
   feather::read_feather()
 
 cod_cuencas1 = 
-  "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_GR4J_KGE.feather" %>% 
+  "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_ERA5Ens_SKGE.feather" %>%
   feather::read_feather() %>%
   select(cod_cuenca) %>% 
   unique() %>% 
@@ -24,9 +24,11 @@ months_initialisation = c("oct") #c('may','jun','jul','ago','sep','oct','nov','d
 
 #test meteo set 
 datasets_hydro = c(
-  "GR4J_KGE","GR4J_NSE","GR4J_EVDSep","GR4J_KGE+logNSE","GR4J_SKGE",
-  "TUW_KGE","TUW_NSE","TUW_EVDSep","TUW_KGE+logNSE","TUW_SKGE",
-  "SAC_KGE","SAC_NSE","SAC_EVDSep","SAC_KGE+logNSE","SAC_SKGE"
+  "ERA5Ens_KGE+logNSE","ERA5Ens_SKGE","ERA5Ens_SKGE+logSNSE",
+  "ERA5Raw_KGE+logNSE","ERA5Raw_SKGE","ERA5Raw_SKGE+logSNSE"
+  #"GR4J_KGE","GR4J_NSE","GR4J_EVDSep","GR4J_KGE+logNSE","GR4J_SKGE",
+  #"TUW_KGE","TUW_NSE","TUW_EVDSep","TUW_KGE+logNSE","TUW_SKGE",
+  #"SAC_KGE","SAC_NSE","SAC_EVDSep","SAC_KGE+logNSE","SAC_SKGE"
   )
 #test forecast order
 iterations = length(cod_cuencas)*length(months_initialisation)*length(datasets_hydro)
@@ -49,13 +51,11 @@ join_x_info <- function(x,normalised = T) {
     y_train = y_train %>% minmax(method = "range")
   }
   
-  
   xy_train = merge(x_train,y_train)
-  
   
   df = xy_train %>% 
     data.table() %>% 
-    melt.data.table(id.vars = c("wy","volume_mm"),
+    melt.data.table(id.vars = c("wy","volume"),
                     variable.name = "predictor_name",
                     value.name = "predictor_value") %>% 
     c(x[["info"]])
@@ -72,7 +72,7 @@ dataset_data_input <- function(dataset_hydro,normalised = T) {
       
       preprocess_data(
         catchment_code = catchment_code,
-        month_initialisation = "sep",
+        month_initialisation = "oct",
         dataset_hydro = dataset_hydro,
         dataset_region = "ChileCentral",
         dataset_meteo  = "ens30avg",
@@ -82,30 +82,33 @@ dataset_data_input <- function(dataset_hydro,normalised = T) {
         predictor_list = c(
           "pr_sum_-1months",
           #"tem_mean_-1months",
-          "SP_last_1months",
-          "STORAGE_last_1months",
-          # GR4J
-          "PROD_last_1months",
-          "ROUT_last_1months",
-          "SM_last_1months",
-          #TUW
-          "SUZ_last_1months",
-          "SLZ_last_1months",
-          "UZT_last_1months",
-          #SACRAMENTO
-          "UZF_last_1months",
-          "LZT_last_1months",
-          "LZS_last_1months",
-          "LZP_last_1months"
+          #"SP_last_1months",
+          "STORAGE_last_1months"
+          ## GR4J
+          #"PROD_last_1months",
+          #"ROUT_last_1months",
+          #"SM_last_1months",
+          ##TUW
+          #"SUZ_last_1months",
+          #"SLZ_last_1months",
+          #"UZT_last_1months",
+          ##SACRAMENTO
+          #"UZF_last_1months",
+          #"LZT_last_1months",
+          #"LZS_last_1months",
+          #"LZP_last_1months"
         ),
         wy_holdout = 2000,
-        remove_wys = NA
+        remove_wys = NA,
+        units_q = "m3/s",#"m^3/s",#"mm/month",#"m^3/s",
+        units_y = "GL"#"GL"
       )
       
     }  
   
 data_input = 
-  lapply(model_data, function(x) join_x_info(x,normalised = normalised)) %>% 
+  lapply(model_data, 
+         function(x) join_x_info(x,normalised = normalised)) %>% 
   rbindlist() %>% 
   merge(attributes_catchments,
         by.x = "catchment_code",
@@ -125,12 +128,12 @@ minmax <- function(df,method = "range" ) {
     predict(df)
   
 }
-
+dataset_hydro="ERA5Ens_KGE+logNSE"
 #saveRDS(data_input,"utils/data_output/model_data_input_49catchments.RDS")
 plot_input <- function(dataset_hydro= "TUW_EVDSep") {
 
-data_input = dataset_data_input(dataset_hydro,normalised = F)
-
+normalised = TRUE
+data_input = dataset_data_input(dataset_hydro,normalised = normalised)
 
 data_input_mean = 
   aggregate(
@@ -140,7 +143,7 @@ data_input_mean =
     )
 
 ggplot(data = data_input,
-       aes(x = predictor_value, y=volume_mm)) +
+       aes(x = predictor_value, y=volume)) +
 geom_point()+
 geom_smooth(formula = y ~ x,
               fullrange=F,
@@ -159,12 +162,12 @@ facet_grid(catchment_code ~ predictor_name,
     subtitle = dataset_hydro
   )+
   scale_y_continuous(
-    limits = c(0,1)
+    limits = c(0,ifelse(normalised,1,max(data_input$volume)))
   )
 
 ggsave(glue::glue("utils/data_output/figuras/xy_{dataset_hydro}.png"),
-       width = 12,
-       height = 18)
+       width = 6,
+       height = 45)
 }
 
 sapply(datasets_hydro, plot_input)
