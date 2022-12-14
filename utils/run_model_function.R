@@ -14,12 +14,12 @@ forecast_vol_to_flow <- function(...) {
   
 data = preprocess_data(...)
 # ensemble volume forecast
-data_fore = forecast_vol_ensemble(data = data)
+data_fore = forecast_vol_ensemble(data_input = data)
 
 # ensemble flow forecast
 q_fore =
   q_ensemble(
-    data = data,
+    data_input = data,
     data_fore = data_fore,
     n_neighbors = 6,
     weight_method = 'distance'
@@ -132,8 +132,8 @@ export_data <- function(data,
   
   return(
     list(
-      #df_platform_vol = df_platform_vol,
-      #df_platform_q   = df_platform_q,
+      df_platform_vol = df_platform_vol,
+      df_platform_q   = df_platform_q,
       scores_volume = scores_volume,
       info = data$info
       #q_fore = q_fore,
@@ -150,6 +150,7 @@ run_model <- function(...,month_initialisation,direction = "vol_to_flow") {
       forecast_vol_to_flow(
         month_initialisation=month_initialisation,
         ...
+        #month_initialisation = "oct",wy_holdout = 2022
         )
     
     }else if(direction=="flow_to_vol"){
@@ -162,7 +163,10 @@ run_model <- function(...,month_initialisation,direction = "vol_to_flow") {
   
     }
   output$data$info$direction = direction
-  return(do.call(export_data,output))
+  
+  return(
+    do.call(export_data,output)
+    )
   
 }
 

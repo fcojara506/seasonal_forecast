@@ -1,6 +1,6 @@
 #rm(list = ls())
 #library(lubridate)
-#library(hydromad)
+library(hydromad)
 
 # script transform from
 # https://github.com/josephguillaume/hydromad/blob/master/R/convertFlow.R

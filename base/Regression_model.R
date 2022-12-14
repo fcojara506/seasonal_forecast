@@ -1,4 +1,5 @@
-
+set.seed(10)
+library(truncnorm)
 ############## RMSE IN LEAVE.ONE.OUT #######################
 rmse_LOO <- function(sim,obs) {
   
@@ -89,9 +90,13 @@ ensemble_generator <- function(y,rmse,n_members=1000){
     center = y[i_year]
     variation = rmse[i_year]
     # volume ensemble = center +- variation
-    ensemble_vol[,i_year] <- rnorm(n_members,
-                                   mean=center,
-                                   sd=variation) %>%
+   
+    
+    ensemble_vol[,i_year] <-  rtruncnorm(n = n_members,
+                                         mean = center,
+                                         sd = variation,
+                                         a = 0,
+                                         b = Inf) %>%
       matrix(n_members,1)
   }  
 

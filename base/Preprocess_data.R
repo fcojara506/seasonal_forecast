@@ -4,7 +4,6 @@ library(data.table)
 library(dplyr)
 library(lubridate)
 library(glue)
-library(tidyr)
 library(tibble)
 
 # import local libraries
@@ -114,7 +113,8 @@ get_catchment_data <- function(catchment_code,
       to = info_list$units_q,
       area.km2 = attributes_catchment$area_km2)) %>%
     select(-days_months)
-    #*365.12/12/days_months)
+  
+    #*365.12/12/days_month
     #dcast.data.table(drop=F,formula = yr ~ month ,value.var = "Q_mm")
   ################# modify this matrix accordingly
   raw_data_df = merge(
@@ -191,6 +191,7 @@ predictor_generator <-
   function(var_name,
            forecast_horizon_,
            catchment_data) {
+    
     word = strsplit(var_name, "_")[[1]]
     
     variable = word[1]
@@ -212,9 +213,10 @@ predictor_generator <-
     tryCatch({
       
       var = input_data %>%
+        select("wy_simple", all_of(variable), "ens",wym) %>% 
         subset(wym < forecast_horizon_$month_initialisation_index) %>%
         subset(wym > forecast_horizon_$month_initialisation_index - period_before -1) %>%
-        select(all_of(c("wy_simple", all_of(variable), "ens")))
+        select("wy_simple", all_of(variable), "ens")
       
       num_records_per_wy = var %>%
         group_by(wy_simple) %>%
@@ -222,6 +224,9 @@ predictor_generator <-
         data.frame()
       
       kickout_wy = num_records_per_wy[num_records_per_wy$num != period_before, "wy_simple"]
+      if (length(kickout_wy)>0) {
+        message("INCOMPLETE WATER-YEARS' PREDICTORS: ",unique(interval_wys(kickout_wy)))
+      }
       
       var = var %>%
         subset(!(wy_simple %in% kickout_wy)) %>%
@@ -269,7 +274,8 @@ predictant_generator <- function(
     catchment_data,
     info_list,
     extra_info) {
-  
+  library(stats)
+  library(dplyr)
   cond1 = catchment_data$monthly_flows$wym >= forecast_horizon_$init_forecast_index
   cond2 = catchment_data$monthly_flows$wym <= forecast_horizon_$end_forecast_index
   
@@ -279,11 +285,11 @@ predictant_generator <- function(
     mutate(wy_simple = as.integer(wy_simple))
   
   #volume in mm
-  y = aggregate(
-      formula = Q_mm ~ wy_simple ,
+  y = stats::aggregate(
+      x = Q_mm ~ wy_simple ,
       FUN = 'sum',
       data = q_period_wy
-    ) %>% rename(volume = Q_mm)
+      ) %>% dplyr::rename(volume = Q_mm)
     
   # streamflow in mm
   q = q_period_wy %>%
@@ -377,8 +383,11 @@ training_data <- function(predictor, predictant, wy_holdout) {
 }
 
 testing_data <- function(predictor, predictant, wy_holdout) {
+  
+  
   ### testing period
   if (wy_holdout %in% predictor$wy_simple) {
+    
     X_test = predictor %>%
       dataframe_to_list %>%
       lapply(function(x)
@@ -386,7 +395,8 @@ testing_data <- function(predictor, predictant, wy_holdout) {
     
   } else{
     X_test = NULL
-    stop("YOU NEED VALID PREDICTORS FOR THE TARGET PERIOD (SEE DATA FOR WY_HOLDOUT)")
+    message("PREDICTOR INTERVAL WYS: ", interval_wys(predictor$wy_simple))
+    stop("YOU NEED VALID PREDICTORS FOR THE TARGET WY (SEE DATA FOR WY_HOLDOUT)")
   }
   
   if (wy_holdout %in% predictant$q$wy_simple) {
@@ -408,7 +418,7 @@ wy_to_year <- function(wy, wym) {
   wy = as.integer(wy)
   wym = as.integer(wym)
   
-  gregorian_year = as.integer(ifelse(wym < 10, wy, wy + 1))
+  gregorian_year = as.integer(ifelse(wym < 11, wy, wy + 1))
   return(gregorian_year)
 }
 
@@ -499,7 +509,7 @@ preprocess_data <- function(
     catchment_code = '5410002',
     dataset_region = "ChileCentral",
     dataset_meteo  = "ens30avg",
-    dataset_hydro  = "GR4J_EVDSep",
+    dataset_hydro  = "ERA5Ens_SKGE",
     month_initialisation = "jun",
     horizon_strategy = "dynamic",
     horizon_month_start = "oct",
@@ -599,16 +609,36 @@ preprocess_data <- function(
 }
 
 test_preprocess <- function(){
+  catchment_code = '5410002'
+  dataset_region = "ChileCentral"
+  dataset_meteo  = "ens30avg"
+  dataset_hydro  = "ERA5Ens_SKGE"
+  month_initialisation = "jun"
+  horizon_strategy = "dynamic"
+  horizon_month_start = "oct"
+  horizon_month_end = "mar"
+  predictor_list = c("pr_sum_-1months")
+  wy_holdout = 2022
+  remove_wys = NA
+  units_q = "mm/month"
+  units_y = "mm"
+  
+data1 = preprocess_data(month_initialisation = "oct",
+                        wy_holdout = 2022)
+data1_1 = preprocess_data(month_initialisation = "oct",
+                        wy_holdout = 2022,
+                        units_q = "m^3/s",
+                        units_y = "GL")
 
-x = preprocess_data(
-  catchment_code = '7321002', #7321002 5410002
+data2 = preprocess_data(
+  catchment_code = '7321002',
   month_initialisation = "sep",
   dataset_region = "ChileCentral",
   dataset_meteo  = "ens30avg",
   horizon_strategy = "dynamic",
   horizon_month_start = "oct",
   horizon_month_end = "mar",
-  predictor_list = c("pr_sum_-1months"),
+  predictor_list = c("pr_sum_-1months","tem_mean_3months"),
   wy_holdout = 2022,
   remove_wys = NA
 )
@@ -618,7 +648,7 @@ data3 =
   catchment_code = '5410002',
   dataset_region = "ChileCentral",
   dataset_meteo = "ens30avg",
-  dataset_hydro = "GR4J_KGE",
+  dataset_hydro = "ERA5Ens_SKGE",
   month_initialisation = "sep",
   horizon_strategy = "dynamic",
   predictor_list = c("pr_sum_-1months",

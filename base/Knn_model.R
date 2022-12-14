@@ -63,9 +63,13 @@ knn_predict <- function(X_train,
   
   ## "f" only for nearest neighbours
   f_neigh = f_train[neigh_distance$neigh_ind,]
-  f_predict = weights %*% f_neigh 
-  rownames(f_predict) = rownames(X_test)
   
+
+  f_predict = weights %*% f_neigh
+  rownames(f_predict) = rownames(X_test)
+  message("weight",length(weights))
+  message("f_k",dim(f_neigh))
+  message("f_*",dim(f_predict))
   return(
     list(
       neigh_distance = neigh_distance,
@@ -84,14 +88,17 @@ ensemble_generator_q <- function(f,y_ens) {
   nrow_f = nrow(f)
   
   if (nrow_y == nrow_f) {
-    y_ens_i =  as.matrix(f * y_ens)
+    q_ens_i =  as.matrix(f * y_ens)
   }else{
   y_i = as.matrix(y_ens)
   f_i = as.matrix(f)
-  y_ens_i = y_i %*% f_i
-  }
   
-  return(y_ens_i)
+  q_ens_i = y_i %*% f_i
+  }
+  print(paste("y*",dim(y_i)))
+  print(paste("f*",dim(f_i)))
+  print(paste("q*",dim(q_ens_i)))
+  return(q_ens_i)
 }
 
 knn_model <- function(data_input,
