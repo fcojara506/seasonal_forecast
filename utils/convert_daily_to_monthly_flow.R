@@ -1,12 +1,6 @@
-
 rm(list = ls())
 library(dplyr)
 library(data.table)
-
-
-#directory = "~/CAPTA/Pronostico_estacional/CAMELS_preproceso/"
-
-
 
 #return relevant dates related to CAMELS-CL's availability
 relevant_dates <- function(t_ini.chr,t_fin.chr) {
@@ -97,26 +91,29 @@ month_to_wym<- function(month_as_char)  {
   wym = sprintf("%02d", wym)
   return(wym)
 }
-
+# path to csv files
+filename_selected_basins = "base/data_input/flows/Cuencas_Fondef-DGA_v1.csv"
+filename_basins_attributes = "base/data_input/flows/catchment_attributes_CAMELS-CL.csv"
+filename_basin_flows_mm = "base/data_input/flows/q_mm_day.csv"
 ## cuencas regimen natural seleccionadas
-codes_catchments = as.character(subset(read.csv("Cuencas_Fondef-DGA_v1.csv",sep=";"),Considerar==1)$gauge_id)
+codes_catchments = as.character(subset(read.csv(filename_selected_basins,sep=";"),Considerar==1)$gauge_id)
 
 ## atributos cuencas
-Data_attr        <- fread(file = "CAMELS_CL_v202201/catchment_attributes.csv",
+Data_attr        <- fread(file = filename_basins_attributes,
                           sep = ",",
                           header = T,
                           check.names = F,
                           stringsAsFactors = F) %>%
   mutate(gauge_id = as.character(gauge_id)) %>% 
-  subset(gauge_id %in% codes_catchments) %>%
-  rename(cod_cuenca = gauge_id) %>% 
+  subset(gauge_id %in% codes_catchments) %>% 
+  dplyr::rename(cod_cuenca = gauge_id) %>% 
   .[,1:16]
   
 # catchment names
 limits_dates = relevant_dates(t_ini.chr="1981-04-01",t_fin.chr="2022-05-31")
 
 ## data Q diaria para el periodo seleccionado y cuencas elegidas
-Data_Q <- "CAMELS_CL_v202201/q_mm_day.csv" %>%  
+Data_Q <- filename_basin_flows_mm %>%  
   read.csv(header = TRUE,stringsAsFactors = F, check.names = F) %>% 
   subset(date %in% limits_dates$t_seq.chr)  %>%
   select(-year, -month, -day) %>% 
@@ -130,8 +127,8 @@ limits_dates =
 Data_Q = Data_Q %>% select(-date)
 
 Data_Q_mes.f = Data_Q %>% 
-  fill_data_daily_pca_to_monthly(limits_dates,codes_catchments) %>% 
-  as.data.frame() %>% 
+  fill_data_daily_pca_to_monthly( limits_dates,codes_catchments) %>% 
+  as.data.frame() #%>% 
   mutate(MES = as.character(MES)) %>% 
   setnames(old = c("WY","MES","codes_catchments","Q"),
            new=c("wy_simple","month","cod_cuenca","Q_mm")) %>% 
@@ -139,7 +136,5 @@ Data_Q_mes.f = Data_Q %>%
   mutate(wy_simple = as.numeric(as.character(wy_simple)))
 
 # export useful file for the next steps
-#directory_export = "~/CAPTA/Pronostico_estacional/"
-setwd(directory_export)
-feather::write_feather(Data_attr,"data_input/attributes_49catchments_ChileCentral.feather")
-feather::write_feather(Data_Q_mes.f,"data_input/flows_mm_monthly_49catchments_ChileCentral.feather")
+#feather::write_feather(Data_attr,"data_input/attributes_49catchments_ChileCentral.feather")
+#feather::write_feather(Data_Q_mes.f,"data_input/flows_mm_monthly_49catchments_ChileCentral.feather")

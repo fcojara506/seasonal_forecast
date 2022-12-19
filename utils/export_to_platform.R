@@ -1,7 +1,6 @@
 rm(list = ls())
 
 source("utils/run_model_function.R")
-
 catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
 attributes_catchments = feather::read_feather(catchments_attributes_filename)#[,c("cod_cuenca","gauge_name","gauge_lat","gauge_lon","mean_elev")]
 
@@ -27,7 +26,7 @@ for (cod_cuenca in cod_cuencas) {
         units_q = "m^3/s",
         units_y = "GL"
       )
-      stop()
+      
       df_platform_vol[[w]] = model$df_platform_vol
       df_platform_q[[w]] = model$df_platform_q
       print(w)

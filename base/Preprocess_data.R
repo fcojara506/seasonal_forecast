@@ -9,7 +9,7 @@ library(tibble)
 # import local libraries
 source("base/Convert_units.R")
 
-# MONTHLY DATA FOR A SELECTED CATCHMENT
+
 months_wy = c('abr',
               'may',
               'jun',
@@ -23,27 +23,32 @@ months_wy = c('abr',
               'feb',
               'mar')
 
-get_dataset_filenames <- function(dataset_region,dataset_meteo,dataset_hydro) {
+get_dataset_filenames <- function(dataset_meteo,dataset_hydro) {
   
-    catchments_attributes_filename = "base/data_input/attributes/attributes_49catchments_ChileCentral.feather"
-    flows_filename                 = "base/data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
-    hydro_filename                 = 
-      glue::glue(
-      "base/data_input/storage_variables/",
+    catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.feather"
+    
+    flows_filename                 = "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
+    
+    hydro_filename                 = glue::glue(
+      "data_input/storage_variables/",
       "hydro_variables_monthly_catchments_ChileCentral_{dataset_hydro}.feather"
       )
-    meteo_filename                 = 
-      glue::glue(
-      "base/data_input/meteo_variables/",
+    
+    meteo_filename                 = glue::glue(
+      "data_input/meteo_variables/",
       "meteo_monthly_catchments_ChileCentral_{dataset_meteo}_1979_2022.feather"
     )
+    
+    climateindex_filename = "data_input/climate_index_variables/indices_mensuales_1988_2020.feather"
+    
     
     return(
       list(
         catchments_attributes_filename = catchments_attributes_filename,
         flows_filename = flows_filename,
         meteo_filename = meteo_filename,
-        hydro_filename = hydro_filename
+        hydro_filename = hydro_filename,
+        climateindex_filename = climateindex_filename
       )
     )
     
@@ -60,7 +65,6 @@ read_and_subset_variable <- function(filename, catchment_code) {
   if (file.exists(filename)) {
     df_variable = feather::read_feather(filename) %>%
       mutate(wym = as.numeric(wym)) %>%
-      #mutate(wym_str = months_wy[wym]) %>%
       data.table(key = c("wy_simple", "wym")) %>%
       subset(cod_cuenca == catchment_code, select = -cod_cuenca)
   }
@@ -69,7 +73,6 @@ read_and_subset_variable <- function(filename, catchment_code) {
 }
 
 get_catchment_data <- function(catchment_code,
-                           dataset_region,
                            dataset_meteo,
                            dataset_hydro,
                            remove_wys,
@@ -77,7 +80,6 @@ get_catchment_data <- function(catchment_code,
   
   data_filenames_ = 
     get_dataset_filenames(
-      dataset_region,
       dataset_meteo,
       dataset_hydro)
   
@@ -100,6 +102,11 @@ get_catchment_data <- function(catchment_code,
     catchment_code = catchment_code) %>%
     remove_years(remove_wys)
   
+  monthly_climateindex <- data_filenames_$climateindex_filename %>% 
+    feather::read_feather() %>%
+    mutate(wym = as.numeric(wym)) %>% 
+    mutate(ens = 1)
+  
   monthly_flows = monthly_flows %>%
     data.table() %>%
     mutate(date = lubridate::dmy(paste0("01",
@@ -114,22 +121,18 @@ get_catchment_data <- function(catchment_code,
       area.km2 = attributes_catchment$area_km2)) %>%
     select(-days_months)
   
-    #*365.12/12/days_month
-    #dcast.data.table(drop=F,formula = yr ~ month ,value.var = "Q_mm")
   ################# modify this matrix accordingly
-  raw_data_df = merge(
-    monthly_meteo,
-    monthly_hydro,
-    all = TRUE,
-    by = c("wy_simple", "wym", "ens")
-  )
+ 
+  raw_data_df =  Reduce(function(x, y) merge(x, y, all=TRUE,by = c("wy_simple", "wym", "ens")),
+                        list(monthly_meteo,monthly_hydro,monthly_climateindex) )
+
   
   return(
     list(
       monthly_flows = monthly_flows ,
-      #monthly_flows2= monthly_flows2 ,
       monthly_meteo = monthly_meteo ,
       monthly_hydro = monthly_hydro ,
+      monthly_climateindex = monthly_climateindex,
       raw_data_df = raw_data_df,
       attributes_catchment = attributes_catchment
     )
@@ -507,7 +510,6 @@ get_extra_info <- function(info_list, forecast_horizon_) {
 
 preprocess_data <- function(
     catchment_code = '5410002',
-    dataset_region = "ChileCentral",
     dataset_meteo  = "ens30avg",
     dataset_hydro  = "ERA5Ens_SKGE",
     month_initialisation = "jun",
@@ -525,7 +527,6 @@ preprocess_data <- function(
   info_list = 
     data.table(
     catchment_code = catchment_code,
-    dataset_region = dataset_region,
     dataset_meteo = dataset_meteo,
     dataset_hydro = dataset_hydro,
     month_initialisation = month_initialisation,
@@ -540,7 +541,6 @@ preprocess_data <- function(
   catchment_data = 
     get_catchment_data(
     catchment_code = catchment_code,
-    dataset_region = dataset_region,
     dataset_meteo = dataset_meteo,
     dataset_hydro = dataset_hydro,
     remove_wys = remove_wys,
@@ -609,8 +609,8 @@ preprocess_data <- function(
 }
 
 test_preprocess <- function(){
+  
   catchment_code = '5410002'
-  dataset_region = "ChileCentral"
   dataset_meteo  = "ens30avg"
   dataset_hydro  = "ERA5Ens_SKGE"
   month_initialisation = "jun"
@@ -623,8 +623,11 @@ test_preprocess <- function(){
   units_q = "mm/month"
   units_y = "mm"
   
+  
+  
 data1 = preprocess_data(month_initialisation = "oct",
                         wy_holdout = 2022)
+
 data1_1 = preprocess_data(month_initialisation = "oct",
                         wy_holdout = 2022,
                         units_q = "m^3/s",
@@ -633,7 +636,6 @@ data1_1 = preprocess_data(month_initialisation = "oct",
 data2 = preprocess_data(
   catchment_code = '7321002',
   month_initialisation = "sep",
-  dataset_region = "ChileCentral",
   dataset_meteo  = "ens30avg",
   horizon_strategy = "dynamic",
   horizon_month_start = "oct",
@@ -646,7 +648,6 @@ data2 = preprocess_data(
 data3 = 
   preprocess_data(
   catchment_code = '5410002',
-  dataset_region = "ChileCentral",
   dataset_meteo = "ens30avg",
   dataset_hydro = "ERA5Ens_SKGE",
   month_initialisation = "sep",
