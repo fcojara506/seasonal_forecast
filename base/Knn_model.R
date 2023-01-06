@@ -122,8 +122,7 @@ knn_model <- function(data_input,
   # normalise predictor data_input
   ensemble_names = names(data_input$X_train)
   
-  f_fore         = vector(mode = "list",
-                          length = length(ensemble_names))
+  f_fore         = vector(mode = "list",length = length(ensemble_names))
   names(f_fore)  = ensemble_names
   
   for (ens_i in ensemble_names) {

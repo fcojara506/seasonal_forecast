@@ -61,13 +61,19 @@ forecast_vol_determinist <- function(X_train,
   
   y_cv                <- y_best_model_pred$pred
   
-  # prediction for test data
-  y_fore              <- predict(regression_model,
-                                 newdata =X_test)[[1]]
-  
-  # errors
+  # errors in cv
   rmse_cv              <- rmse_LOO(sim = y_cv,obs = y_train)
   rmse_model           <- hydroGOF::rmse(sim = y_cv, obs = y_train)
+  
+  
+  # prediction for test data
+  if (! is.null(X_test) ) {
+  y_fore <- predict(regression_model,newdata =X_test)
+  #choose one first?
+  y_fore <- y_fore[[1]]
+  }else{
+    y_fore = NULL
+  }
   
  return(list(y_cv = y_cv,
              y_fore = y_fore,
@@ -113,12 +119,16 @@ ensemble_post <- function(vol_det,data_input, n_members) {
                                 n_members = n_members)
   
   colnames(y_ens_cv) = data_input$wy_train
-  # prediction period
+  
+  # prediction test period
+  if (! is.null(vol_det_unique$y_fore) & data_input$info$test_subset) {
   y_ens_fore = ensemble_generator(y = vol_det_unique$y_fore,
                                   rmse = vol_det_unique$rmse_model,
                                   n_members = n_members)
   
   colnames(y_ens_fore) = data_input$wy_holdout
+  
+  }else{y_ens_fore = NULL}
   
   return(
   c(list(
@@ -182,12 +192,11 @@ forecast_vol_ensemble <- function(data_input,
     
   }
   
-  if (length(ensemble_names)==1) {
-    y_forecast = ensemble_post(vol_det, data_input,n_members)
-  }else{
-    
-    y_forecast = ensemble_pre(vol_det,data_input)
-    }
+  if (length(ensemble_names) == 1) {
+    y_forecast = ensemble_post(vol_det, data_input, n_members)
+  } else{
+    y_forecast = ensemble_pre(vol_det, data_input)
+  }
   
   
   return(y_forecast)

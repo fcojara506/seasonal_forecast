@@ -158,14 +158,14 @@ get_forecast_horizon <- function(
     } else{
       init_forecast_index = month_initialisation_index
     }
-  } else if (horizon_strategy == 'fixed') {
+  } else if (horizon_strategy == 'static') {
     init_forecast_index = init_target_index
   }
   
   # end month
   if (horizon_strategy == "dynamic") {
     end_forecast_index = end_target_index
-  } else if (horizon_strategy == 'fixed') {
+  } else if (horizon_strategy == 'static') {
     end_forecast_index = end_target_index
   }
   
@@ -520,7 +520,8 @@ preprocess_data <- function(
     wy_holdout = 2016,
     remove_wys = NA,
     units_q = "mm/month",
-    units_y = "mm"
+    units_y = "mm",
+    test_subset = T
                             ) {
   
   # save function arguments
@@ -535,7 +536,8 @@ preprocess_data <- function(
     wy_holdout = wy_holdout,
     remove_wys = list(remove_wys),
     units_q = units_q,
-    units_y = units_y
+    units_y = units_y,
+    test_subset = test_subset
   )
   # catchment data (raw forcings, flows)
   catchment_data = 
@@ -587,15 +589,14 @@ preprocess_data <- function(
     wy_holdout = wy_holdout
     )
   
+  if (test_subset) {
+    
   test_data  = 
     testing_data(
     predictor = predictor,
     predictant = predictant,
     wy_holdout = wy_holdout
     )
-  
-
-  
   return(
     c(
       train_data,
@@ -606,6 +607,21 @@ preprocess_data <- function(
       info = list(info_list)
     )
   )
+  }else{
+    return(
+      c(
+        train_data,
+        raw_data = list(catchment_data),
+        time_horizon = list(forecast_horizon_),
+        extra_info = list(extra_info),
+        info = list(info_list)
+      )
+    )
+  }
+  
+    
+    
+  
 }
 
 test_preprocess <- function(){

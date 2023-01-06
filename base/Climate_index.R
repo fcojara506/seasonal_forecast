@@ -54,17 +54,17 @@ read_indices_files <- function(download_index_files = T) {
   a = read.table("aao",col.names = c("year","month","AAO")) %>%
     data.table(key = c("year", "month"))
   
-  b = read.csv("censo", skip = 1, sep = "") %>%
-    head(-2) %>%
+  b = read.csv("censo", skip = 1, sep = "",header = T) %>%
+    head(-2) %>% 
     as.matrix.data.frame() %>%
     `colnames<-`(colnames) %>%
     data.table %>%
-    reshape2::melt(id.vars = "year") %>%
-    rename(month = variable, BIENSO = value) %>%
+    reshape2::melt(id.vars = "year",variable.name = "month",value.name = "BIENSO") %>% 
     mutate_all(as.numeric) %>%
     data.table(key = c("year", "month"))
   
-  c = read.csv("espi", sep = "") %>% rename(year = YYYY, month = MM) %>%
+  c = read.csv("espi", sep = "") %>% 
+    rename(year = YYYY, month = MM) %>%
     mutate(EI = NULL, LI = NULL) %>%
     data.table(key = c("year", "month"))
   
@@ -145,7 +145,8 @@ read_indices_files <- function(download_index_files = T) {
     dplyr::na_if(-99.9)  %>%
     dplyr::na_if(-9.99)  %>%
     dplyr::na_if(-999) %>%
-    dplyr::na_if(99.99) %>% 
+    dplyr::na_if(99.99) %>%
+    tidyr::drop_na() %>% 
   mutate(
       wy_simple = wy_simple(month = month, year = year),
       wym = wym_simple(month = month),

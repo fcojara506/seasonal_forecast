@@ -26,9 +26,6 @@ months_initialisation = c("oct") #c('may','jun','jul','ago','sep','oct','nov','d
 datasets_hydro = c(
   "ERA5Ens_KGE+logNSE","ERA5Ens_SKGE","ERA5Ens_SKGE+logSNSE",
   "ERA5Raw_KGE+logNSE","ERA5Raw_SKGE","ERA5Raw_SKGE+logSNSE"
-  #"GR4J_KGE","GR4J_NSE","GR4J_EVDSep","GR4J_KGE+logNSE","GR4J_SKGE",
-  #"TUW_KGE","TUW_NSE","TUW_EVDSep","TUW_KGE+logNSE","TUW_SKGE",
-  #"SAC_KGE","SAC_NSE","SAC_EVDSep","SAC_KGE+logNSE","SAC_SKGE"
   )
 #test forecast order
 iterations = length(cod_cuencas)*length(months_initialisation)*length(datasets_hydro)
