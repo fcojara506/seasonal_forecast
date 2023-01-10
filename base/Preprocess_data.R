@@ -228,7 +228,7 @@ predictor_generator <-
       
       kickout_wy = num_records_per_wy[num_records_per_wy$num != period_before, "wy_simple"]
       if (length(kickout_wy)>0) {
-        message("INCOMPLETE WATER-YEARS' PREDICTORS: ",unique(interval_wys(kickout_wy)))
+        message("Warning. Removing INCOMPLETE PREDICTORS, WATER-YEARS: ",unique(interval_wys(kickout_wy)))
       }
       
       var = var %>%

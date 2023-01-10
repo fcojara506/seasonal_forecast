@@ -1,4 +1,4 @@
-rm(list = ls())
+#rm(list = ls())
 
 source("base/Preprocess_data.R")
 source("base/Regression_model.R")
@@ -16,22 +16,21 @@ data = preprocess_data(...)
 # ensemble volume forecast
 data_fore = forecast_vol_ensemble(data_input = data)
 
-# ensemble flow forecast
-q_fore =
-  q_ensemble(
-    data_input = data,
-    data_fore = data_fore,
-    n_neighbors = 6,
-    weight_method = 'distance'
-  )
+# # ensemble flow forecast
+# q_fore =
+#   q_ensemble(
+#     data_input = data,
+#     data_fore = data_fore,
+#     n_neighbors = 6,
+#     weight_method = 'distance'
+#   )
 
-return(
-  list(
-  q_fore = q_fore,
+results =list(
+  #q_fore = q_fore,
   data_fore = data_fore,
-  data = data
-  )
-  )
+  data = data)
+
+return(results)
 
 
 }
@@ -120,8 +119,8 @@ export_data <- function(data,
                         q_fore
                           ) {
   #platform data
-  df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
-  df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
+  #df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
+  #df_platform_q   = export_flow_platform(data=data,q_fore = q_fore)
   
   #### metrics
   scores_volume = 
@@ -132,8 +131,8 @@ export_data <- function(data,
   
   return(
     list(
-      df_platform_vol = df_platform_vol,
-      df_platform_q   = df_platform_q,
+      #df_platform_vol = df_platform_vol,
+      #df_platform_q   = df_platform_q,
       scores_volume = scores_volume,
       info = data$info
       #q_fore = q_fore,

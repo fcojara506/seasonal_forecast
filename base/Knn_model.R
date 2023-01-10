@@ -116,9 +116,6 @@ knn_model <- function(data_input,
   
   rownames(f_train) = rownames(data_input$q_train)
   
-  
-  
-
   # normalise predictor data_input
   ensemble_names = names(data_input$X_train)
   
@@ -129,7 +126,11 @@ knn_model <- function(data_input,
     
   pp = caret::preProcess(data_input$X_train[[ens_i]], method = "range")
   X_train_minmax = predict(pp,data_input$X_train[[ens_i]])
-  X_test_minmax  = predict(pp,data_input$X_test[[ens_i]])
+  
+  if (! is.null(vol_det_unique$y_fore) & data_input$info$test_subset) {
+    X_test_minmax  = predict(pp,data_input$X_test[[ens_i]])
+  }else{X_test_minmax = NULL}
+  
   
   f_fore[[ens_i]] = 
     knn_predict(
