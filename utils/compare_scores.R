@@ -102,9 +102,10 @@ labs(
   theme(legend.position = "bottom",
         strip.text.x = element_text(size = 6))
 
-ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_climate_indices.png",
+ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_climate_indices_comparacion_horizonte.png",
                 dpi=500,plot = p, width =  10,height = 6)    
 
+plot(p)
 
 p1 = subset(data_input,horizon == "1 mes previo") %>% 
   ggplot( 
@@ -122,12 +123,54 @@ p1 = subset(data_input,horizon == "1 mes previo") %>%
     y = "CRPSS (climatología)"
   )+
   theme(legend.position = "bottom")
-
+plot(p1)
 ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_climate_indices_per_month.png",
                 dpi=500,plot = p1, width =  10,height = 6)    
 
-
 p2=ggplot(data = subset(data_input,horizon == "1 mes previo"), 
+          mapping = aes(x = month_initialisation,
+                        y = crpss_climatology))+
+  geom_hline(yintercept = 0)+
+  geom_hline(yintercept = 0.5)+
+  geom_boxplot()+
+  facet_wrap(~var)+
+  labs(
+    title = "CRPSS volumen estacional sep-mar, 49 cuencas, 1981-2020",
+    #subtitle = "Meteo: pre-processed, averaged 30 ensemble members",
+    x = "",
+    y = "CRPSS (climatología)"
+  )+
+  theme(legend.position = "bottom")
+plot(p2)
+
+ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_per_climate_indices.png",
+                dpi=500,plot = p2, width =  10,height = 6)    
+
+#plot correlation
+p3=ggplot(data = subset(data_input,horizon == "1 mes previo"), 
+          mapping = aes(y = floor(gauge_lat),
+                        x = crpss_climatology,
+                        group = floor(gauge_lat)))+
+  geom_boxplot()+
+  geom_vline(xintercept = 0)+
+  geom_vline(xintercept = 0.5)+
+  facet_wrap(~var)+
+  labs(
+    title = "CRPSS volumen estacional sep-mar, 49 cuencas, 1981-2020",
+    #subtitle = "Meteo: pre-processed, averaged 30 ensemble members",
+    x = "",
+    y = "CRPSS (climatología)")+
+  theme(legend.position = "bottom")
+
+plot(p3)
+
+ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_climate_indices_per_latitude.png",
+                dpi=500,plot = p3, width =  10,height = 6)    
+
+#heatmap correlation
+
+
+p4=ggplot(data = subset(data_input,horizon == "1 mes previo"), 
           mapping = aes(y =as.character(catchment_code),
                         x = month_initialisation,
                         fill=crpss_climatology))+
@@ -146,7 +189,7 @@ p2=ggplot(data = subset(data_input,horizon == "1 mes previo"),
 
 
 ggplot2::ggsave("data_output/scores/figures/CRPSS_vol_climate_indices_heatmap.png",
-                dpi=500,plot = p2,
+                dpi=500,plot = p4,
                 width =  10,height = 8)    
 
 }

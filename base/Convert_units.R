@@ -68,24 +68,6 @@ convert_vol <- function(
   return(v)
 }
 
-# convert_data_input <- function(data_input) {
-#   
-# }
-# 
-# convert_data_fore <- function(data_fore,data_input) {
-#   
-# }
-# 
-# convert_q_fore  <- function(q_fore,data_input = data_input) {
-#   q_fore_m3s = q_fore %>% 
-#   convert_flow(from = "mm/month",
-#                to = "m^3/s",
-#                area_km2 = data_input$raw_data$attributes_catchment$area_km2,
-#                days_per_month = data_input$plot_text$days_per_month_horizon,
-#                timestep.default = "months"
-#                )
-# }
-
 
 # ######### test
 # library(dplyr)
