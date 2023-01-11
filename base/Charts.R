@@ -103,9 +103,9 @@ plot_X_y_train <- function(
         title = "Volumen vs Predictores" ,
         subtitle = paste("Cuenca:",data_input$raw_data$attributes_catchment$gauge_name),
         x= "predictor",
-        y= glue("Volumen observado ({data_input$info$units_y}) ", data_input$extra_info$volume_span_text),
+        y= glue("Volumen observado ({data_input$info$units_y}) ", data_input$time_horizon$volume_span_text),
         col="Año hidrológico",
-        caption = glue("Emisión {data_input$extra_info$date_initialisation}")
+        caption = glue("Emisión {data_input$time_horizon$date_initialisation}")
       )+ theme(
         legend.position = "bottom",
         legend.key.width = unit(0.5,"in")
@@ -185,12 +185,12 @@ p =
     geom_vline(xintercept =  mean(v_line$y_fore))+
   scale_color_viridis_b()+
     labs(
-      x = glue("Volumen simulado {data_input$extra_info$volume_span_text} ({data_input$info$units_y})"),
-      y = glue("Volumen observado {data_input$extra_info$volume_span_text} ({data_input$info$units_y})"),
+      x = glue("Volumen simulado {data_input$time_horizon$volume_span_text} ({data_input$info$units_y})"),
+      y = glue("Volumen observado {data_input$time_horizon$volume_span_text} ({data_input$info$units_y})"),
       title = "Volumen observado vs simulado en validación cruzada",
       subtitle = paste("Cuenca:", data_input$raw_data$attributes_catchment$gauge_name),
       col = "Año Hidrológico",
-      caption = glue("Emisión {data_input$extra_info$date_initialisation}")
+      caption = glue("Emisión {data_input$time_horizon$date_initialisation}")
     )+ theme(
       legend.position = "bottom",
       legend.key.width = unit(0.5,"in"),
@@ -505,10 +505,10 @@ plot_backtest_volume <- function(
   
     p1 = p
     
-    title =  glue("Pronóstico retrospectivo de volumen {data_input$extra_info$volume_span_text}")
+    title =  glue("Pronóstico retrospectivo de volumen {data_input$time_horizon$volume_span_text}")
     subcaption =
-      glue("Pronóstico de volumen {data_input$extra_info$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
-      "Emisión {data_input$extra_info$date_initialisation}")
+      glue("Pronóstico de volumen {data_input$time_horizon$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
+      "Emisión {data_input$time_horizon$date_initialisation}")
     
   ##############
   # compute new order of x-axis based on median of the forecast
@@ -573,8 +573,8 @@ plot_backtest_volume <- function(
     # filename
     figure_vol_output = glue(
       "{folder_output}EnsembleVolumeHindcast_{data_input$info$catchment_code}_",
-      "1st{data_input$info$month_initialisation}_{data_input$extra_info$predictor_list_join}_",
-      "{data_input$extra_info$volume_span_text}{data_input$wy_holdout}.png")
+      "1st{data_input$info$month_initialisation}_{data_input$time_horizon$predictor_list_join}_",
+      "{data_input$time_horizon$volume_span_text}{data_input$wy_holdout}.png")
     
     ggsave(figure_vol_output,plot = p3, width = width_p, height = height_p)
   }
@@ -662,7 +662,7 @@ plot_knn_flow <- function(
   library(ggplot2)
   library(see) # halfviolin
   
-  plot_text = data_input$extra_info
+  plot_text = data_input$time_horizon
   
   q_plot_data = data_plot_knn_flow(data_input = data_input,q_ens_fore=q_ens_fore)
   q_plot_data$q_obs_stats$wym_str <- factor(q_plot_data$q_obs_stats$wym_str , levels=unique(q_plot_data$q_obs_stats$wym_str))

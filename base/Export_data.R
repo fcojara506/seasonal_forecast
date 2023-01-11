@@ -59,7 +59,7 @@ export_volume_platform <- function(data,data_fore) {
     vol_promin = v_promin %>% round(2)%>% replace_negative(),
     vol_pron   = v_pron %>% round(2)%>% replace_negative(),
     year = wy_target,
-    fecha_emision = data$extra_info$datetime_initialisation,
+    fecha_emision = data$time_horizon$datetime_initialisation,
     comentarios = "version de prueba"
   )
   
@@ -137,12 +137,12 @@ export_flow_platform <- function(data,q_fore) {
     as.matrix()%>% 
     t() %>%
     data.frame(check.names = F) %>% 
-    `rownames<-` (data$extra_info$wy_holdout_months) %>% #(data$plot_text$forecast_horizon_months)
+    `rownames<-` (data$time_horizon$wy_holdout_months) %>% #(data$plot_text$forecast_horizon_months)
     `colnames<-`(c("q_normal","q_last_year","q_obs","q_pron_min","q_pron","q_pron_max")) %>% 
     rownames_to_column(var = "fecha") %>%
     mutate(cuenca = data$info$catchment_code) %>%
     mutate(cuenca_name = data$raw_data$attributes_catchment$gauge_name) %>%
-    mutate(fecha_emision = data$extra_info$datetime_initialisation) %>%
+    mutate(fecha_emision = data$time_horizon$datetime_initialisation) %>%
     select(all_of(columns)) %>% 
     mutate(comentarios = "version de prueba")
     
