@@ -9,24 +9,20 @@ source("base/Convert_units.R")
 
 
 get_dataset_filenames <- function(dataset_meteo, dataset_hydro) {
-    # catchment attributes
-    catchments_attributes_filename <-
-      "data_input/attributes/attributes_49catchments_ChileCentral.feather"
+
+  # catchment attributes
+    catchments_attributes_filename <-"data_input/attributes/attributes_49catchments_ChileCentral.feather"
     # flow in average monthly mm
-    flows_filename <- 
-      "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
+    flows_filename <- "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
     # variable from the hydrology model
-    hydro_filename <- glue::glue(
-      "data_input/storage_variables/",
-      "hydro_variables_monthly_catchments_ChileCentral_{dataset_hydro}.feather"
-      )
+    hydro_filename <- NULL
+    hydro_filename <- if(!is.null(dataset_hydro)) glue::glue("data_input/storage_variables/","hydro_variables_monthly_catchments_ChileCentral_{dataset_hydro}.feather")
     # meteorological data from dataset_meteo
-    meteo_filename <- glue::glue(
-      "data_input/meteo_variables/",
-      "meteo_monthly_catchments_ChileCentral_{dataset_meteo}_1979_2022.feather"
-    )
+    meteo_filename <- NULL
+    meteo_filename <- if(!is.null(dataset_meteo)) glue::glue("data_input/meteo_variables/","meteo_monthly_catchments_ChileCentral_{dataset_meteo}_1979_2022.feather")
     # monthly standard climate indices
     climateindex_filename <- "data_input/climate_index_variables/indices_mensuales_1988_2020.feather"
+    
     return(
       list(
         catchments_attributes_filename = catchments_attributes_filename,
@@ -46,7 +42,8 @@ read_and_subset_variable <- function(filename, catchment_code) {
   wym <- numeric()
   df_variable <- NULL
   
-  if (file.exists(filename)) {
+  if (!is.null(filename) && file.exists(filename)) {
+    # read the feather file and subset by catchment code
     df_variable <- feather::read_feather(filename) %>%
       mutate(wym = as.numeric(wym)) %>%
       data.table(key = c("wy_simple", "wym")) %>%
@@ -56,17 +53,38 @@ read_and_subset_variable <- function(filename, catchment_code) {
   return(df_variable)
 }
 
-get_catchment_data <- function(catchment_code,
+read_and_process_catchment_data <- function(catchment_code,
                            dataset_meteo,
                            dataset_hydro,
                            remove_wys,
                            units_q) {
+  #' @title Read and Process Catchment Data
+  #'
+  #' @description This script reads and processes data for a specific catchment. 
+  #' It imports the feather library and then defines the filenames
+  #' for the catchment attributes, flows, meteorological data, and hydrological 
+  #' variables using the get_dataset_filenames() function. 
+  #'
+  #' @param dataset_meteo The dataset for the meteorological data
+  #' @param dataset_hydro The dataset for the hydrological data
+  #' @param catchment_code The code for the specific catchment
+  #' @param remove_wys A list of years to be removed from the data
+  #' @param units_q The units for the flow data
+  #'
+  #' @return A list of processed data and the catchment attributes
+  #'
+  #' @examples
+  #' catchment_data <- read_and_process_catchment_data(dataset_meteo = dataset_meteo,
+  #'                                                   dataset_hydro = dataset_hydro,
+  #'                                                   catchment_code = "4311001",
+  #'                                                   remove_wys = c(1990, 1995),
+  #'                                                   units_q = "m^3/s")
+  
   library(feather)
-  # path filenames to catchment attributes,
-  #flows, meteorological data, hydrological variables
-  data_filenames <- get_dataset_filenames(
-    dataset_meteo = dataset_meteo,
-    dataset_hydro = dataset_hydro)
+  if(missing(catchment_code) || missing(dataset_meteo) || missing(dataset_hydro) || missing(remove_wys) || missing(units_q)) {
+    stop("Missing parameter. All parameters are required (catchment_code, dataset_meteo, dataset_hydro, remove_wys, units_q)")
+  }
+  
   #initialise NULL attributes
   attributes_catchment <- NULL
   monthly_flows <- NULL
@@ -74,30 +92,30 @@ get_catchment_data <- function(catchment_code,
   monthly_hydro <- NULL
   monthly_climateindex <- NULL
   
-  attributes_catchment <-
-    read_feather(data_filenames$catchments_attributes_filename) %>%
+  # path filenames to catchment attributes
+  data_filenames <- get_dataset_filenames(
+    dataset_meteo = dataset_meteo,
+    dataset_hydro = dataset_hydro)
+  
+  # read all the catchments attributes from the study area
+  attributes_catchments <- read_feather(data_filenames$catchments_attributes_filename)
+  
+  #check if the catchment code exists
+  if(!(catchment_code %in% attributes_catchments$cod_cuenca)) {
+    stop(paste0(catchment_code, " not found in catchments"))
+  }
+  
+  # subset the attributes for the specific catchment
+  attributes_catchment <- attributes_catchments %>% 
     subset(cod_cuenca == catchment_code)
   
+  # read and subset the flows, meteorological data, and hydrological data
   monthly_flows        <- read_and_subset_variable(
     filename = data_filenames$flows_filename,
     catchment_code = catchment_code) %>%
     remove_years(remove_wys)
   
-  monthly_meteo       <- read_and_subset_variable(
-    filename = data_filenames$meteo_filename,
-    catchment_code = catchment_code) %>%
-    remove_years(remove_wys)
-  
-  monthly_hydro       <- read_and_subset_variable(
-    filename = data_filenames$hydro_filename,
-    catchment_code = catchment_code) %>%
-    remove_years(remove_wys)
-  
-  monthly_climateindex <- data_filenames$climateindex_filename %>% 
-    feather::read_feather() %>%
-    mutate(wym = as.numeric(wym)) %>% 
-    mutate(ens = 1)
-  
+  # convert the flow data to the desired units
   monthly_flows <- monthly_flows %>%
     data.table() %>%
     mutate(date = lubridate::dmy(paste0("01",
@@ -113,13 +131,37 @@ get_catchment_data <- function(catchment_code,
       to = units_q,
       area.km2 = attributes_catchment$area_km2)) %>%
     select(-days_months)
+  # meteorological data
+  monthly_meteo       <- read_and_subset_variable(
+    filename = data_filenames$meteo_filename,
+    catchment_code = catchment_code) %>%
+    remove_years(remove_wys)
+  # data from the hydrological model
+  monthly_hydro       <- read_and_subset_variable(
+    filename = data_filenames$hydro_filename,
+    catchment_code = catchment_code) %>%
+    remove_years(remove_wys)
   
-  ################# modify this matrix accordingly
+  # read and process the climate index data
+  monthly_climateindex <- data_filenames$climateindex_filename %>% 
+    feather::read_feather() %>%
+    mutate(wym = as.numeric(wym))
  
-  raw_data_df <-  Reduce(function(x, y) {
-    merge(x, y, all = TRUE, by = c("wy_simple", "wym", "ens"))},
-  list(monthly_meteo, monthly_hydro, monthly_climateindex))
-
+  # merge the meteorological, hydrological, and climate index data into a single dataframe
+  raw_data_df <-  Reduce(
+    f = function(x, y) {
+      merge(x,
+            y,
+            all = TRUE,
+            by = c("wy_simple", "wym"),
+      )
+    },
+    x = purrr::compact(list(
+      monthly_meteo, monthly_hydro, monthly_climateindex
+    ))
+  )
+  
+  #return a list of the processed data and the catchment attributes
   return(
     list(
       monthly_flows = monthly_flows,
@@ -148,7 +190,8 @@ get_forecast_horizon <- function(
   month_initialisation_index <- match(month_initialisation, months_wy)
   init_target_index <- match(horizon_month_start, months_wy)
   end_target_index <- match(horizon_month_end, months_wy)
-  
+  # check horizon_strategy
+  horizon_strategy <- match.arg(horizon_strategy,c("dynamic","static"))
   # start month
   if (horizon_strategy == "dynamic") {
     if (month_initialisation_index < init_target_index) {
@@ -264,11 +307,13 @@ get_forecast_horizon <- function(
 split_predictor_name <- function(predictor_name, month_initialisation_index) {
   # var_name, consists of 3 attributes:
   # variable, aggregation function, aggregation period
-  predictor_list <- strsplit(predictor_name, "_")[[1]]
+  predictor_name_list <- strsplit(predictor_name, "_")[[1]]
+  # check if predictor's name is correct
+  stopifnot(length(predictor_name_list)==3)
   # separate into variable function and horizon
-  predictor_variable <- predictor_list[1]
-  predictor_function <- predictor_list[2]
-  predictor_horizon <- as.numeric(strsplit(predictor_list[3], "months")[[1]])
+  predictor_variable <- predictor_name_list[1]
+  predictor_function <- predictor_name_list[2]
+  predictor_horizon <- as.numeric(strsplit(predictor_name_list[3], "months")[[1]])
   #condition to consider the whole period of the current wy
   if (predictor_horizon < 0) {
     predictor_horizon <- month_initialisation_index - 1
@@ -290,20 +335,22 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
     
     predictor_attributes <- split_predictor_name(
       predictor_name = predictor_name,
-      month_initialisation_index = month_initialisation_index) 
-      
+      month_initialisation_index = month_initialisation_index)
+    
     input_data <- catchment_data$raw_data_df
-    num_ensembles <- unique(input_data$ens)
     
-    if (is.null(num_ensembles)) {input_data$ens <- 1}
-    
+    # check if values of variable belong to catchment data
+    if(!(predictor_attributes$predictor_variable %in% names(catchment_data$raw_data_df))) {
+      stop(paste0("predictor: ",predictor_attributes$predictor_variable, " not found in database"))
+    }
+
     tryCatch({
     # subset data in forecast horizon interval
       var <- input_data %>%
-        select("wy_simple", all_of(predictor_attributes$predictor_variable), "ens",wym) %>% 
+        select("wy_simple", all_of(predictor_attributes$predictor_variable),"wym") %>% 
         subset(wym < month_initialisation_index) %>%
         subset(wym > month_initialisation_index - predictor_attributes$predictor_horizon -1) %>%
-        select("wy_simple", all_of(predictor_attributes$predictor_variable), "ens")
+        select("wy_simple", all_of(predictor_attributes$predictor_variable))
       
       num_records_per_wy <- var %>% 
         count(wy_simple) %>% 
@@ -322,11 +369,10 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
         subset(!(wy_simple %in% kickout_wy)) %>%
         aggregate(
           FUN = predictor_attributes$predictor_function,
-          by = list(wy_simple = .$"wy_simple", ens = .$"ens"),
+          by = list(wy_simple = .$"wy_simple"),
           drop = T
         ) %>%
         select(c("wy_simple",
-                 "ens",
                  all_of(predictor_attributes$predictor_variable)))
       
       names(var)[names(var) == predictor_attributes$predictor_variable] <- predictor_attributes$predictor_newname
@@ -355,7 +401,7 @@ predictors_generator <- function(predictor_list,
   
   
   predictors <- Reduce(merge, predictors) %>%
-    data.table(key = "wy_simple,ens") %>%
+    data.table(key = "wy_simple") %>%
     tidyr::drop_na()
   
   return(predictors)
@@ -442,26 +488,30 @@ interval_wys <- function(wy_train) {
 }
 
 
-dataframe_to_list <- function(df) {
-  ensemble_names <- unique(df$ens)
-  df_list <- lapply(ensemble_names,
-                   function(ens_i)
-                     subset(df, ens == ens_i, select = -ens))
-  names(df_list) <- ensemble_names
-  return(df_list)
-}
+# dataframe_to_list <- function(df) {
+#   ensemble_names <- unique(df$ens)
+#   df_list <- lapply(ensemble_names,
+#                    function(ens_i)
+#                      subset(df, ens == ens_i, select = -ens))
+#   names(df_list) <- ensemble_names
+#   return(df_list)
+# }
 
 
 training_set <- function(predictors, predictant, wy_holdout) {
+  if (is.null(predictors) | is.null(predictant)) { 
+    stop("error: PREDICTORS OR PREDICTANT CANNOT BE NULL")
+  }
+  
   wy_train <- intersect(predictors$wy_simple, predictant$q$wy_simple)
   wy_train <- wy_train[wy_train != wy_holdout]
   
   ### training period for 
-  X_train <- predictors %>%
-    dataframe_to_list %>%
-    lapply(function(x) subset_years(x, wy_train))
+  # X_train <- predictors %>%
+  #   dataframe_to_list %>%
+  #   lapply(function(x) subset_years(x, wy_train))
   
-  #X_train = predictors %>% subset_years(wy_train)
+  X_train <- predictors %>% subset_years(wy_train)
   y_train <- predictant$y %>% subset_years(wy_train)
   q_train <- predictant$q %>% subset_years(wy_train)
   return(
@@ -469,8 +519,8 @@ training_set <- function(predictors, predictant, wy_holdout) {
       X_train = X_train,
       y_train = y_train,
       q_train = q_train,
-      wy_train = wy_train,
-      wy_holdout = wy_holdout
+      wy_train = wy_train
+      #wy_holdout = wy_holdout
     )
   )
 }
@@ -480,11 +530,11 @@ testing_set <- function(predictors, predictant, wy_holdout) {
   
   # wy_holdout must be in predictors
   if (wy_holdout %in% predictors$wy_simple) {
-    X_test <- predictors %>%
-      dataframe_to_list %>%
-      lapply(function(x)
-        subset_years(x, wy_holdout))
-    
+    # X_test <- predictors %>%
+    #   dataframe_to_list %>%
+    #   lapply(function(x)
+    #     subset_years(x, wy_holdout))
+    X_test <- predictors %>% subset_years(wy_holdout)
   } else{
     X_test <- NULL
     message("PREDICTOR INTERVAL WYS: ", interval_wys(predictors$wy_simple))
@@ -544,7 +594,7 @@ preprocess_data <- function(
   
   # catchment data (raw forcings, flows)
   catchment_data <-
-    get_catchment_data(
+    read_and_process_catchment_data(
     catchment_code = catchment_code,
     dataset_meteo = dataset_meteo,
     dataset_hydro = dataset_hydro,
@@ -626,11 +676,11 @@ test_preprocess <- function(){
   dataset_hydro  <- "ERA5Ens_SKGE"
   month_initialisation <- "jun"
   horizon_strategy <- "dynamic"
-  horizon_month_start <- "oct"
+  horizon_month_start <- "sep"
   horizon_month_end <- "mar"
   predictor_list <- c("pr_sum_-1months","tem_mean_1months")
   wy_holdout <- 2010
-  remove_wys <- c(1980,2013)
+  remove_wys <- c(1990,1980,2013)
   units_q <- "m^3/s"
   units_y <- "GL"
   test_subset <- T
@@ -658,34 +708,7 @@ data2 <- preprocess_data(
   remove_wys = NA
 )
 
-data3 <-
-  preprocess_data(
-  catchment_code = "5410002",
-  dataset_meteo = "ens30avg",
-  dataset_hydro = "ERA5Ens_SKGE",
-  month_initialisation = "sep",
-  horizon_strategy = "dynamic",
-  predictor_list = c("pr_sum_-1months",
-                     "tem_mean_-1months",
-                     "SP_last_1months",
-                     ##GR4J
-                     "PROD_last_1months",
-                     "ROUT_last_1months",
-                     ##TUW
-                     "SM_last_1months",
-                     "SUZ_last_1months",
-                     "SLZ_last_1months",
-                     ##SACRAMENTO
-                     "UZT_last_1months",
-                     "UZF_last_1months",
-                     "LZT_last_1months",
-                     "LZS_last_1months",
-                     "LZP_last_1months"),
-                     wy_holdout = 2000,
-                     remove_wys = NULL
-  )
-
-data4 <- preprocess_data(
+data3 <- preprocess_data(
   catchment_code = catchment_code,
   dataset_meteo  = dataset_meteo,
   dataset_hydro  = dataset_hydro,
@@ -702,9 +725,12 @@ data4 <- preprocess_data(
 )
 
 
-return(list(
+return(
+
+  list(
   data1 = data1,
   data2 = data2,
-  data3 = data3,
-  data4 = data4))
+  data3 = data3)
+
+)
 }
