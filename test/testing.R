@@ -6,11 +6,12 @@ source("base/Regression_model.R")
 # ensemble volume forecast
 data_fore = forecast_vol_ensemble(data_input = data_input,mode = "both")
 source("base/Knn_model.R")
+
 q_fore =
   q_ensemble(
     data_input = data_input,
     data_fore = data_fore,
-    n_neighbors = 6,
+    n_neighbours = 6,
     weight_method = 'distance',
-    mode = "both"
+    mode = "cv"
   )
