@@ -178,7 +178,7 @@ read_and_process_catchment_data <- function(catchment_code,
 get_forecast_horizon <- function(
     month_initialisation,
     horizon_strategy,
-    horizon_month_start = "oct",
+    horizon_month_start = "sep",
     horizon_month_end =  "mar",
     wy_holdout
     ) {
@@ -318,6 +318,10 @@ split_predictor_name <- function(predictor_name, month_initialisation_index) {
   if (predictor_horizon < 0) {
     predictor_horizon <- month_initialisation_index - 1
   }
+  # check if values of predictor_horizon are positive
+  if (predictor_horizon==0) {
+    stop(paste0("ERROR: predictor horizon is zero for your variable ", predictor_variable))
+  }
   # new name
   predictor_newname <- glue::glue("{predictor_variable}_{predictor_function}_{predictor_horizon}months")
   
@@ -332,7 +336,7 @@ split_predictor_name <- function(predictor_name, month_initialisation_index) {
 
 # one predictor column generator
 one_column_predictor <- function(predictor_name,month_initialisation_index,catchment_data) {
-    
+
     predictor_attributes <- split_predictor_name(
       predictor_name = predictor_name,
       month_initialisation_index = month_initialisation_index)
@@ -341,17 +345,21 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
     
     # check if values of variable belong to catchment data
     if(!(predictor_attributes$predictor_variable %in% names(catchment_data$raw_data_df))) {
-      stop(paste0("predictor: ",predictor_attributes$predictor_variable, " not found in database"))
+      stop(paste0("predictor: ", predictor_attributes$predictor_variable, " not found in database"))
     }
 
-    tryCatch({
     # subset data in forecast horizon interval
+    diff_wym_a = (month_initialisation_index - predictor_attributes$predictor_horizon)%% 12 
+    diff_wym_b = (month_initialisation_index - 1)%% 12
+    wym_a = diff_wym_a + ifelse(diff_wym_a == 0, 12, 0)
+    wym_b = diff_wym_b + ifelse(diff_wym_b == 0, 12, 0)
+    
+    wym_selected =  if (wym_a <= wym_b) {wym_a:wym_b} else {c(wym_a:12, 1:(wym_b))}
+
       var <- input_data %>%
         select("wy_simple", all_of(predictor_attributes$predictor_variable),"wym") %>% 
-        subset(wym < month_initialisation_index) %>%
-        subset(wym > month_initialisation_index - predictor_attributes$predictor_horizon -1) %>%
-        select("wy_simple", all_of(predictor_attributes$predictor_variable))
-      
+        subset(wym %in% wym_selected)
+
       num_records_per_wy <- var %>% 
         count(wy_simple) %>% 
         dplyr::rename(num = n)
@@ -378,21 +386,19 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
       names(var)[names(var) == predictor_attributes$predictor_variable] <- predictor_attributes$predictor_newname
       
       return(var)
-    }
-    ,
-    error = function(e) {NULL})
+
+
   }
 ## predictor dataframe
 predictors_generator <- function(predictor_list,
-                                 forecast_horizon,
+                                 month_initialisation_index,
                                  catchment_data) {
   
   predictors <- lapply(predictor_list,
                       function(predictor_name)
-                        
                         one_column_predictor(
                           predictor_name = predictor_name,
-                          month_initialisation_index =  forecast_horizon$month_initialisation_index,
+                          month_initialisation_index = month_initialisation_index,
                           catchment_data = catchment_data
                         )
                       )
@@ -487,17 +493,6 @@ interval_wys <- function(wy_train) {
     y)
 }
 
-
-# dataframe_to_list <- function(df) {
-#   ensemble_names <- unique(df$ens)
-#   df_list <- lapply(ensemble_names,
-#                    function(ens_i)
-#                      subset(df, ens == ens_i, select = -ens))
-#   names(df_list) <- ensemble_names
-#   return(df_list)
-# }
-
-
 training_set <- function(predictors, predictant, wy_holdout) {
   if (is.null(predictors) | is.null(predictant)) { 
     stop("error: PREDICTORS OR PREDICTANT CANNOT BE NULL")
@@ -505,11 +500,6 @@ training_set <- function(predictors, predictant, wy_holdout) {
   
   wy_train <- intersect(predictors$wy_simple, predictant$q$wy_simple)
   wy_train <- wy_train[wy_train != wy_holdout]
-  
-  ### training period for 
-  # X_train <- predictors %>%
-  #   dataframe_to_list %>%
-  #   lapply(function(x) subset_years(x, wy_train))
   
   X_train <- predictors %>% subset_years(wy_train)
   y_train <- predictant$y %>% subset_years(wy_train)
@@ -529,27 +519,22 @@ testing_set <- function(predictors, predictant, wy_holdout) {
   ### testing period
   
   # wy_holdout must be in predictors
+  X_test <- NULL
   if (wy_holdout %in% predictors$wy_simple) {
-    # X_test <- predictors %>%
-    #   dataframe_to_list %>%
-    #   lapply(function(x)
-    #     subset_years(x, wy_holdout))
     X_test <- predictors %>% subset_years(wy_holdout)
   } else{
-    X_test <- NULL
     message("PREDICTOR INTERVAL WYS: ", interval_wys(predictors$wy_simple))
     stop("YOU NEED VALID PREDICTORS FOR THE TARGET WY (SEE DATA FOR WY_HOLDOUT)")
   }
   
   # wy_holdout must be in predictant
+  y_test <- NULL
+  q_test <- NULL
   if (wy_holdout %in% predictant$q$wy_simple) {
     y_test <- predictant$y %>% subset_years(wy_holdout)
     q_test <- predictant$q %>% subset_years(wy_holdout)
-  } else{
-    y_test <- NULL
-    q_test <- NULL
-  }
-  
+  } 
+
   return(list(
     X_test = X_test,
     y_test = y_test,
@@ -611,12 +596,13 @@ preprocess_data <- function(
     horizon_month_end =  horizon_month_end,
     wy_holdout = wy_holdout
   )
-
+  
+  month_initialisation_index = forecast_horizon$month_initialisation_index
   # create the predictors variables
   predictors <-
     predictors_generator(
     predictor_list = predictor_list,
-    forecast_horizon = forecast_horizon,
+    month_initialisation_index = month_initialisation_index,
     catchment_data = catchment_data
   )
 
@@ -669,6 +655,14 @@ preprocess_data <- function(
   
 }
 
+
+
+
+
+
+
+######################### Testing
+
 test_preprocess <- function(){
   
   catchment_code <- "5410002"
@@ -679,34 +673,48 @@ test_preprocess <- function(){
   horizon_month_start <- "sep"
   horizon_month_end <- "mar"
   predictor_list <- c("pr_sum_-1months","tem_mean_1months")
-  wy_holdout <- 2010
+  wy_holdout <- 2022
   remove_wys <- c(1990,1980,2013)
   units_q <- "m^3/s"
   units_y <- "GL"
   test_subset <- T
+
+  data1 <- preprocess_data(
+    catchment_code = catchment_code,
+    dataset_meteo  = dataset_meteo,
+    dataset_hydro  = dataset_hydro,
+    month_initialisation = month_initialisation,
+    horizon_strategy = horizon_strategy,
+    horizon_month_start = horizon_month_start,
+    horizon_month_end = horizon_month_end,
+    predictor_list = predictor_list,
+    wy_holdout = wy_holdout,
+    remove_wys = remove_wys,
+    units_q = units_q,
+    units_y = units_y,
+    test_subset = test_subset
+  )
   
-  
-data1 <- preprocess_data(
+data2 <- preprocess_data(
   month_initialisation = "oct",
   wy_holdout = 2022)
 
-data1_1 <- preprocess_data(
-  month_initialisation = "oct",
-  wy_holdout = 2022,
-  units_q = "m^3/s",
-  units_y = "GL")
 
-data2 <- preprocess_data(
-  catchment_code = "7321002",
-  month_initialisation = "sep",
-  dataset_meteo  = "ens30avg",
-  horizon_strategy = "dynamic",
-  horizon_month_start = "oct",
-  horizon_month_end = "mar",
-  predictor_list = c("pr_sum_-1months","tem_mean_3months"),
-  wy_holdout = 2022,
-  remove_wys = NA
-)
+predictors = c(
+"MEIv2_mean_2months", "PDO_mean_2months", "SOI_mean_2months", "ONI_mean_2months",
+"NINO1.2_mean_2months", "NINO3_mean_2months", "NINO4_mean_2months", "NINO3.4_mean_2months",
+"ESPI_mean_2months", "AAO_mean_2months", "BIENSO_mean_2months")
+catchment_code = "3414001"
+month_initialisation = "may"
+horizon_month_start = "sep"
+horizon_month_end = "mar"
+horizon_strategy = "static"
+predictor_list = predictors
+wy_holdout = 2022
+remove_wys = c(1978)
+units_q = "m3/s"
+units_y = "GL"
+test_subset = F
 
 data3 <- preprocess_data(
   catchment_code = catchment_code,
@@ -725,12 +733,13 @@ data3 <- preprocess_data(
 )
 
 
-return(
 
+return(
   list(
   data1 = data1,
   data2 = data2,
-  data3 = data3)
+  data3 = data3
+  )
 
 )
 }

@@ -7,8 +7,7 @@ source("base/Regression_model.R")
 data_fore = forecast_vol_ensemble(data_input = data_input,mode = "both")
 source("base/Knn_model.R")
 
-q_fore =
-  q_ensemble(
+q_fore = run_q_forecast(
     data_input = data_input,
     data_fore = data_fore,
     n_neighbours = 6,

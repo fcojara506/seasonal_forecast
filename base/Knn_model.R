@@ -180,16 +180,19 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
     q_cv = f_cv$q
     wy_neighbours_cv = f_cv$wy_neighbours
   }
-  
+  # save function arguments
+  info_list <- as.list(environment())
+
   return(list(q_cv = q_cv,
               wy_neighbours_cv = wy_neighbours_cv,
               q_predict = q_predict, 
-              wy_neighbours_predict = wy_neighbours_predict
+              wy_neighbours_predict = wy_neighbours_predict,
+              info = info_list
   ))
   
 }
 
-run_q_forecast <- function(data_input, data_fore, n_neighbours, weight_method, mode) {
+run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", mode="both") {
   # perform flow prediction or cross-validation using the knn_forecast function
   # inputs:
   # q_train = training flow data
