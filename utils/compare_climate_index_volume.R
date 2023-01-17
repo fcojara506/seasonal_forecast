@@ -11,19 +11,20 @@ minmax <- function(df) {
     predict(df)
 }
 
+convert_items_to_lists <- function(lst) {
+  lst <- lapply(lst, function(x) if (length(x) > 1) list(x) else x)
+  return(lst)
+}
 
 join_x_info <- function(x,normalised = T) {
-  
-  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy") 
-  y_train = rownames_to_column(x[["y_train"]],var = "wy")
-  
-  if (normalised) {
-    x_train = x_train %>% minmax
-    y_train = y_train %>% minmax
-  }
-  
+  #get online x and y training set
+  x_train = rownames_to_column(x$X_train,var = "wy") 
+  y_train = rownames_to_column(x$y_train,var = "wy")
+  #merge
   xy_train = merge(x_train,y_train)
-  
+  # convert items with length>1 on lists
+  x$info = convert_items_to_lists(x$info)
+  #transform x and y and add info
   df = xy_train %>% 
     data.table() %>% 
     melt.data.table(id.vars = c("wy","volume"),
@@ -35,49 +36,11 @@ join_x_info <- function(x,normalised = T) {
   
 }
 
-dataset_data_input <- function(months_initialisation,
-                               cod_cuencas,
-                               months_backwards_list,
-                               normalised = F) {
+
   
-  #library(foreach)
-  #library(doParallel)
-  #registerDoParallel(cores=parallel::detectCores())
   
-  # foreach(month_initialisation=months_initialisation,.combine = "c") %:%
-  # foreach(months_backwards=months_backwards_list,.combine = "c") %:%
-  # foreach(catchment_code=cod_cuencas) %dopar% {
-  for (month_initialisation in months_initialisation) {
-    for (months_backwards in months_backwards_list) {
-      for (catchment_code in cod_cuencas) {
-        
-      predictors = paste(climate_indices,"mean",paste0(months_backwards,"months"),sep = "_")
-      
-      model_data <- preprocess_data(
-        catchment_code = catchment_code,
-        month_initialisation = month_initialisation,
-        horizon_month_start = "sep",
-        horizon_month_end = "mar",
-        horizon_strategy = "static",
-        predictor_list = predictors,
-        wy_holdout = 2022,
-        remove_wys = seq(1950,1980),
-        units_q = "m3/s",
-        units_y = "GL",
-        test_subset = F
-      )
-      
-      }
-    }
-  }
-  
-  data_input = model_data %>%
-    lapply(function(x) join_x_info(x, normalised)) %>% 
-    rbindlist()
-  
-  #stopImplicitCluster()
-  return(data_input)
-}
+
+
 
 #test catchments
 attributes_catchments = "data_input/attributes/attributes_49catchments_ChileCentral.feather" %>%
@@ -99,14 +62,62 @@ climate_indices = c(
 )
 
 # get input climate indices and volume for each basin, month for many predictors
-df_input = dataset_data_input(
-  months_initialisation =  c('may','jun','jul','ago'),
-  cod_cuencas = attributes_catchments$cod_cuenca,
-  months_backwards_list = seq(1,3),
+
+  months_initialisation =  c('may','jun','jul','ago')
+  cod_cuencas = attributes_catchments$cod_cuenca
+  months_backwards_list = seq(1,3)
   normalised = F
-  )
+  
+  ###### code
+  
+  library(foreach)
+  library(doParallel)
+  registerDoParallel(cores=parallel::detectCores())
+  
+  model_data <- 
+  foreach(month_initialisation=months_initialisation,.combine = "c") %:%
+  foreach(months_backwards=months_backwards_list,.combine = "c") %:%
+  foreach(catchment_code=cod_cuencas) %dopar% {
+    
+        predictors = paste(climate_indices,"mean",paste0(months_backwards,"months"),sep = "_")
+        
+        preprocess_data(
+          catchment_code = catchment_code,
+          month_initialisation = month_initialisation,
+          horizon_month_start = "sep",
+          horizon_month_end = "mar",
+          horizon_strategy = "static",
+          predictor_list = predictors,
+          wy_holdout = 2022,
+          remove_wys = seq(1950,1980),
+          units_q = "m3/s",
+          units_y = "GL",
+          test_subset = F
+        )
+        
+      }
+
+  data_input = model_data %>%
+    lapply(function(x) join_x_info(x, normalised)) %>% 
+    rbindlist()
+  
+  stopImplicitCluster()
+  
+  ###### code
+  
+  
+  stop()
+  
+  
+  
+  
+  
+  
+  
+  
+  
 #compute correlation of climate indices vs seasonal volume
-df = df_input %>%
+df = data_input %>%
   group_by(catchment_code,month_initialisation,predictor_name) %>% 
   summarise(correlation = cor(x = volume, y = predictor_value, method = "spearman")) %>%
 #add catchment attributes

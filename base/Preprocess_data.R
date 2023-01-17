@@ -343,13 +343,22 @@ split_predictor_name <- function(predictor_name, month_initialisation_index) {
   ))
 }
 
+find_initial_months <- function(date, month_i){
+  date <- as.Date(date)
+  year <- as.numeric(format(date, "%Y")) + (month_i < as.numeric(format(date, "%m")))
+  as.Date(paste0(year, "-", month_i, "-01"))
+}
+
+#predictor_name = "ONI_mean_5months"
+predictor_name = "pr_sum_-1months"
 # one predictor column generator
 one_column_predictor <- function(predictor_name,month_initialisation_index,catchment_data) {
 
     predictor_attributes <- split_predictor_name(
       predictor_name = predictor_name,
       month_initialisation_index = month_initialisation_index)
-    predictor_var = predictor_attributes$predictor_variable
+    
+    predictor_var <- predictor_attributes$predictor_variable
     input_data <- catchment_data$raw_data_df
     
     # check if values of variable belong to catchment data
@@ -357,44 +366,40 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
       stop(paste0("predictor: ", predictor_var, " not found in database"))
     }
     
-    
     # subset the predictor and months
       var <- input_data %>%
         select("wy_simple", all_of(predictor_var),"wym") %>% 
-        subset(wym %in% predictor_attributes$wym_selected)
-      ## agrupar
-        var = var %>%
-          mutate(date = ymd(paste(wy_simple, wym, 1, sep = "-")))
+        subset(wym %in% predictor_attributes$wym_selected) %>%
+        mutate(date_initial = find_initial_months(ymd(paste(wy_simple, wym, 1, sep = "-")),month_initialisation_index)) %>% 
+        select(date_initial,all_of(predictor_var))
 
-
+      ### find and remove incomplete year
       num_records_per_wy <- var %>% 
-        count(wy_simple) %>% 
+        count(date_initial) %>% 
         dplyr::rename(num = n)
       
       kickout_wy <- num_records_per_wy %>% 
         filter(num != predictor_attributes$predictor_horizon) %>% 
-        pull(wy_simple)
+        pull(date_initial)
       
       if (length(kickout_wy)>0) {
         message("Warning. Removing INCOMPLETE PREDICTORS, WATER-YEARS: ",
-                unique(interval_wys(kickout_wy)))
+                unique(interval_wys(lubridate::year(kickout_wy))))
       }
       
-      var <- var %>%
-        subset(!(wy_simple %in% kickout_wy)) %>%
-        aggregate(
-          FUN = predictor_attributes$predictor_function,
-          by = list(wy_simple = .$"wy_simple"),
-          drop = T
-        ) %>%
-        select(c("wy_simple",
-                 all_of(predictor_var)))
-      
+      #print(predictor_name)
+      ## group by date_initial
+      var <- var[!var$date_initial %in% kickout_wy,]
+      var <- aggregate(select(var,all_of(predictor_var)),
+                       by=list(date_initial=var$date_initial),
+                       FUN=predictor_attributes$predictor_function) %>%
+        select(c("date_initial",all_of(predictor_var))) %>% 
+        mutate(wy_simple = year(date_initial)) %>% 
+        select(c("wy_simple",all_of(predictor_var)))
+    
       names(var)[names(var) == predictor_var] <- predictor_attributes$predictor_newname
       
       return(var)
-
-
   }
 ## predictor dataframe
 predictors_generator <- function(predictor_list,
@@ -584,6 +589,9 @@ preprocess_data <- function(
     test_subset = T
     ) {
   
+  # save arguments
+  info_list <- as.list(environment())
+  
   # catchment data (raw forcings, flows)
   catchment_data <-
     read_and_process_catchment_data(
@@ -630,12 +638,11 @@ preprocess_data <- function(
     wy_holdout = wy_holdout
     )
   
-  # save function arguments
-  info_list <- as.list(environment())
+ 
   # append corrected predictor list
   info_list$predictor_list_corrected <- 
              predictors %>%
-             select(-1, -2) %>%
+             select(- "wy_simple") %>%
              colnames
   
   # save results in structure
@@ -671,7 +678,7 @@ preprocess_data <- function(
 ######################### Testing
 
 test_preprocess <- function(){
-  
+
   catchment_code <- "5410002"
   dataset_meteo  <- "ens30avg"
   dataset_hydro  <- "ERA5Ens_SKGE"
@@ -712,7 +719,7 @@ predictors = c(
 "NINO1.2_mean_2months", "NINO3_mean_2months", "NINO4_mean_2months", "NINO3.4_mean_2months",
 "ESPI_mean_2months", "AAO_mean_2months", "BIENSO_mean_2months")
 catchment_code = "3414001"
-month_initialisation = "may"
+month_initialisation = "dic"
 horizon_month_start = "sep"
 horizon_month_end = "mar"
 horizon_strategy = "static"
