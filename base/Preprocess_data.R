@@ -322,6 +322,14 @@ split_predictor_name <- function(predictor_name, month_initialisation_index) {
   if (predictor_horizon==0) {
     stop(paste0("ERROR: predictor horizon is zero for your variable ", predictor_variable))
   }
+  # subset data in forecast horizon interval
+  diff_wym_a = (month_initialisation_index - predictor_horizon)%% 12 
+  diff_wym_b = (month_initialisation_index - 1)%% 12
+  wym_a = diff_wym_a + ifelse(diff_wym_a == 0, 12, 0)
+  wym_b = diff_wym_b + ifelse(diff_wym_b == 0, 12, 0)
+  
+  wym_selected =  if (wym_a <= wym_b) {wym_a:wym_b} else {c(wym_a:12, 1:(wym_b))}
+  
   # new name
   predictor_newname <- glue::glue("{predictor_variable}_{predictor_function}_{predictor_horizon}months")
   
@@ -330,7 +338,8 @@ split_predictor_name <- function(predictor_name, month_initialisation_index) {
     predictor_newname = predictor_newname,
     predictor_variable = predictor_variable,
     predictor_function = predictor_function,
-    predictor_horizon = predictor_horizon
+    predictor_horizon = predictor_horizon,
+    wym_selected = wym_selected
   ))
 }
 
@@ -340,25 +349,23 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
     predictor_attributes <- split_predictor_name(
       predictor_name = predictor_name,
       month_initialisation_index = month_initialisation_index)
-    
+    predictor_var = predictor_attributes$predictor_variable
     input_data <- catchment_data$raw_data_df
     
     # check if values of variable belong to catchment data
-    if(!(predictor_attributes$predictor_variable %in% names(catchment_data$raw_data_df))) {
-      stop(paste0("predictor: ", predictor_attributes$predictor_variable, " not found in database"))
+    if(!(predictor_var %in% names(catchment_data$raw_data_df))) {
+      stop(paste0("predictor: ", predictor_var, " not found in database"))
     }
-
-    # subset data in forecast horizon interval
-    diff_wym_a = (month_initialisation_index - predictor_attributes$predictor_horizon)%% 12 
-    diff_wym_b = (month_initialisation_index - 1)%% 12
-    wym_a = diff_wym_a + ifelse(diff_wym_a == 0, 12, 0)
-    wym_b = diff_wym_b + ifelse(diff_wym_b == 0, 12, 0)
     
-    wym_selected =  if (wym_a <= wym_b) {wym_a:wym_b} else {c(wym_a:12, 1:(wym_b))}
-
+    
+    # subset the predictor and months
       var <- input_data %>%
-        select("wy_simple", all_of(predictor_attributes$predictor_variable),"wym") %>% 
-        subset(wym %in% wym_selected)
+        select("wy_simple", all_of(predictor_var),"wym") %>% 
+        subset(wym %in% predictor_attributes$wym_selected)
+      ## agrupar
+        var = var %>%
+          mutate(date = ymd(paste(wy_simple, wym, 1, sep = "-")))
+
 
       num_records_per_wy <- var %>% 
         count(wy_simple) %>% 
@@ -381,9 +388,9 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
           drop = T
         ) %>%
         select(c("wy_simple",
-                 all_of(predictor_attributes$predictor_variable)))
+                 all_of(predictor_var)))
       
-      names(var)[names(var) == predictor_attributes$predictor_variable] <- predictor_attributes$predictor_newname
+      names(var)[names(var) == predictor_var] <- predictor_attributes$predictor_newname
       
       return(var)
 
