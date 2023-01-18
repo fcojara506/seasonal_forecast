@@ -37,11 +37,6 @@ join_x_info <- function(x,normalised = T) {
 }
 
 
-  
-  
-
-
-
 #test catchments
 attributes_catchments = "data_input/attributes/attributes_49catchments_ChileCentral.feather" %>%
   feather::read_feather()
@@ -63,7 +58,7 @@ climate_indices = c(
 
 # get input climate indices and volume for each basin, month for many predictors
 
-  months_initialisation =  c('may','jun','jul','ago')
+  months_initialisation =  c('abr','may','jun','jul','ago')
   cod_cuencas = attributes_catchments$cod_cuenca
   months_backwards_list = seq(1,3)
   normalised = F
@@ -103,32 +98,21 @@ climate_indices = c(
   
   stopImplicitCluster()
   
-  ###### code
+  ###### code plotting
   
   
-  stop()
-  
-  
-  
-  
-  
-  
-  
-  
+
   
 #compute correlation of climate indices vs seasonal volume
 df = data_input %>%
   group_by(catchment_code,month_initialisation,predictor_name) %>% 
-  summarise(correlation = cor(x = volume, y = predictor_value, method = "spearman")) %>%
+  summarise(correlation = cor(x = volume, y = predictor_value, method = "spearman"))
 #add catchment attributes
-  merge(attributes_catchments,
-        by.x = "catchment_code",
-        by.y = "cod_cuenca") %>% 
-  mutate(short_gauge_name = short_river_name(gauge_name))
+
 
 # order columns
 df$month_initialisation = factor(df$month_initialisation,levels = months_initialisation)
-df$predictor_name = factor(df$predictor_name,labels = climate_indices)
+df$predictor_name = factor(df$predictor_name)
 df$catchment_code = as.numeric(df$catchment_code)
 
 saveRDS(object = df, file = "data_output/scores/RDS/correlations_climates_indices_vol.RDS")
@@ -137,9 +121,52 @@ saveRDS(object = df, file = "data_output/scores/RDS/correlations_climates_indice
 ##################################################################
 ##                           PLOTTING                           ##
 ##################################################################
+library(tidyr)
+library(ComplexHeatmap)
+rm(list = ls())
+df = readRDS(file = "data_output/scores/RDS/correlations_climates_indices_vol.RDS") %>% data.table()
 
-# rm(list = ls())
-# df = readRDS(file = "data_output/scores/RDS/correlations_climates_indices_vol.RDS")
+
+cor_matrix = df %>% select(catchment_code,month_initialisation,predictor_name,correlation) %>%
+  .[, c("var", "fun", "horizon_months") := tstrsplit(predictor_name, "_", fixed = TRUE, keep = 1:3)] %>% 
+  mutate(horizon_months = substr(horizon_months,1,1)) %>% 
+  select(-predictor_name) %>% 
+  select(-fun) %>% 
+  tidyr::unite(catchment_month,c(catchment_code,month_initialisation)) %>%
+  tidyr::unite(predictor,c(var,horizon_months)) %>%
+  dcast(formula = catchment_month ~ predictor,value.var = "correlation") %>% 
+  column_to_rownames(var = "catchment_month") %>% 
+  as.matrix()
+
+annotation_row = data.table(catchment_month =rownames(cor_matrix)) %>%
+  .[, c("catchment_code","month_initialisation") := tstrsplit(catchment_month, "_", fixed = TRUE, keep = 1:2)] %>%
+  column_to_rownames(var = "catchment_month") %>% 
+  transform(catchment_code = as.numeric(catchment_code))
+annotation_row$month_initialisation = factor(annotation_row$month_initialisation,
+                                             levels = rev(levels(df$month_initialisation)))
+
+annotation_col = data.table(predictor =colnames(cor_matrix)) %>% 
+  .[, c("var","horizon_months") := tstrsplit(predictor, "_", fixed = TRUE, keep = 1:2)] %>%
+  column_to_rownames(var = "predictor")
+
+pheatmap(cor_matrix,
+         annotation_row = annotation_row,
+         annotation_col = annotation_col,
+         row_split = annotation_row$month_initialisation,
+         column_split = annotation_col$var,
+        cluster_row = F,
+        cluster_cols = F,
+        show_rownames=FALSE)
+
+pheatmap(abs(cor_matrix),
+         annotation_row = annotation_row,
+         annotation_col = annotation_col,
+         row_split = annotation_row$month_initialisation,
+         column_split = annotation_col$var,
+         cluster_row = F,
+         cluster_cols = F,
+         show_rownames=FALSE)
+
 # #plot correlation
 # p1=ggplot(data = df, 
 #        mapping = aes(y = correlation,
