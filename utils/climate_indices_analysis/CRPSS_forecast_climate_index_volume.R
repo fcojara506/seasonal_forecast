@@ -45,6 +45,5 @@ stopImplicitCluster()
 
 
 data_input = cbind(rbindlist(model$info),rbindlist(model$scores))
-
 saveRDS(data_input,paste0("data_output/scores/RDS/model_results_",today(),".RDS"))
 

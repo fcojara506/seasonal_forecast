@@ -573,6 +573,11 @@ wy_month_to_month <- function(wy_month) {
   return(month)
 }
 
+convert_items_to_lists <- function(lst) {
+  lst <- lapply(lst, function(x) if (length(x) > 1) list(x) else x)
+  return(lst)
+}
+
 preprocess_data <- function(
     catchment_code = "5410002",
     dataset_meteo  = "ens30avg",
@@ -650,7 +655,7 @@ preprocess_data <- function(
     train_set,
     raw_data = list(catchment_data),
     time_horizon = list(forecast_horizon),
-    info = list(info_list)
+    info = list(convert_items_to_lists(info_list))
   )
   
   if (mode == "prediction" | mode == "both"){
