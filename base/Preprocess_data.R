@@ -586,7 +586,7 @@ preprocess_data <- function(
     predictor_list = c("pr_sum_-1months","tem_mean_2months"),
     units_q = "mm/month",
     units_y = "mm",
-    test_subset = T
+    mode = "both"
     ) {
   
   # save arguments
@@ -653,7 +653,7 @@ preprocess_data <- function(
     info = list(info_list)
   )
   
-  if (test_subset){
+  if (mode == "prediction" | mode == "both"){
     # testing set 
     test_set  <- 
       testing_set(
@@ -691,7 +691,7 @@ test_preprocess <- function(){
   remove_wys <- c(1990,1980,2013)
   units_q <- "m^3/s"
   units_y <- "GL"
-  test_subset <- T
+  mode <- "both"
 
   data1 <- preprocess_data(
     catchment_code = catchment_code,
@@ -706,7 +706,7 @@ test_preprocess <- function(){
     remove_wys = remove_wys,
     units_q = units_q,
     units_y = units_y,
-    test_subset = test_subset
+    mode = mode
   )
   
 data2 <- preprocess_data(
@@ -728,7 +728,7 @@ wy_holdout = 2022
 remove_wys = c(1978)
 units_q = "m3/s"
 units_y = "GL"
-test_subset = F
+mode = "cv"
 
 data3 <- preprocess_data(
   catchment_code = catchment_code,
@@ -743,7 +743,7 @@ data3 <- preprocess_data(
   remove_wys = remove_wys,
   units_q = units_q,
   units_y = units_y,
-  test_subset = test_subset
+  mode = mode
 )
 
 

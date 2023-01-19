@@ -56,7 +56,7 @@ y_scores <- function(data_fore,data_input) {
 
 q_scores <- function(q_fore,data_input) {
   #streamflow data
-  q_train=data$q_train
+  q_train=data_input$q_train
   
   #ensemble monthly scores
   q_ens = q_fore

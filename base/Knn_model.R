@@ -136,6 +136,8 @@ knn_cross_validation <- function(X_train,f_train,n_neighbours,weight_method,y_en
 
 q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, n_neighbours, weight_method, mode) {
   set.seed(seed = 10)
+  # save function arguments
+  args <- as.list(environment())
   # check input
   if (!is.numeric(n_neighbours) || n_neighbours <= 0) {stop("Invalid n_neighbours. Number of neighbours should be a positive number")}
   if (!is.character(weight_method) || !weight_method %in% c("uniform", "distance")) {stop("Invalid weight_method. Should be either 'uniform' or 'distance'")}
@@ -180,14 +182,13 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
     q_cv = f_cv$q
     wy_neighbours_cv = f_cv$wy_neighbours
   }
-  # save function arguments
-  info_list <- as.list(environment())
+
 
   return(list(q_cv = q_cv,
               wy_neighbours_cv = wy_neighbours_cv,
               q_predict = q_predict, 
               wy_neighbours_predict = wy_neighbours_predict,
-              info = info_list
+              args = args
   ))
   
 }
