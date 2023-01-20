@@ -2,7 +2,7 @@ rm(list = ls())
 
 source("utils/run_model_function.R")
 #test catchments
-catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.feather" 
+catchments_attributes_filename = "df/attributes/attributes_49catchments_ChileCentral.feather" 
 cod_cuencas = feather::read_feather(catchments_attributes_filename)$cod_cuenca
 #test months initial
 months_initialisation = c('abr','may','jun','jul','ago','sep')
@@ -44,6 +44,14 @@ stopImplicitCluster()
 
 
 
-data_input = cbind(rbindlist(model$info),rbindlist(model$scores))
-saveRDS(data_input,paste0("data_output/scores/RDS/model_results_",today(),".RDS"))
+df <- cbind(rbindlist(model$info),rbindlist(model$scores))
+# modify names
+df <- dplyr::rename(df,'predictor_name' = 'predictor_list_corrected')
+
+# order columns
+df$month_initialisation <- factor(df$month_initialisation,levels = months_initialisation)
+df$predictor_name <- factor(df$predictor_name)
+df$catchment_code <- as.numeric(df$catchment_code)
+
+saveRDS(df,paste0("data_output/scores/RDS/model_results_",today(),".RDS"))
 
