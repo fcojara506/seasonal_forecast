@@ -61,13 +61,10 @@ cross_validation <- function(regression_model, y_train) {
 # Function for making predictions on test data
 make_predictions <- function(regression_model, X_test) {
   # Make predictions using the trained model and test data
+  y_fore = NULL
   if (!is.null(X_test)) {
     y_fore <- predict(regression_model, newdata = X_test)
-    #y_fore <- y_fore[[1]]
-  } else {
-    y_fore = NULL
-  }
-  
+  } 
   return(y_fore)
 }
 
@@ -95,9 +92,14 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
   if (mode == "both" || mode == "prediction") {
     # Make predictions on the test data
     y_fore <- make_predictions(regression_model, X_test)
+    
   }
   
-  return(list(y_cv = y_cv, y_fore = y_fore, rmse_cv = rmse_cv, rmse_model = rmse_model, regression_model = regression_model))
+  return(list(y_cv = y_cv,
+              y_fore = y_fore,
+              rmse_cv = rmse_cv,
+              rmse_model = rmse_model,
+              regression_model = regression_model))
 }
 
 # Function to generate an ensemble of predictions
@@ -189,14 +191,16 @@ forecast_vol_ensemble <- function(data_input,
         data_input$X_train,
         data_input$y_train$volume,
         data_input$X_test,
-        method = "knn",
+        method = 'ridge',
         preProcess = preProcess,
         mode = mode
       )
-    m = vol_deterministic$regression_model
-    summary(m)$coefficients[,2]
-    
-    # Generate ensemble forecast
+   
+    #m = vol_deterministic$regression_model$finalModel
+    #pp = vol_deterministic$regression_model$preProcess
+    #summary(m)
+    #predict(m, predict(pp, data_input$X_test),se.fit = T,lambda = 0.1,se=3)
+      # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,mode)
 
     return(y_forecast)
