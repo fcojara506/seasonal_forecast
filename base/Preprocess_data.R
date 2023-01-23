@@ -716,7 +716,7 @@ test_preprocess <- function(){
   
 data2 <- preprocess_data(
   month_initialisation = "oct",
-  wy_holdout = 2022)
+  wy_holdout = 1996)
 
 
 predictors = c(

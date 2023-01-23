@@ -10,8 +10,9 @@ wy_simple         <- function(month,year){fifelse(month>3, year,year - 1)}
 
 
 read_indices_files <- function(download_index_files = T) {
-  library(dplyr)
   library(data.table)
+  library(dplyr)
+  
   
   
   if (download_index_files) {
@@ -20,7 +21,8 @@ read_indices_files <- function(download_index_files = T) {
       list(
         "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
         "https://psl.noaa.gov/enso/mei/data/meiv2.data",
-        "https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/index/ersst.v5.pdo.dat",
+        #"https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/index/ersst.v5.pdo.dat",
+        "https://psl.noaa.gov/pdo/data/pdo.timeseries.ersstv5.csv",
         "https://psl.noaa.gov/data/correlation/soi.data",
         "https://psl.noaa.gov/data/correlation/censo.data",
         "https://psl.noaa.gov/data/correlation/oni.data",
@@ -39,7 +41,7 @@ read_indices_files <- function(download_index_files = T) {
               "espi",
               "olr")
     
-    sapply(seq_along(urls)[1:5], function(i) 
+    sapply(seq_along(urls), function(i) 
       download.file(url = urls[[i]],
                     destfile =  names[i],
                     method = 'curl')
@@ -113,12 +115,12 @@ read_indices_files <- function(download_index_files = T) {
     mutate_all(as.numeric) %>%
     data.table(key = c("year", "month"))
   
-  h = read.csv("pdo", skip = 1, sep = "") %>%
-    as.matrix.data.frame() %>%
-    `colnames<-`(colnames) %>%
-    data.table %>%
-    reshape2::melt(id.vars = "year") %>%
-    rename(month = variable, PDO = value) %>%
+  h = read.csv("pdo",header = T,skip = 1, sep = ',') %>%
+    `colnames<-`(c("date","PDO")) %>%
+    data.table %>% 
+    mutate(year = year(date)) %>% 
+    mutate(month = month(date)) %>% 
+    select(-date) %>% 
     mutate_all(as.numeric) %>%
     data.table(key = c("year", "month"))
   

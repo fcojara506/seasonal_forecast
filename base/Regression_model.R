@@ -144,7 +144,7 @@ ensemble_generator <- function(y,rmse,n_members=1000){
   ensemble_test <- function(vol_deterministic, data_input, n_members) {
     # Generate ensemble for test mode if test data is available
     y_ens_fore = NULL
-    if (! is.null(vol_deterministic$y_fore) & data_input$info$test_subset) {
+    if (! is.null(vol_deterministic$y_fore)) {
       y_ens_fore = ensemble_generator(y = vol_deterministic$y_fore,
                                       rmse = vol_deterministic$rmse_model,
                                       n_members = n_members)
@@ -181,7 +181,7 @@ forecast_vol_ensemble <- function(data_input,
                                   n_members=1000,
                                   method='lm',
                                   preProcess = c("center", "scale"),
-                                  mode = "both"
+                                  mode = data_input$info$mode
                                   ){
   # Train and predict using regression model
     vol_deterministic =
@@ -189,10 +189,13 @@ forecast_vol_ensemble <- function(data_input,
         data_input$X_train,
         data_input$y_train$volume,
         data_input$X_test,
-        method = method,
+        method = "knn",
         preProcess = preProcess,
         mode = mode
       )
+    m = vol_deterministic$regression_model
+    summary(m)$coefficients[,2]
+    
     # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,mode)
 

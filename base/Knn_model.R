@@ -193,7 +193,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   
 }
 
-run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", mode="both") {
+run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", mode=data_input$info$mode) {
   # perform flow prediction or cross-validation using the knn_forecast function
   # inputs:
   # q_train = training flow data
