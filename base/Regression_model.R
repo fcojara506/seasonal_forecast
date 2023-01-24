@@ -28,7 +28,7 @@ rmse_LOO <- function(simulated_values, observed_values) {
 }
 ############## REGRESSION
 # Function for training the linear regression model
-train_regression_model <- function(X_train, y_train,method,preProcess) {
+train_regression_model <- function(X_train, y_train,method,preProcess,...) {
   library(caret)
   #Train the linear regression model using the provided data and method
   train(
@@ -37,7 +37,8 @@ train_regression_model <- function(X_train, y_train,method,preProcess) {
     metric = "RMSE",
     trControl = trainControl(method = "LOOCV", savePredictions = "all"),
     method = method,
-    preProcess = preProcess
+    preProcess = preProcess,
+    ...
   )
 }
 
@@ -73,7 +74,7 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
   # check mode
   if(!(mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
-  regression_model <- train_regression_model(X_train, y_train, method, preProcess)
+  regression_model <- train_regression_model(X_train, y_train, method, preProcess,...)
   # error from regression model
   rmse_model <- regression_model$results$RMSE
 
@@ -191,16 +192,17 @@ forecast_vol_ensemble <- function(data_input,
         data_input$X_train,
         data_input$y_train$volume,
         data_input$X_test,
-        method = 'ridge',
+        method = 'lm',
         preProcess = preProcess,
         mode = mode
       )
    
-    #m = vol_deterministic$regression_model$finalModel
-    #pp = vol_deterministic$regression_model$preProcess
-    #summary(m)
-    #predict(m, predict(pp, data_input$X_test),se.fit = T,lambda = 0.1,se=3)
-      # Generate ensemble forecast
+    # m = vol_deterministic$regression_model$finalModel
+    # pp = vol_deterministic$regression_model$preProcess
+    # predict(m, predict(pp, data_input$X_test),se.fit = T)
+    #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
+    
+    # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,mode)
 
     return(y_forecast)
