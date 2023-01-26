@@ -8,7 +8,6 @@ wym_simple        <- function(month){fifelse(month>3, month-3,month+9)}
 wy_simple         <- function(month,year){fifelse(month>3, year,year - 1)}
 
 
-
 read_indices_files <- function(download_index_files = T) {
   library(data.table)
   library(dplyr)
@@ -159,8 +158,8 @@ read_indices_files <- function(download_index_files = T) {
   return(result)
 }
 
-monthly_indices = read_indices_files(download_index_files = F)
+monthly_indices = read_indices_files(download_index_files = T)
 
-feather::write_feather(monthly_indices,"indices_mensuales_1988_2020.feather")
+feather::write_feather(monthly_indices,"indices_mensuales_1988_2022.feather")
 
 
