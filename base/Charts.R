@@ -1,3 +1,6 @@
+library(data.table)
+library(ggplot2)
+library(lubridate)
 
 ### plot predictors vs volume
 plot_X_y_train <- function(
@@ -851,7 +854,7 @@ plot_pheatmap_EDA <- function(
     metric_variable,
     legend_title,
     filename_export,
-    plot_obsolute,
+    plot_absolute,
     threshold_for_x = 0.1
 ) {
   #https://jokergoo.github.io/2020/05/06/translate-from-pheatmap-to-complexheatmap/
@@ -939,19 +942,22 @@ plot_pheatmap_EDA <- function(
              }
     )
   #export in png format
+  filename_export_png = paste0(
+    "data_output/scores/figures/",
+    filename_export,
+    today(),
+    ".png"
+  )
+  
   png(
-    paste0(
-      "data_output/scores/figures/",
-      filename_export,
-      today(),
-      ".png"
-    ),
+    filename = filename_export_png,
     width = 10,
     height = 10,
     units = "in",
     res = 800
   )
-  draw(p,
+  p_draw =
+    draw(p,
        merge_legend = TRUE,
        column_title = paste0(legend_title, ": predictores climáticos vs volumen sep-mar, 1981-2021"),
        row_title = "Fecha de emisión",
@@ -960,9 +966,9 @@ plot_pheatmap_EDA <- function(
   
   dev.off()
   
-
+plot_list = list(plot1 = p_draw, filename1 = filename_export_png )
   #### absolute value
-  if(plot_obsolute){
+  if(plot_absolute){
   new_matrix = abs(cor_matrix)
   p_abs <-
     pheatmap(
@@ -990,21 +996,23 @@ plot_pheatmap_EDA <- function(
   
 
   #export absolute(matrix)
-  png(
-    paste0(
-      "data_output/scores/figures/",
-      filename_export,
-      "_abs",
-      today(),
-      ".png"
-    ),
+  filename_export_png_abs =     paste0(
+    "data_output/scores/figures/",
+    filename_export,
+    "_abs",
+    today(),
+    ".png"
+  )
+  
+  png(filename = filename_export_png_abs,
     width = 10,
     height = 10,
     units = "in",
     res = 800
   )
 
-  draw(p_abs,
+  p_abs_draw =
+    draw(p_abs,
        merge_legend = TRUE,
        column_title = paste0(legend_title, ": predictores climáticos vs volumen sep-mar, 1981-2021"),
        row_title = "Fecha de emisión",
@@ -1012,7 +1020,10 @@ plot_pheatmap_EDA <- function(
        ht_gap = unit(4, "cm"))
   
   dev.off()
+  plot_list = append(plot_list, list(plot2 = p_abs_draw,
+                                    filename2 = filename_export_png_abs))
   }
+  return(plot_list)
 }
 
 
