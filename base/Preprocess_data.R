@@ -621,7 +621,7 @@ preprocess_data <- function(
     train_set,
     raw_data = list(catchment_data),
     time_horizon = list(forecast_horizon),
-    info = list(convert_items_to_lists(info_list))
+    info = list((info_list))
   )
   
   if (forecast_mode == "prediction" | forecast_mode == "both"){

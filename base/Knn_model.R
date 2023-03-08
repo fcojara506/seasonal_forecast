@@ -134,14 +134,14 @@ knn_cross_validation <- function(X_train,f_train,n_neighbours,weight_method,y_en
 }
 
 
-q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, n_neighbours, weight_method, mode) {
+q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, n_neighbours, weight_method, forecast_mode) {
   set.seed(seed = 10)
   # save function arguments
   args <- as.list(environment())
   # check input
   if (!is.numeric(n_neighbours) || n_neighbours <= 0) {stop("Invalid n_neighbours. Number of neighbours should be a positive number")}
   if (!is.character(weight_method) || !weight_method %in% c("uniform", "distance")) {stop("Invalid weight_method. Should be either 'uniform' or 'distance'")}
-  if (!is.character(mode) || !mode %in% c("cv", "prediction", "both")) {stop("Invalid mode. Should be either 'cv', 'prediction' or 'both'")}
+  if (!is.character(forecast_mode) || !forecast_mode %in% c("cv", "prediction", "both")) {stop("Invalid mode. Should be either 'cv', 'prediction' or 'both'")}
   
   # target variables is f_i = Q_i/V of the forecast period (month i)
   f_train = rownames(q_train) %>% 
@@ -158,7 +158,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   wy_neighbours_cv = NULL
   
   # Prediction mode
-  if (mode == "prediction" || mode == "both") {
+  if (forecast_mode == "prediction" || forecast_mode == "both") {
     # perform flow prediction using k-NN algorithm with inputs:
     # X_train = training predictors
     # f_train = training target variable (flow/volume)
@@ -172,7 +172,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   }
   
   # Cross-validation mode
-  if (mode == "cv" || mode == "both") {    # perform leave-one-out cross-validation (LOOCV) on flow prediction using k-NN algorithm with inputs:
+  if (forecast_mode == "cv" || forecast_mode == "both") {    # perform leave-one-out cross-validation (LOOCV) on flow prediction using k-NN algorithm with inputs:
     # X_train = training predictors
     # f_train = training target variable (flow/volume)
     # n_neighbours = number of nearest neighbours
@@ -193,7 +193,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   
 }
 
-run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", mode=data_input$info$mode) {
+run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", forecast_mode=data_input$info$forecast_mode) {
   # perform flow prediction or cross-validation using the knn_forecast function
   # inputs:
   # q_train = training flow data
@@ -204,7 +204,7 @@ run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_metho
   # y_ens_cv = ensemble forecasts of volume for cross-validation (used for cv mode only)
   # n_neighbours = number of nearest neighbours
   # weight_method = method to weight the neighbours
-  # mode = "prediction", "cv", or "both"
+  # forecast_mode = "prediction", "cv", or "both"
   q_train = data_input$q_train
   y_train = data_input$y_train
   X_train = data_input$X_train
@@ -222,7 +222,7 @@ run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_metho
       y_ens_cv,
       n_neighbours,
       weight_method,
-      mode
+      forecast_mode
     )
   
   return(output)

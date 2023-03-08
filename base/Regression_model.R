@@ -70,9 +70,9 @@ make_predictions <- function(regression_model, X_test) {
 }
 
 # Main function that calls the above functions
-forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', preProcess = c("center", "scale"), mode = "both", ...) {
+forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', preProcess = c("center", "scale"), forecast_mode = "both", ...) {
   # check mode
-  if(!(mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
+  if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
   regression_model <- train_regression_model(X_train, y_train, method, preProcess,...)
   # error from regression model
@@ -83,14 +83,14 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
   rmse_cv <- NULL
   y_fore <- NULL
   
-  if (mode == "both" || mode == "cv") {
+  if (forecast_mode == "both" || forecast_mode == "cv") {
     # Perform cross validation and get the results
     cv_results <- cross_validation(regression_model, y_train)
     y_cv <- cv_results$y_cv
     rmse_cv <- cv_results$rmse_cv
   }
   
-  if (mode == "both" || mode == "prediction") {
+  if (forecast_mode == "both" || forecast_mode == "prediction") {
     # Make predictions on the test data
     y_fore <- make_predictions(regression_model, X_test)
     
@@ -160,18 +160,18 @@ ensemble_generator <- function(y,rmse,n_members=1000){
     return(list(y_ens_fore = y_ens_fore))
   }
   
-  ensemble_cv_and_test <- function(vol_deterministic, data_input, n_members, mode = c("both","cv", "prediction")) {
+  ensemble_cv_and_test <- function(vol_deterministic, data_input, n_members, forecast_mode = c("both","cv", "prediction")) {
     # check mode
-    if(!(mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please choose one of these: 'cv', 'prediction', 'both'")
+    if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please choose one of these: 'cv', 'prediction', 'both'")
     # Initialise ensemble variables
     y_ens_cv = NULL
     y_ens_fore = NULL
     
-    if (mode == "both" || mode == "cv") {
+    if (forecast_mode == "both" || forecast_mode == "cv") {
       # Perform cross validation and get the results
       y_ens_cv = ensemble_cv(vol_deterministic, data_input, n_members)
     }
-    if (mode == "both" || mode == "prediction") {
+    if (forecast_mode == "both" || forecast_mode == "prediction") {
       # Make predictions on the test data
       y_ens_fore = ensemble_test(vol_deterministic, data_input, n_members)
     }
@@ -184,7 +184,7 @@ forecast_vol_ensemble <- function(data_input,
                                   n_members=1000,
                                   method='lm',
                                   preProcess = c("center", "scale"),
-                                  mode = data_input$info$mode
+                                  forecast_mode = data_input$info$forecast_mode
                                   ){
   # Train and predict using regression model
     vol_deterministic =
@@ -194,7 +194,7 @@ forecast_vol_ensemble <- function(data_input,
         data_input$X_test,
         method = 'lm',
         preProcess = preProcess,
-        mode = mode
+        forecast_mode = forecast_mode
       )
    
     # m = vol_deterministic$regression_model$finalModel
@@ -203,7 +203,7 @@ forecast_vol_ensemble <- function(data_input,
     #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
     
     # Generate ensemble forecast
-    y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,mode)
+    y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,forecast_mode)
 
     return(y_forecast)
 }

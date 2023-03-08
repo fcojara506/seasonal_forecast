@@ -1,7 +1,7 @@
 library(icesTAF)
 library(glue)
 
-
+source("base/Scores.R")
 # replace_negative <- function(value,replace_for = 0) {
 #   if (value<0) {
 #     value = replace_for
@@ -134,7 +134,7 @@ export_data <- function(data_input,
                         q_fore,
                         export = "all"
 ) {
-  library(rlist)
+  
   if (!is.character(export) || !export %in% c("scores", "platform","forecasts", "all")) {stop("Invalid mode. Should be either 'scores', 'platform', 'forecasts' or 'all'")}
   
   results = list(info = data_input$info)
