@@ -1,3 +1,4 @@
+rm(list=ls())
 library(data.table)
 library(dplyr)
 library(lubridate)
@@ -6,22 +7,23 @@ library(tibble)
 
 # import local libraries
 source("base/Convert_units.R")
+source("base/DatesWaterYear.R")
 
 
-get_dataset_filenames <- function(dataset_meteo, dataset_hydro) {
+get_default_datasets_path <- function(meteo=NULL, hydro=NULL) {
 
   # catchment attributes
-    catchments_attributes_filename <-"data_input/attributes/attributes_49catchments_ChileCentral.feather"
+    catchments_attributes_filename <-"data_input/attributes/attributes_49catchments_ChileCentral.csv"
     # flow in average monthly mm
-    flows_filename <- "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.feather"
+    flows_filename <- "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.csv"
     # variable from the hydrology model
     hydro_filename <- NULL
-    hydro_filename <- if(!is.null(dataset_hydro)) glue::glue("data_input/storage_variables/","hydro_variables_monthly_catchments_ChileCentral_{dataset_hydro}.feather")
-    # meteorological data from dataset_meteo
+    hydro_filename <- if(!is.null(hydro)) glue::glue("data_input/storage_variables/","hydro_variables_monthly_catchments_ChileCentral_{hydro}.csv")
+    # meteorological data from meteo
     meteo_filename <- NULL
-    meteo_filename <- if(!is.null(dataset_meteo)) glue::glue("data_input/meteo_variables/","meteo_monthly_catchments_ChileCentral_{dataset_meteo}_1979_2022.feather")
+    meteo_filename <- if(!is.null(meteo)) glue::glue("data_input/meteo_variables/","meteo_monthly_catchments_ChileCentral_{meteo}_1979_present.csv")
     # monthly standard climate indices
-    climateindex_filename <- "data_input/climate_index_variables/indices_mensuales_1988_2020.feather"
+    climateindex_filename <- "data_input/climate_index_variables/indices_mensuales_1979_present.csv"
     
     return(
       list(
@@ -36,69 +38,44 @@ get_dataset_filenames <- function(dataset_meteo, dataset_hydro) {
   }
 
 read_and_subset_variable <- function(filename, catchment_code) {
-  # read feather files from the catchment data and 
+  # read files from the catchment data and 
   # subset given the catchment code
   cod_cuenca <- factor()
   wym <- numeric()
   df_variable <- NULL
   
   if (!is.null(filename) && file.exists(filename)) {
-    # read the feather file and subset by catchment code
-    df_variable <- feather::read_feather(filename) %>%
+    # read file and subset by catchment code
+    df_variable <- read.csv(filename) %>%
       mutate(wym = as.numeric(wym)) %>%
       data.table(key = c("wy_simple", "wym")) %>%
       subset(cod_cuenca == catchment_code, select = -cod_cuenca)
   }
-  
   return(df_variable)
 }
 
-read_and_process_catchment_data <- function(catchment_code,
-                           dataset_meteo,
-                           dataset_hydro,
-                           remove_wys,
-                           units_q) {
+read_catchment_data <- function(catchment_code,
+                                remove_wys,
+                                water_units,
+                                data_location_paths
+                           ) {
   #' @title Read and Process Catchment Data
-  #'
   #' @description This script reads and processes data for a specific catchment. 
-  #' It imports the feather library and then defines the filenames
   #' for the catchment attributes, flows, meteorological data, and hydrological 
-  #' variables using the get_dataset_filenames() function. 
-  #'
-  #' @param dataset_meteo The dataset for the meteorological data
-  #' @param dataset_hydro The dataset for the hydrological data
+  #' variables.
   #' @param catchment_code The code for the specific catchment
-  #' @param remove_wys A list of years to be removed from the data
-  #' @param units_q The units for the flow data
-  #'
-  #' @return A list of processed data and the catchment attributes
-  #'
-  #' @examples
-  #' catchment_data <- read_and_process_catchment_data(dataset_meteo = dataset_meteo,
-  #'                                                   dataset_hydro = dataset_hydro,
-  #'                                                   catchment_code = "4311001",
-  #'                                                   remove_wys = c(1990, 1995),
-  #'                                                   units_q = "m^3/s")
-  
-  library(feather)
-  if(missing(catchment_code) || missing(dataset_meteo) || missing(dataset_hydro) || missing(remove_wys) || missing(units_q)) {
-    stop("Missing parameter. All parameters are required (catchment_code, dataset_meteo, dataset_hydro, remove_wys, units_q)")
-  }
+  #' @param remove_wys
+  #' @param water_units
   
   #initialise NULL attributes
-  attributes_catchment <- NULL
-  monthly_flows <- NULL
-  monthly_meteo <- NULL
-  monthly_hydro <- NULL
+  attributes_catchment <- 
+  monthly_flows <- 
+  monthly_meteo <-
+  monthly_hydro <- 
   monthly_climateindex <- NULL
   
-  # path filenames to catchment attributes
-  data_filenames <- get_dataset_filenames(
-    dataset_meteo = dataset_meteo,
-    dataset_hydro = dataset_hydro)
-  
   # read all the catchments attributes from the study area
-  attributes_catchments <- read_feather(data_filenames$catchments_attributes_filename)
+  attributes_catchments <- read.csv(data_location_paths$catchments_attributes_filename)
   
   #check if the catchment code exists
   if(!(catchment_code %in% attributes_catchments$cod_cuenca)) {
@@ -111,16 +88,15 @@ read_and_process_catchment_data <- function(catchment_code,
   
   # read and subset the flows, meteorological data, and hydrological data
   monthly_flows        <- read_and_subset_variable(
-    filename = data_filenames$flows_filename,
-    catchment_code = catchment_code) %>%
-    remove_years(remove_wys)
+    filename = data_location_paths$flows_filename,
+    catchment_code = catchment_code) 
   
   # convert the flow data to the desired units
   monthly_flows <- monthly_flows %>%
     data.table() %>%
     mutate(date = lubridate::dmy(paste0("01",
-    sprintf("%02d", wy_month_to_month(wy_month = wym)),
-    wy_to_year(wy = wy_simple, wym = wym)
+    sprintf("%02d", wateryearmonth2month(wy_month = wym)),
+    wateryear2year(wy = wy_simple, wym = wym)
     ))) %>% 
     mutate(days_months = lubridate::days_in_month(date)) %>%
     select(-date) %>% 
@@ -128,23 +104,21 @@ read_and_process_catchment_data <- function(catchment_code,
              hydromad::convertFlow(
       Q_mm,
       from = "mm/month",
-      to = units_q,
+      to = water_units$q,
       area.km2 = attributes_catchment$area_km2)) %>%
-    select(-days_months)
+    select(-days_months) %>% 
+    remove_years(remove_wys)
   # meteorological data
   monthly_meteo       <- read_and_subset_variable(
-    filename = data_filenames$meteo_filename,
-    catchment_code = catchment_code) %>%
-    remove_years(remove_wys)
+    filename = data_location_paths$meteo_filename,
+    catchment_code = catchment_code) 
   # data from the hydrological model
   monthly_hydro       <- read_and_subset_variable(
-    filename = data_filenames$hydro_filename,
-    catchment_code = catchment_code) %>%
-    remove_years(remove_wys)
-  
+    filename = data_location_paths$hydro_filename,
+    catchment_code = catchment_code) 
   # read and process the climate index data
-  monthly_climateindex <- data_filenames$climateindex_filename %>% 
-    feather::read_feather() %>%
+  monthly_climateindex <- data_location_paths$climateindex_filename %>% 
+    read.csv() %>%
     mutate(wym = as.numeric(wym))
  
   # merge the meteorological, hydrological, and climate index data into a single dataframe
@@ -175,40 +149,38 @@ read_and_process_catchment_data <- function(catchment_code,
 }
 
 ### FORECASTING MONTHS HORIZON
-get_forecast_horizon <- function(
-    month_initialisation,
-    horizon_strategy,
-    horizon_month_start = "sep",
-    horizon_month_end =  "mar",
-    wy_holdout
-    ) {
+get_forecast_horizon <- function(date_init,horizon) {
   
-  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep",
-    "oct", "nov", "dic", "ene", "feb", "mar")
+  months_year <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
+  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
+  
+  
   
   # indices within months_wy vector
-  month_initialisation_index <- match(month_initialisation, months_wy)
-  init_target_index <- match(horizon_month_start, months_wy)
-  end_target_index <- match(horizon_month_end, months_wy)
-  # check horizon_strategy
-  horizon_strategy <- match.arg(horizon_strategy,c("dynamic","static"))
+  month_initialisation_index <- date_init$init_water_year_month
+  init_target_index <-  wateryearmonth(horizon$month_start)
+  end_target_index <- wateryearmonth(horizon$month_end)
+  
+  # check horizon$window_method
+  horizon$window_method <- match.arg(horizon$window_method,c("dynamic","static"))
   # start month
-  if (horizon_strategy == "dynamic") {
+  if (horizon$window_method == "dynamic") {
     if (month_initialisation_index < init_target_index) {
       init_forecast_index <- init_target_index
     } else {
       init_forecast_index <- month_initialisation_index
     }
-  } else if (horizon_strategy == "static") {
+  } else if (horizon$window_method == "static") {
     init_forecast_index <- init_target_index
   }
   
   # end month
-  if (horizon_strategy == "dynamic") {
+  if (horizon$window_method == "dynamic") {
     end_forecast_index <- end_target_index
-  } else if (horizon_strategy == "static") {
+  } else if (horizon$window_method == "static") {
     end_forecast_index <- end_target_index
   }
+  
   ############################################################################
   ######## DERIVED DATA ###############
   # PREVIOUS MONTHS OF FORECAST
@@ -218,56 +190,54 @@ get_forecast_horizon <- function(
   months_forecast_period <- months_wy[init_forecast_index:end_forecast_index]
   library(glue)
   ### initialisation dates
-  #gregorian year
-  year_initialisation <- wy_to_year(
-    wy = wy_holdout,
-    wym = month_initialisation_index + 1)
-  #gregorian month number (january = 1)
-  month_initialisation_num <- wy_month_to_month(
-    wy_month = month_initialisation_index)
+  
   #format date: %d %b %Y
-  date_initialisation <- glue("1 {month_initialisation_num} {year_initialisation}")
+  date_initialisation <- format(date_init$ymd_datetime,'%d %m %Y')
   #format date: %Y-%m-%d
-  datetime_initialisation <- as.Date(glue("{year_initialisation}/{month_initialisation_num}/01"))
+  datetime_initialisation <- date_init$datetime_initialisation
   ### forecast horizon dates
   ###
   # (1) forecast horizon start date FHSD
+  
   #year of FHSD
-  year_init <- wy_to_year(
-    wy = wy_holdout,
-    wym = init_forecast_index)
+  year_init <- wateryear2year(wy = date_init$init_water_year, wym = init_forecast_index)
   #month of FHSD
-  month_init <- wy_month_to_month(init_forecast_index)
+  month_init <- wateryearmonth2month(init_forecast_index)
   #date of FHSD %Y-%m-%d
-  date_init_forecast <- as.Date(glue("{year_init}/", "{month_init}/", "{01}"))
+  date_init_forecast <- make_date(year_init,month_init,1)
   # (2) forecast horizon end date FHED
+  
+  
+  
   #year of FHED
-  year_end <-  wy_to_year(wy = wy_holdout, wym = end_forecast_index)
+  year_end <-  wateryear2year(wy = date_init$init_water_year, wym = end_forecast_index)
   #month of FHED
-  month_end <- wy_month_to_month(end_forecast_index)
+  month_end <- wateryearmonth2month(end_forecast_index)
   #date of FHED %Y-%m-%d
-  date_end_forecast <- as.Date(glue("{year_end}/", "{month_end}/", "{01}"))
+  date_end_forecast <- make_date(year_end,month_end,1)
+  
+  
   # months in the forecast horizon
-  forecast_horizon_months <- seq.Date(
-    from = date_init_forecast,
-    to = date_end_forecast,
-    by = "1 months")
-  # number of day in each month of the forecast horizon
-  days_per_month_horizon  <- lubridate::days_in_month(forecast_horizon_months)
+  forecast_horizon_months <- seq.Date(from = date_init_forecast,
+                                      to = date_end_forecast, by = "1 months")
+  
+  
+
   # start and end of forecast horizon (%b %Y and %b)
   # change date format to Spanish (for convenience)
   system_locale <- Sys.getlocale(category = "LC_TIME")
   spanish_locale <- Sys.setlocale("LC_TIME", "es_ES.UTF-8")
   
-  volume_span_text_v2     <- 
-    forecast_horizon_months %>%
-    format("%b %Y") %>%
+  # number of day in each month of the forecast horizon
+  days_per_month_horizon  <- lubridate::days_in_month(forecast_horizon_months)
+  
+  volume_span_text_v2     <-
+    format(forecast_horizon_months,"%b %Y") %>%
     .[c(1, length(.))] %>%
     paste(collapse = " - ")
   
   volume_span_text        <-
-    forecast_horizon_months %>%
-    format("%b") %>%
+    format(forecast_horizon_months,"%b") %>%
     .[c(1, length(.))] %>%
     paste(collapse = ",") %>%
     paste0("[", ., "]")
@@ -276,9 +246,9 @@ get_forecast_horizon <- function(
   
   ### target water year
   # start date
-  date_init_wy <-   as.Date(glue("{wy_to_year(wy_holdout,1)}/04/01"))
+  date_init_wy <- make_date(wateryear2year(date_init$init_water_year,1),4,1)
   # end date
-  date_end_wy <-   as.Date(glue("{wy_to_year(wy_holdout,12)}/03/31"))
+  date_end_wy <-  make_date(wateryear2year(date_init$init_water_year,12),3,31)
   # months in target water year
   wy_holdout_months   <- seq.Date(from = date_init_wy,
                                      to = date_end_wy,
@@ -286,20 +256,19 @@ get_forecast_horizon <- function(
   #results
   return(
     list(
+      months_wy = months_wy,
+      months_forecast_period = months_forecast_period,
+      dates_forecast_period = forecast_horizon_months,
+      days_per_month_horizon = days_per_month_horizon,
+      months_before_initialisation = months_before_initialisation,
       init_forecast_index = init_forecast_index,
       end_forecast_index = end_forecast_index,
-      months_forecast_period = months_forecast_period,
-      months_before_initialisation = months_before_initialisation,
       month_initialisation_index = month_initialisation_index,
-      month_initialisation =  month_initialisation,
-      months_wy = months_wy,
       date_initialisation = date_initialisation,
       datetime_initialisation = datetime_initialisation,
       volume_span_text    = volume_span_text,
       volume_span_text_v2 = volume_span_text_v2,
-      forecast_horizon_months = forecast_horizon_months,
-      days_per_month_horizon = days_per_month_horizon,
-      wy_holdout_months = wy_holdout_months
+      months_target_water_year = wy_holdout_months
     )
   )
 }
@@ -349,8 +318,6 @@ find_initial_months <- function(date, month_i){
   as.Date(paste0(year, "-", month_i, "-01"))
 }
 
-#predictor_name = "ONI_mean_5months"
-predictor_name = "pr_sum_-1months"
 # one predictor column generator
 one_column_predictor <- function(predictor_name,month_initialisation_index,catchment_data) {
 
@@ -366,11 +333,13 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
       stop(paste0("predictor: ", predictor_var, " not found in database"))
     }
     
+    
     # subset the predictor and months
       var <- input_data %>%
         select("wy_simple", all_of(predictor_var),"wym") %>% 
         subset(wym %in% predictor_attributes$wym_selected) %>%
-        mutate(date_initial = find_initial_months(ymd(paste(wy_simple, wym, 1, sep = "-")),month_initialisation_index)) %>% 
+        mutate(date_initial = find_initial_months(ymd(paste(wy_simple, wym, 1, sep = "-")),
+                                                  month_initialisation_index)) %>% 
         select(date_initial,all_of(predictor_var))
 
       ### find and remove incomplete year
@@ -404,7 +373,8 @@ one_column_predictor <- function(predictor_name,month_initialisation_index,catch
 ## predictor dataframe
 predictors_generator <- function(predictor_list,
                                  month_initialisation_index,
-                                 catchment_data) {
+                                 catchment_data,
+                                 remove_wys) {
   
   predictors <- lapply(predictor_list,
                       function(predictor_name)
@@ -420,7 +390,8 @@ predictors_generator <- function(predictor_list,
   
   predictors <- Reduce(merge, predictors) %>%
     data.table(key = "wy_simple") %>%
-    tidyr::drop_na()
+    tidyr::drop_na() %>% 
+    remove_years(remove_wys)
   
   return(predictors)
 }
@@ -429,11 +400,11 @@ predictors_generator <- function(predictor_list,
 predictant_generator <- function(
     forecast_horizon,
     catchment_data,
-    units_q,
-    units_y) {
+    water_units) {
   
   library(stats)
   library(dplyr)
+  # filter in the horizon period
   cond1 <- catchment_data$monthly_flows$wym >= forecast_horizon$init_forecast_index
   cond2 <- catchment_data$monthly_flows$wym <= forecast_horizon$end_forecast_index
   
@@ -461,7 +432,7 @@ predictant_generator <- function(
   q_converted <-
     convert_flow(q = select(q,-wy_simple),
                  from = "mm/month",
-                 to = units_q,
+                 to = water_units$q,
                  area_km2 = catchment_data$attributes_catchment$area_km2,
                  days_per_month = forecast_horizon$days_per_month_horizon
                  )
@@ -470,12 +441,12 @@ predictant_generator <- function(
     convert_vol(
       v = select(y,-wy_simple),
       from = "mm",
-      to = units_y,
+      to = water_units$y,
       area_km2 = catchment_data$attributes_catchment$area_km2
   )
   
   #add water year column
-  q_converted$wy_simple <- q$wy_simple
+  q_converted$wy_simple <- q$wy_simple 
   y_converted$wy_simple <- y$wy_simple
   
   return(list(y = y_converted, q = q_converted))
@@ -505,13 +476,13 @@ interval_wys <- function(wy_train) {
     y)
 }
 
-training_set <- function(predictors, predictant, wy_holdout) {
+training_set <- function(predictors, predictant, water_year_target) {
   if (is.null(predictors) | is.null(predictant)) { 
     stop("error: PREDICTORS OR PREDICTANT CANNOT BE NULL")
   }
   
   wy_train <- intersect(predictors$wy_simple, predictant$q$wy_simple)
-  wy_train <- wy_train[wy_train != wy_holdout]
+  wy_train <- wy_train[wy_train != water_year_target]
   
   X_train <- predictors %>% subset_years(wy_train)
   y_train <- predictant$y %>% subset_years(wy_train)
@@ -522,29 +493,29 @@ training_set <- function(predictors, predictant, wy_holdout) {
       y_train = y_train,
       q_train = q_train,
       wy_train = wy_train
-      #wy_holdout = wy_holdout
+      #water_year_target = water_year_target
     )
   )
 }
 
-testing_set <- function(predictors, predictant, wy_holdout) {
+testing_set <- function(predictors, predictant, water_year_target) {
   ### testing period
   
-  # wy_holdout must be in predictors
+  # water_year_target must be in predictors
   X_test <- NULL
-  if (wy_holdout %in% predictors$wy_simple) {
-    X_test <- predictors %>% subset_years(wy_holdout)
+  if (water_year_target %in% predictors$wy_simple) {
+    X_test <- predictors %>% subset_years(water_year_target)
   } else{
     message("PREDICTOR INTERVAL WYS: ", interval_wys(predictors$wy_simple))
-    stop("YOU NEED VALID PREDICTORS FOR THE TARGET WY (SEE DATA FOR WY_HOLDOUT)")
+    stop("YOU NEED VALID PREDICTORS FOR THE TARGET WY (SEE DATA FOR water_year_target)")
   }
   
-  # wy_holdout must be in predictant
+  # water_year_target must be in predictant
   y_test <- NULL
   q_test <- NULL
-  if (wy_holdout %in% predictant$q$wy_simple) {
-    y_test <- predictant$y %>% subset_years(wy_holdout)
-    q_test <- predictant$q %>% subset_years(wy_holdout)
+  if (water_year_target %in% predictant$q$wy_simple) {
+    y_test <- predictant$y %>% subset_years(water_year_target)
+    q_test <- predictant$q %>% subset_years(water_year_target)
   } 
 
   return(list(
@@ -554,44 +525,43 @@ testing_set <- function(predictors, predictant, wy_holdout) {
   ))
 }
 
-wy_to_year <- function(wy, wym) {
-  #Take a wateryear(wy) to gregorian year
-  wy <- as.integer(wy)
-  wym <- as.integer(wym)
-  
-  gregorian_year <- as.integer(ifelse(wym < 11, wy, wy + 1))
-  return(gregorian_year)
-}
-
-wy_month_to_month <- function(wy_month) {
-  month <- wy_month + 3
-  
-  month <-
-    ifelse(month > 12,
-           month - 12,
-           month)
-  return(month)
-}
 
 convert_items_to_lists <- function(lst) {
   lst <- lapply(lst, function(x) if (length(x) > 1) list(x) else x)
   return(lst)
 }
 
+initialisation_dates <- function(datetime_initialisation) {
+  library(lubridate)
+  #parse as datetime
+  ymd_datetime = as_datetime(datetime_initialisation)
+  #get gregorian year,month
+  init_year = year(ymd_datetime)
+  init_month = month(ymd_datetime)
+  
+  #get water-year year,month
+  init_water_year = wateryear(ymd_datetime)
+  init_water_year_month = wateryearmonth(init_month)
+  
+ return(as.list(environment())) 
+}
+
+horizon_mode <- function(window_method,month_start,month_end) {
+  return(as.list(environment()))
+}
+
+waterunits <- function(q, y) {return(list(q=q,y=y))}
+
+
 preprocess_data <- function(
-    catchment_code = "5410002",
-    dataset_meteo  = "ens30avg",
-    dataset_hydro  = "ERA5Ens_SKGE",
-    month_initialisation = "jun",
-    wy_holdout = 2016,
-    remove_wys = NA,
-    horizon_strategy = "dynamic",
-    horizon_month_start = "sep",
-    horizon_month_end = "mar",
-    predictor_list = c("pr_sum_-1months","tem_mean_2months"),
-    units_q = "mm/month",
-    units_y = "mm",
-    mode = "both"
+    catchment_code , #"5410002",
+    datetime_initialisation , #lubridate::make_date(2016,6,1),
+    predictor_list, #= c("pr_sum_-1months","tem_mean_2months"),
+    horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3),
+    data_location_paths = get_default_datasets_path(meteo = "ens30avg",hydro = "ERA5Ens_SKGE"),
+    water_units = waterunits(q = "m^3/s", y = "GL"),
+    forecast_mode = "both",
+    remove_wys = NULL
     ) {
   
   # save arguments
@@ -599,23 +569,19 @@ preprocess_data <- function(
   
   # catchment data (raw forcings, flows)
   catchment_data <-
-    read_and_process_catchment_data(
+    read_catchment_data(
     catchment_code = catchment_code,
-    dataset_meteo = dataset_meteo,
-    dataset_hydro = dataset_hydro,
+    water_units = water_units,
     remove_wys = remove_wys,
-    units_q = units_q
-  )
+    data_location_paths = data_location_paths
+    )
+  #dates related to the initialisation
+  date_init = initialisation_dates(datetime_initialisation)
   
   # set target period to forecast
-  forecast_horizon <-
-    get_forecast_horizon(
-    month_initialisation = month_initialisation,
-    horizon_strategy = horizon_strategy,
-    horizon_month_start = horizon_month_start,
-    horizon_month_end =  horizon_month_end,
-    wy_holdout = wy_holdout
-  )
+  forecast_horizon <- get_forecast_horizon(
+    date_init = date_init,
+    horizon = horizon)
   
   month_initialisation_index = forecast_horizon$month_initialisation_index
   # create the predictors variables
@@ -623,7 +589,8 @@ preprocess_data <- function(
     predictors_generator(
     predictor_list = predictor_list,
     month_initialisation_index = month_initialisation_index,
-    catchment_data = catchment_data
+    catchment_data = catchment_data,
+    remove_wys = remove_wys
   )
 
   # create the target variable (VOLUME)
@@ -631,16 +598,15 @@ preprocess_data <- function(
     predictant_generator(
     forecast_horizon = forecast_horizon,
     catchment_data = catchment_data,
-    units_q = units_q,
-    units_y = units_y
+    water_units = water_units
     )
   
-  # separate into training set based on wy_holdout
+  # separate into training set based on water_year_target
   train_set <- 
     training_set(
     predictor = predictors,
     predictant = predictant,
-    wy_holdout = wy_holdout
+    water_year_target = date_init$init_water_year
     )
   
  
@@ -658,13 +624,13 @@ preprocess_data <- function(
     info = list(convert_items_to_lists(info_list))
   )
   
-  if (mode == "prediction" | mode == "both"){
+  if (forecast_mode == "prediction" | forecast_mode == "both"){
     # testing set 
     test_set  <- 
       testing_set(
         predictors = predictors,
         predictant = predictant,
-        wy_holdout = wy_holdout)
+        water_year_target = date_init$init_water_year)
     # append to results
     results <- c(results,test_set)
   }
@@ -685,39 +651,24 @@ preprocess_data <- function(
 test_preprocess <- function(){
 
   catchment_code <- "5410002"
-  dataset_meteo  <- "ens30avg"
-  dataset_hydro  <- "ERA5Ens_SKGE"
-  month_initialisation <- "jun"
-  horizon_strategy <- "dynamic"
-  horizon_month_start <- "sep"
-  horizon_month_end <- "mar"
-  predictor_list <- c("pr_sum_-1months","tem_mean_1months")
-  wy_holdout <- 2022
-  remove_wys <- c(1990,1980,2013)
-  units_q <- "m^3/s"
-  units_y <- "GL"
-  mode <- "both"
+  datetime_initialisation = lubridate::make_date(2016,6,1)
+  horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
+  predictor_list <- c("tem_mean_6months")
+  remove_wys <- c(1990,1940,2013)
+  water_units = waterunits(q = "m^3/s", y = "GL")
+  forecast_mode <- "both"
+  data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE")
 
   data1 <- preprocess_data(
     catchment_code = catchment_code,
-    dataset_meteo  = dataset_meteo,
-    dataset_hydro  = dataset_hydro,
-    month_initialisation = month_initialisation,
-    horizon_strategy = horizon_strategy,
-    horizon_month_start = horizon_month_start,
-    horizon_month_end = horizon_month_end,
+    datetime_initialisation = datetime_initialisation,
+    horizon = horizon,
     predictor_list = predictor_list,
-    wy_holdout = wy_holdout,
     remove_wys = remove_wys,
-    units_q = units_q,
-    units_y = units_y,
-    mode = mode
+    water_units = water_units,
+    forecast_mode = forecast_mode
   )
   
-data2 <- preprocess_data(
-  month_initialisation = "oct",
-  wy_holdout = 1996)
-
 
 predictors = c(
 "MEIv2_mean_2months", "PDO_mean_2months", "SOI_mean_2months", "ONI_mean_2months",
@@ -725,39 +676,21 @@ predictors = c(
 "ESPI_mean_2months", "AAO_mean_2months", "BIENSO_mean_2months")
 catchment_code = "3414001"
 month_initialisation = "dic"
-horizon_month_start = "sep"
-horizon_month_end = "mar"
-horizon_strategy = "static"
+horizon$month_start = 9
+horizon$month_end = 3
+horizon$window_method = "static"
 predictor_list = predictors
-wy_holdout = 2022
+water_year_target = 2022
 remove_wys = c(1978)
-units_q = "m3/s"
-units_y = "GL"
-mode = "cv"
+water_units = waterunits(q = "m3/s",y = "GL")
+forecast_mode = "cv"
 
-data3 <- preprocess_data(
-  catchment_code = catchment_code,
-  dataset_meteo  = dataset_meteo,
-  dataset_hydro  = dataset_hydro,
-  month_initialisation = month_initialisation,
-  horizon_strategy = horizon_strategy,
-  horizon_month_start = horizon_month_start,
-  horizon_month_end = horizon_month_end,
-  predictor_list = predictor_list,
-  wy_holdout = wy_holdout,
-  remove_wys = remove_wys,
-  units_q = units_q,
-  units_y = units_y,
-  mode = mode
-)
 
 
 
 return(
   list(
-  data1 = data1,
-  data2 = data2,
-  data3 = data3
+  data1 = data1
   )
 
 )

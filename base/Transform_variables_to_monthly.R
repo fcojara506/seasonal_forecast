@@ -1,19 +1,9 @@
 rm(list = ls())
+source("base/DatesWaterYear.R")
 library(dplyr)
 library(data.table)
 
-wy         <- function(x) {
-  fifelse(lubridate::month(x) > 3,
-          lubridate::year(x),
-          lubridate::year(x) - 1)
-}
 
-month_to_wym <- function(month_as_char)  {
-  wym = as.numeric(as.character(month_as_char))
-  wym = ifelse(wym > 3, wym - 3, wym + 12 - 3)
-  #wym = sprintf("%02d", wym)
-  return(wym)
-}
 
 get_var_name<- function(filename) {
   toupper(tools::file_path_sans_ext(basename(filename)))
@@ -32,12 +22,12 @@ aggregate_variable <- function(filename,
     )
   colnames(df)[1] = "date"
   
-  if (!"i_ens" %in% colnames(df)) df$i_ens = 1
+  #if (!"i_ens" %in% colnames(df)) df$i_ens = 1
   
   df =
     df %>%
     melt.data.table(
-      id.vars = c("date", "i_ens"),
+      id.vars = c("date"),
       variable.name = "cod_cuenca",
       value.name = "var"
     ) %>% 
@@ -46,9 +36,9 @@ aggregate_variable <- function(filename,
     mutate(wy_simple = wy(date)) %>%
     select(-date) %>%
     .[, .(var = round(fx(var), 3)),
-      by = list(cod_cuenca, wym, wy_simple, i_ens)]
+      by = list(cod_cuenca, wym, wy_simple)]
   
-  names(df)[names(df) == 'i_ens'] <- "ens"
+ 
   names(df)[names(df) == 'var'] <- var_name
   
   
@@ -57,17 +47,19 @@ aggregate_variable <- function(filename,
 
 export_meteo <- function(filename_pr,
                          filename_tem,
-                         filename_export) {
+                         filename_export=NULL) {
   
   pr_monthly = aggregate_variable(filename_pr, "pr", sum)
   tem_monthly = aggregate_variable(filename_tem, "tem", mean)
   # merge variables and export
   meteo_input = merge(pr_monthly, tem_monthly)
-  feather::write_feather(meteo_input, filename_export)
+  if (!is.null(filename_export)) {
+    #feather::write_feather(meteo_input, filename_export)
+    write.csv(x = meteo_input,file = filename_export,row.names = F)
+    message("Monthly data successfully exported ")
+  }
   
-  message("Monthly data successfully exported ")
-  
-  return(filename_export)
+  return(meteo_input)
 }
 
 #### storage
@@ -96,7 +88,7 @@ storage_variables_filename <- function(
 }
 
 aggregate_hydro <- function(files_list,
-                            filename_export = glue::glue('hydro_variables_monthly_catchments_ChileCentral_{files_list$hydrological_model}_{files_list$objective_function}.feather')
+                            filename_export = glue::glue('hydro_variables_monthly_catchments_ChileCentral_{files_list$hydrological_model}_{files_list$objective_function}.csv')
                             ) {
   
   df  =
@@ -140,10 +132,11 @@ new_hydro_variable <- function(df,selected_variables,FUN,var_name) {
 
 # join files
 join_files <- function(df_list,filename_export) {
-  
-  var = Reduce(function(x, y) merge(x, y, all=TRUE), df_list)
+  library(data.table)
+  var = rbindlist(df_list)#Reduce(function(x, y) merge(x, y,all=T), df_list)
   var = as.data.table(var)[order(wy_simple)]
-    
-  feather::write_feather(x=var,path = filename_export )
+  var = select(var, c('wy_simple','wym',everything()))  
+  #feather::write_feather(x=var,path = filename_export )
+  write.csv(x = var,file = filename_export,row.names = F)
   return(var)
 }

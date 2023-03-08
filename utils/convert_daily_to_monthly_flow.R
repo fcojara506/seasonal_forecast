@@ -91,10 +91,11 @@ month_to_wym<- function(month_as_char)  {
   wym = sprintf("%02d", wym)
   return(wym)
 }
-# path to csv files
-filename_selected_basins = "base/data_input/flows/Cuencas_Fondef-DGA_v1.csv"
-filename_basins_attributes = "base/data_input/flows/catchment_attributes_CAMELS-CL.csv"
-filename_basin_flows_mm = "base/data_input/flows/q_mm_day.csv"
+# path to csv files 
+
+filename_selected_basins = "data_input/flows/Cuencas_Fondef-DGA_v1.csv"
+filename_basins_attributes = "data_input/flows/catchment_attributes_CAMELS-CL.csv"
+filename_basin_flows_mm = "data_input/flows/q_mm_day.csv"
 ## cuencas regimen natural seleccionadas
 codes_catchments = as.character(subset(read.csv(filename_selected_basins,sep=";"),Considerar==1)$gauge_id)
 

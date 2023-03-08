@@ -2,7 +2,7 @@
 #library(lubridate)
 library(hydromad)
 
-# script transform from
+# script transformed from
 # https://github.com/josephguillaume/hydromad/blob/master/R/convertFlow.R
 
 convert_flow <- function(q,

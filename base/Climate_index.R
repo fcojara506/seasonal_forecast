@@ -1,6 +1,7 @@
 rm(list = ls())
 
-
+library(data.table)
+library(dplyr)
 index_folder = "data_input/climate_index_variables/"
 setwd(index_folder)
 
@@ -9,8 +10,7 @@ wy_simple         <- function(month,year){fifelse(month>3, year,year - 1)}
 
 
 read_indices_files <- function(download_index_files = T) {
-  library(data.table)
-  library(dplyr)
+ 
   
   
   
@@ -20,7 +20,6 @@ read_indices_files <- function(download_index_files = T) {
       list(
         "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
         "https://psl.noaa.gov/enso/mei/data/meiv2.data",
-        #"https://www.ncei.noaa.gov/pub/data/cmb/ersst/v5/index/ersst.v5.pdo.dat",
         "https://psl.noaa.gov/pdo/data/pdo.timeseries.ersstv5.csv",
         "https://psl.noaa.gov/data/correlation/soi.data",
         "https://psl.noaa.gov/data/correlation/censo.data",
@@ -85,8 +84,15 @@ read_indices_files <- function(download_index_files = T) {
     ) %>%
     mutate_all(as.numeric) %>%
     data.table(key = c("year", "month"))
+ 
   
-  e = read.csv(file = "olr",skip=111,sep = "",na.strings = "-999.9") %>% 
+  read.csv(file = "olr",skip = 111,header = T) %>%
+    apply(MARGIN = 1,
+           function(row) stringr::str_replace_all(row,pattern = "-999.9"," NA"))%>%
+    data.frame() %>% 
+    write.csv(file = "olr2",row.names = F,quote = F) 
+  
+  e = read.csv(file = "olr2",header = F,sep = "",na.strings = "NA",skip=6) %>% 
     as.matrix.data.frame() %>% 
     data.table %>% 
     `colnames<-`(colnames) %>%
@@ -158,8 +164,9 @@ read_indices_files <- function(download_index_files = T) {
   return(result)
 }
 
-monthly_indices = read_indices_files(download_index_files = T)
+monthly_indices = read_indices_files(download_index_files = F)
+monthly_indices = select(monthly_indices, c('wy_simple','wym',everything())) 
+write.csv(x = monthly_indices,file ="indices_mensuales_1979_present.csv",  row.names = F)
 
-feather::write_feather(monthly_indices,"indices_mensuales_1988_2022.feather")
 
 

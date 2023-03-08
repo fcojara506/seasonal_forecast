@@ -12,7 +12,6 @@ plot_absolute = T
 
 p = do.call(plot_pheatmap_EDA,correlation_plot)
 
-library('plotly')
 
 
 CRPSS_plot = list(
