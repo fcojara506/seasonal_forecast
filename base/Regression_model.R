@@ -11,7 +11,7 @@
 ############## RMSE IN LEAVE.ONE.OUT #######################
 # Function to calculate the RMSE in Leave One Out cross-validation
 rmse_LOO <- function(simulated_values, observed_values) {
-  require(hydroGOF)
+  require(caret)
   
   # Check that the lengths of simulated and observed values match
   if (length(simulated_values) != length(observed_values)) {
@@ -21,7 +21,7 @@ rmse_LOO <- function(simulated_values, observed_values) {
   rmse_matrix <- matrix(nrow = length(simulated_values))
   # Loop through each simulated value and calculate the RMSE 
   for (iterator in seq_along(simulated_values)) {
-    rmse_matrix[iterator] <- hydroGOF::rmse(sim = simulated_values[-iterator],
+    rmse_matrix[iterator] <- caret::RMSE(pred = simulated_values[-iterator],
                                             obs = observed_values[-iterator])
   }
   return(rmse_matrix)
@@ -31,11 +31,13 @@ rmse_LOO <- function(simulated_values, observed_values) {
 train_regression_model <- function(X_train, y_train,method,preProcess,resampling_method = "LOOCV",...) {
   library(caret)
   #Train a regression model using the provided data and method
+
   train(
     X_train,
     y_train,
-    #metric = "RMSE",
-    trControl = trainControl(method = resampling_method, savePredictions = "all"),
+    metric = "RMSE",
+    trControl = trainControl(method = resampling_method,
+                             savePredictions = "all"),
     method = method,
     preProcess = preProcess,
     ...
@@ -55,7 +57,7 @@ cross_validation <- function(regression_model) {
 
   # Calculate the RMSE in cross-validation
   rmse_cv              <- rmse_LOO(sim = y_cv,obs = obs_cv)
-  rmse_model           <- hydroGOF::rmse(sim = y_cv, obs = obs_cv)
+  rmse_model           <- caret::RMSE(pred = y_cv, obs = obs_cv)
   
   return(list(y_cv = y_cv, rmse_cv = rmse_cv, rmse_model = rmse_model))
 }
@@ -75,9 +77,9 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
   # check mode
   if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
-  regression_model <- train_regression_model(X_train, y_train, method, preProcess,...)
+  regression_model <- train_regression_model(X_train, y_train, method, preProcess,tuneLength = 10,...)
   # error from regression model
-  rmse_model <- regression_model$results$RMSE
+  rmse_model <- merge(regression_model$bestTune,regression_model$results)$RMSE
 
   #Initialise variables
   y_cv <- NULL

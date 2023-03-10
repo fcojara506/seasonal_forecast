@@ -10,6 +10,8 @@ source("base/Scores.R")
 # }
 
 # export volume data to platform
+library('rlist')
+
 export_volume_platform <- function(data_input,data_fore) {
   
   wy_target =  data_input$info$wy_holdout
@@ -131,7 +133,7 @@ short_river_name <- function(var) {stringr::word(var,start = 1,end = 2)}
 
 export_data <- function(data_input,
                         data_fore,
-                        q_fore,
+                        q_fore = NULL,
                         export = "all"
 ) {
   

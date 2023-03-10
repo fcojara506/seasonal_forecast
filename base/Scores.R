@@ -1,12 +1,14 @@
 deterministic_scores <- function(y_true,y_pred) {
-  library(hydroGOF)
+  library(caret)
+  # library(hydroGOF)
+  # 
+  # scores  = hydroGOF::gof.data.frame(
+  #   sim = y_pred,
+  #   obs = y_true)
+  # scores["RMSE",][[1]]
   
-  scores  = hydroGOF::gof.data.frame(
-    sim = y_pred,
-    obs = y_true)
-  
-  rmse            = scores["RMSE",][[1]]
-  R2              = scores["R2",][[1]]
+  rmse            =  caret::RMSE(pred = y_pred, obs = y_true)
+  R2              = caret::R2(pred =  y_pred,obs = y_true)
   
   return(list(
     rmse_det = rmse,
@@ -16,7 +18,7 @@ deterministic_scores <- function(y_true,y_pred) {
 
 ensemble_scores <- function(y_train,y_ens) {
   library(SpecsVerification)
-  library(hydroGOF)
+  library(caret)
   #ensemble scores
   
   obs_climate               <- rep(mean(y_train), times = nrow(y_train)) %>% 
@@ -30,7 +32,7 @@ ensemble_scores <- function(y_train,y_ens) {
     )
   ) 
   
-  crps_climate              <- hydroGOF::mae(sim = obs_climate,obs = y_train)
+  crps_climate              <- caret::MAE(pred = obs_climate,obs = y_train)
   crpss                     <- 1 - crps_ensembles/crps_climate
   
   return(list(
