@@ -28,14 +28,14 @@ rmse_LOO <- function(simulated_values, observed_values) {
 }
 ############## REGRESSION
 # Function for training the linear regression model
-train_regression_model <- function(X_train, y_train,method,preProcess,...) {
+train_regression_model <- function(X_train, y_train,method,preProcess,resampling_method = "LOOCV",...) {
   library(caret)
-  #Train the linear regression model using the provided data and method
+  #Train a regression model using the provided data and method
   train(
     X_train,
     y_train,
-    metric = "RMSE",
-    trControl = trainControl(method = "LOOCV", savePredictions = "all"),
+    #metric = "RMSE",
+    trControl = trainControl(method = resampling_method, savePredictions = "all"),
     method = method,
     preProcess = preProcess,
     ...
@@ -43,7 +43,7 @@ train_regression_model <- function(X_train, y_train,method,preProcess,...) {
 }
 
 # Function for performing cross validation
-cross_validation <- function(regression_model, y_train) {
+cross_validation <- function(regression_model) {
   #Get the best model predictions and merge them with the actual values 
   y_best_model_pred = merge(
     regression_model$bestTune,
@@ -51,10 +51,11 @@ cross_validation <- function(regression_model, y_train) {
     arrange(rowIndex)
   #Get the cross-validated simulated values
   y_cv                <- y_best_model_pred$pred
-  
+  obs_cv              <- y_best_model_pred$obs
+
   # Calculate the RMSE in cross-validation
-  rmse_cv              <- rmse_LOO(sim = y_cv,obs = y_train)
-  rmse_model           <- hydroGOF::rmse(sim = y_cv, obs = y_train)
+  rmse_cv              <- rmse_LOO(sim = y_cv,obs = obs_cv)
+  rmse_model           <- hydroGOF::rmse(sim = y_cv, obs = obs_cv)
   
   return(list(y_cv = y_cv, rmse_cv = rmse_cv, rmse_model = rmse_model))
 }
@@ -85,7 +86,7 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
   
   if (forecast_mode == "both" || forecast_mode == "cv") {
     # Perform cross validation and get the results
-    cv_results <- cross_validation(regression_model, y_train)
+    cv_results <- cross_validation(regression_model)
     y_cv <- cv_results$y_cv
     rmse_cv <- cv_results$rmse_cv
   }
@@ -192,7 +193,7 @@ forecast_vol_ensemble <- function(data_input,
         data_input$X_train,
         data_input$y_train$volume,
         data_input$X_test,
-        method = 'lm',
+        method = method,
         preProcess = preProcess,
         forecast_mode = forecast_mode
       )
