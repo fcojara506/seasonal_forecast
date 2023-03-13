@@ -849,6 +849,13 @@ plot_knn_flow <- function(
 }
 
 
+
+# filename_input  = "data_output/scores/RDS/model_results_singles_2023-03-13.RDS"
+# metric_variable = "crpss_climatology"
+# filename_export = "CRPSS_vol_climate_indices_pheatmap"
+# legend_title = "CRPSS (climatología)"
+# plot_absolute = F
+
 plot_pheatmap_EDA <- function(
     filename_input,
     metric_variable,
@@ -861,22 +868,25 @@ plot_pheatmap_EDA <- function(
   #https://jokergoo.github.io/ComplexHeatmap-reference/book/a-list-of-heatmaps.html
   
   library(ComplexHeatmap)
+  
   df <- readRDS(filename_input)
   setDT(df)
   
   # Split predictor_name into var, fun, and horizon_months
-  df <- df[, c("var", "fun", "horizon_months") := tstrsplit(predictor_name, "_", fixed = TRUE, keep = 1:3)][]
-  df <- df[, horizon_months := substr(horizon_months, 1, 1)][]
+  df <- df[, c("var", "fun", "horizon_months") := tstrsplit(predictor_name, "_", fixed = TRUE)][]
+  df <- df[, horizon_months := as.numeric(gsub("*months","",horizon_months))][]
+  df <- df[, horizon_months := factor(horizon_months,levels = seq(1,12,1))]
   # Create catchment_month and predictor columns
   df <- df[, catchment_month := paste(catchment_code, month_initialisation, sep = "_")][]
-  df <- df[, predictor := paste(var, horizon_months, sep = "_")][]
-      
+  df <- df[, predictor := paste(var, horizon_months, sep = "_")]
+  df$predictor = factor(df$predictor,levels = unique(df$predictor))
   # Use dcast to reshape the data into a correlation matrix
   cor_matrix <-
     dcast(df,
           catchment_month ~ predictor,
           value.var = metric_variable,
-          fill = NA)
+          fill = NA,
+          verbose = T)
   
   # Annotation for rows
   annotation_row <- data.table(catchment_month = cor_matrix[, catchment_month])
@@ -884,11 +894,13 @@ plot_pheatmap_EDA <- function(
                                   c("catchment_code", "month_initialisation") := 
                                     tstrsplit(catchment_month, "_",
                                               fixed = TRUE, keep = 1:2)]
-  annotation_row$month_initialisation= paste0('1° ',annotation_row$month_initialisation)
+  #annotation_row$month_initialisation = lubridate::month(as.numeric(annotation_row$month_initialisation),label = T)
+  annotation_row$month_initialisation = paste0('1° ',annotation_row$month_initialisation)
+  
   annotation_row <- annotation_row[, catchment_code := as.numeric(catchment_code)]
   annotation_row <- annotation_row[, month_initialisation := factor(
     x = month_initialisation,
-    levels = rev(paste0('1° ',levels(df$month_initialisation))))]
+    levels = (paste0('1° ',levels(df$month_initialisation) )))]
   annotation_row <- tibble::column_to_rownames(annotation_row, var = "catchment_month")
   rows_split <-  annotation_row$month_initialisation
   annotation_row$month_initialisation <- NULL
@@ -898,8 +910,10 @@ plot_pheatmap_EDA <- function(
   cor_matrix <- as.matrix(cor_matrix)
   annotation_col <- data.table(predictor = colnames(cor_matrix))
   annotation_col <- annotation_col[, c("var", "horizon_months") := tstrsplit(predictor, "_", fixed = TRUE, keep = 1:2)]
-  annotation_col <- annotation_col[, horizon_months := factor(horizon_months)]
+  annotation_col <- annotation_col[, horizon_months := factor(horizon_months,levels = seq(1,12,1))]
   annotation_col <- annotation_col[, var := factor(var)]
+  #setkeyv(annotation_col,c("var", "horizon_months"))
+  
   
   cols_split <-  annotation_col$var
   annotation_col$var <-  NULL # remove var from legend
@@ -907,23 +921,28 @@ plot_pheatmap_EDA <- function(
   colnames(cor_matrix) <- NULL #remove row labels
   
   #### colors
-  length_horizon = length(levels(annotation_col$horizon_months))
+  length_horizon = length(unique(as.numeric(annotation_col$horizon_months)) )
   colours_blue <- colorRampPalette(c("#190E53", "#3C3176", "#887FBC"))(length_horizon)
+  
+  library(circlize)
+  col_fun = colorRamp2(c(-1,-0.5, 0,0.5, 1), c("red","orange", "white","skyblue", "blue"))
   
   ann_colors = list(
     catchment_code = c("firebrick", 'green'),
-    horizon_months = setNames(colours_blue, levels(annotation_col$horizon_months))
+    horizon_months = setNames(colours_blue, unique(annotation_col$horizon_months))
   )
+
   
-  
-  
+  library(RColorBrewer)
   #Plot correlation matrix and absolute correlation matrix using pheatmap
   p <-
     pheatmap((cor_matrix),
              cluster_row = F,
              cluster_cols = F,
+             color = col_fun,#colorRampPalette((brewer.pal(n = 7, name = "RdBu")))(100),
              annotation_row = annotation_row,
              annotation_col = annotation_col,
+             
              row_split = rows_split,
              column_split = cols_split,
              annotation_names_col = F,
@@ -938,7 +957,7 @@ plot_pheatmap_EDA <- function(
              cell_fun = function(j, i, x, y, width, height, fill) {
                if (cor_matrix[i, j] > -threshold_for_x &
                    cor_matrix[i, j] < threshold_for_x)
-                 grid.text('x', x, y, gp = gpar(fontsize = 4))
+                 grid.text('x', x, y, gp = gpar(fontsize = 6))
              }
     )
   #export in png format

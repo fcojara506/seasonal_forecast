@@ -620,7 +620,7 @@ preprocess_data <- function(
   results <- c(
     train_set,
     raw_data = list(catchment_data),
-    time_horizon = list(forecast_horizon),
+    time_horizon = list(convert_items_to_lists(forecast_horizon)),
     info = list(convert_items_to_lists(info_list))
   )
   
@@ -641,7 +641,14 @@ preprocess_data <- function(
 }
 
 
-
+grid_pred  <- function(  variable,
+                         agg_months,
+                         agg_func) {
+  # explore variables (averaged)
+  grid = expand.grid(variable, agg_months)
+  predictors = paste(grid[,1], agg_func, paste0(grid[,2],"months"), sep = "_")
+  return(predictors)
+}
 
 
 
@@ -650,13 +657,13 @@ preprocess_data <- function(
 
 test_preprocess <- function(){
 
-  catchment_code <- "5410002"
-  datetime_initialisation = lubridate::make_date(2016,6,1)
+  catchment_code <- "6008005"#"5410002"
+  datetime_initialisation = lubridate::make_date(2022,6,1)
   horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
-  predictor_list <- c("tem_mean_6months")
+  predictor_list <- c("pr_mean_6months")
   remove_wys <- c(1990,1940,2013)
   water_units = waterunits(q = "m^3/s", y = "GL")
-  forecast_mode <- "both"
+  forecast_mode <- "cv"
   data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE")
 
   data1 <- preprocess_data(
@@ -670,28 +677,7 @@ test_preprocess <- function(){
   )
   
 
-predictors = c(
-"MEIv2_mean_2months", "PDO_mean_2months", "SOI_mean_2months", "ONI_mean_2months",
-"NINO1.2_mean_2months", "NINO3_mean_2months", "NINO4_mean_2months", "NINO3.4_mean_2months",
-"ESPI_mean_2months", "AAO_mean_2months", "BIENSO_mean_2months")
-catchment_code = "3414001"
-month_initialisation = "dic"
-horizon$month_start = 9
-horizon$month_end = 3
-horizon$window_method = "static"
-predictor_list = predictors
-water_year_target = 2022
-remove_wys = c(1978)
-water_units = waterunits(q = "m3/s",y = "GL")
-forecast_mode = "cv"
+return(data1)
 
 
-
-
-return(
-  list(
-  data1 = data1
-  )
-
-)
 }
