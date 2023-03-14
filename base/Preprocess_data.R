@@ -546,6 +546,16 @@ initialisation_dates <- function(datetime_initialisation) {
  return(as.list(environment())) 
 }
 
+grid_pred  <- function(  variable,
+                         agg_months,
+                         agg_func) {
+  # explore variables (averaged)
+  grid = expand.grid(variable, agg_months)
+  predictors = paste(grid[,1], agg_func, paste0(grid[,2],"months"), sep = "_")
+  return(predictors)
+}
+
+
 horizon_mode <- function(window_method,month_start,month_end) {
   return(as.list(environment()))
 }
@@ -641,14 +651,6 @@ preprocess_data <- function(
 }
 
 
-grid_pred  <- function(  variable,
-                         agg_months,
-                         agg_func) {
-  # explore variables (averaged)
-  grid = expand.grid(variable, agg_months)
-  predictors = paste(grid[,1], agg_func, paste0(grid[,2],"months"), sep = "_")
-  return(predictors)
-}
 
 
 

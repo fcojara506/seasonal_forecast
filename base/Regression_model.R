@@ -189,6 +189,10 @@ forecast_vol_ensemble <- function(data_input,
                                   preProcess = c("center", "scale"),
                                   forecast_mode = data_input$info$forecast_mode
                                   ){
+  model_info = as.list(environment())
+  model_info$data_input <- NULL
+  model_info$forecast_mode <- NULL
+  model_info = lapply(model_info, function(x) if (length(x) > 1) list(x) else x)
   # Train and predict using regression model
     vol_deterministic =
       forecast_vol_determinist(
@@ -200,13 +204,11 @@ forecast_vol_ensemble <- function(data_input,
         forecast_mode = forecast_mode
       )
    
-    # m = vol_deterministic$regression_model$finalModel
-    # pp = vol_deterministic$regression_model$preProcess
-    # predict(m, predict(pp, data_input$X_test),se.fit = T)
+
     #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
     
     # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,forecast_mode)
 
-    return(y_forecast)
+    return(append(y_forecast,list(model_info = model_info)))
 }

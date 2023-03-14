@@ -144,7 +144,9 @@ export_data <- function(data_input,
   if (export == "scores" | export == "all") {
     # metrics
     scores_volume <- y_scores(data_fore = data_fore,data = data_input)
-    results <- list.append(results,scores_volume = scores_volume)
+    results <- list.append(results,
+                           scores_volume = scores_volume,
+                           model_info = data_fore$model_info)
   }
   
   if (export == "platform" | export == "all") {
