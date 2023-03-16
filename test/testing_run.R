@@ -1,31 +1,8 @@
 rm(list = ls())
 source("base/Preprocess_data.R")
-#input data from preprocess
-data_input <- preprocess_data(datetime_initialisation = '2020-06-01',
-                              forecast_mode = "both",
-                              catchment_code = "5410002",
-                              predictor_list = c("pr_sum_-1months"))
 
-source("base/Regression_model.R")
 
-X_train = data_input$X_train
-y_train = data_input$y_train$volume
-resampling_method = 'LOOCV'
-preProcess = c("center", "scale")
-method = 'simpls'
 
-regression_model = 
-train(
-  X_train,
-  y_train,
-  metric = "RMSE",
-  trControl = trainControl(method = resampling_method,
-                           savePredictions = "all"),
-  method = method,
-  preProcess = preProcess
-)
-rmse_model <- merge(regression_model$bestTune,regression_model$results)$RMSE
-rmse_model
 # Train and predict using regression model
 # f1 <- function(reg_method = "lm",boot_times = 500) {
 #   

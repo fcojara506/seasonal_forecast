@@ -7,7 +7,9 @@
 # ensemble_post is used to post-process the ensemble of predictions
 # forecast_vol_ensemble is the main function that calls the above functions and returns the results of the ensemble forecast
 
+library(caret)
 
+set.seed(10)
 ############## RMSE IN LEAVE.ONE.OUT #######################
 # Function to calculate the RMSE in Leave One Out cross-validation
 rmse_LOO <- function(simulated_values, observed_values) {
@@ -108,7 +110,7 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
 
 # Function to generate an ensemble of predictions
 ensemble_generator <- function(y,rmse,n_members=1000){
-  set.seed(10)
+  
   library(truncnorm)
   # Check that the lengths of observed values and rmse match
   if (length(y) != length(rmse)) {

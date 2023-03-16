@@ -66,7 +66,7 @@ read_catchment_data <- function(catchment_code,
   #' @param catchment_code The code for the specific catchment
   #' @param remove_wys
   #' @param water_units
-  
+  library(dplyr)
   #initialise NULL attributes
   attributes_catchment <- 
   monthly_flows <- 
@@ -98,14 +98,14 @@ read_catchment_data <- function(catchment_code,
     sprintf("%02d", wateryearmonth2month(wy_month = wym)),
     wateryear2year(wy = wy_simple, wym = wym)
     ))) %>% 
-    mutate(days_months = lubridate::days_in_month(date)) %>%
+    mutate(days_months = lubridate::days_in_month(date)) %>% 
     select(-date) %>% 
     mutate(Q_converted =
              hydromad::convertFlow(
       Q_mm,
       from = "mm/month",
       to = water_units$q,
-      area.km2 = attributes_catchment$area_km2)) %>%
+      area.km2 = attributes_catchment$area_km2)) %>% 
     select(-days_months) %>% 
     remove_years(remove_wys)
   # meteorological data
@@ -563,6 +563,12 @@ horizon_mode <- function(window_method,month_start,month_end) {
 waterunits <- function(q, y) {return(list(q=q,y=y))}
 
 
+
+
+
+
+
+
 preprocess_data <- function(
     catchment_code , #"5410002",
     datetime_initialisation , #lubridate::make_date(2016,6,1),
@@ -659,7 +665,7 @@ preprocess_data <- function(
 
 test_preprocess <- function(){
 
-  catchment_code <- "6008005"#"5410002"
+  catchment_code <- "4703002"#"5410002"
   datetime_initialisation = lubridate::make_date(2022,6,1)
   horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
   predictor_list <- c("pr_mean_6months")
