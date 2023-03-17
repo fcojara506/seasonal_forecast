@@ -30,14 +30,14 @@ rmse_LOO <- function(simulated_values, observed_values) {
 }
 ############## REGRESSION
 # Function for training the linear regression model
-train_regression_model <- function(X_train, y_train,method,preProcess,resampling_method = "LOOCV",...) {
+train_regression_model <- function(X_train, y_train,method = "lm",preProcess = c("center", "scale"),resampling_method = "LOOCV",metric = "RMSE",...) {
   library(caret)
   #Train a regression model using the provided data and method
 
   train(
     X_train,
     y_train,
-    metric = "RMSE",
+    metric = metric,
     trControl = trainControl(method = resampling_method,
                              savePredictions = "all"),
     method = method,

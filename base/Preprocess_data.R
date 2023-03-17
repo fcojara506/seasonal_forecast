@@ -46,7 +46,7 @@ read_and_subset_variable <- function(filename, catchment_code) {
   
   if (!is.null(filename) && file.exists(filename)) {
     # read file and subset by catchment code
-    df_variable <- read.csv(filename) %>%
+    df_variable <- fread(filename) %>%
       mutate(wym = as.numeric(wym)) %>%
       data.table(key = c("wy_simple", "wym")) %>%
       subset(cod_cuenca == catchment_code, select = -cod_cuenca)
@@ -75,8 +75,7 @@ read_catchment_data <- function(catchment_code,
   monthly_climateindex <- NULL
   
   # read all the catchments attributes from the study area
-  attributes_catchments <- read.csv(data_location_paths$catchments_attributes_filename)
-  
+  attributes_catchments <- fread(data_location_paths$catchments_attributes_filename)
   #check if the catchment code exists
   if(!(catchment_code %in% attributes_catchments$cod_cuenca)) {
     stop(paste0(catchment_code, " not found in catchments"))
@@ -118,7 +117,7 @@ read_catchment_data <- function(catchment_code,
     catchment_code = catchment_code) 
   # read and process the climate index data
   monthly_climateindex <- data_location_paths$climateindex_filename %>% 
-    read.csv() %>%
+    fread() %>%
     mutate(wym = as.numeric(wym))
  
   # merge the meteorological, hydrological, and climate index data into a single dataframe
@@ -577,7 +576,8 @@ preprocess_data <- function(
     data_location_paths = get_default_datasets_path(meteo = "ens30avg",hydro = "ERA5Ens_SKGE"),
     water_units = waterunits(q = "m^3/s", y = "GL"),
     forecast_mode = "both",
-    remove_wys = NULL
+    remove_wys = NULL,
+    save_raw = F
     ) {
   
   # save arguments
@@ -635,10 +635,13 @@ preprocess_data <- function(
   # save results in structure
   results <- c(
     train_set,
-    raw_data = list(catchment_data),
     time_horizon = list(convert_items_to_lists(forecast_horizon)),
     info = list(convert_items_to_lists(info_list))
   )
+  
+  if (save_raw) {
+    results <- c(results,raw_data = list(catchment_data))
+  }
   
   if (forecast_mode == "prediction" | forecast_mode == "both"){
     # testing set 
