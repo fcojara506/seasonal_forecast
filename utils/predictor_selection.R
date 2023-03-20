@@ -10,9 +10,9 @@ library(dplyr)
 library(caret)
 
 
-# Source required scripts
+# # Source required scripts
 source("base/Preprocess_data.R")
-source("base/Regression_model.R")
+# source("base/Regression_model.R")
 
 # ----------------------
 # Functions
@@ -21,7 +21,7 @@ source("base/Regression_model.R")
 # Function for removing correlated predictors
 remove_correlated_predictors <- function(X_train, predictor_list, cutoff = 0.8) {
   cor_matrix <- cor(X_train)
-  high_cor <- findCorrelation(cor_matrix, cutoff = cutoff, verbose = FALSE)
+  high_cor <- caret::findCorrelation(cor_matrix, cutoff = cutoff, verbose = FALSE)
   
   if (rlang::is_empty(high_cor)) {
     return(predictor_list)
@@ -34,19 +34,35 @@ remove_correlated_predictors <- function(X_train, predictor_list, cutoff = 0.8) 
 # Function for calculating model metrics
 calculate_model_metrics <- function(regression_model) {
   library(locfit)
+  library(caret)
   mlrmod <- regression_model$finalModel
   pr <- resid(mlrmod) / (1 - lm.influence(mlrmod)$hat)
   
+  pred <- mlrmod$fitted.values
+  obs <- regression_model$pred$obs
+  
+  # Calculate model metrics using caret
+  rmse <- RMSE(pred, obs)
+  r2 <- R2(pred, obs)
+  mae <- MAE(pred, obs)
+  pbias <- abs(mean((obs - pred) / obs))
+  
   metrics <- list(
-    gcv = unlist(gcv(mlrmod,maxk=1e6)[[4]]),
+    gcv = unlist(gcv(mlrmod, maxk = 1e6)[[4]]),
     bic = BIC(mlrmod),
     press = sum(pr^2),
     aic = AIC(mlrmod),
-    rmse = RMSE(pred = mlrmod$fitted.values, obs = regression_model$pred$obs)
+    rmse = rmse,
+    r2 = r2,
+    mae = mae,
+    pbias = pbias
   )
   
   return(metrics)
 }
+
+
+
 
 # Function for saving model results
 save_model_results <- function(df_info,
@@ -71,7 +87,7 @@ save_model_results <- function(df_info,
 # ------------------------------
 
 # Set catchment code and months of initialization
-catchment_code <- "4703002"
+catchment_code <- "4503001"#"5410002" #6028001 #"5410002" #"4503001" #"3414001"
 months_initialisation <- 5:9
 
 # Define predictors
@@ -84,17 +100,28 @@ library(doSNOW)
 cl <- makeCluster(parallel::detectCores()-1L)
 registerDoSNOW(cl)
 
+data_input <- preprocess_data(
+  datetime_initialisation = lubridate::make_date(2022, 5),
+  forecast_mode = "cv",
+  catchment_code = catchment_code,
+  predictor_list = predictors[[5]],save_raw = T
+)
 
 # Train regression models for each combination of predictors and month of initialization
 models <-
-foreach(month_initialisation=months_initialisation,.combine = "c") %dopar% { 
+foreach(month_initialisation=months_initialisation,.combine = "c") %do% { 
+  #for (month_initialisation in months_initialisation[1]) {
+    
+  
   library(foreach)
+  library(caret)
   # Source required scripts
   source("base/Preprocess_data.R")
-  source("base/Regression_model.R")
+
+  
   # Preprocess input data
   data_input <- preprocess_data(
-    datetime_initialisation = lubridate::make_date(2022, month_initialisation, 1),
+    datetime_initialisation = lubridate::make_date(2022, month_initialisation),
     forecast_mode = "cv",
     catchment_code = catchment_code,
     predictor_list = predictors
@@ -110,41 +137,49 @@ foreach(month_initialisation=months_initialisation,.combine = "c") %dopar% {
   
   #Iterate through each predictor combination
   #for (predictor in predictors_comb) {
-    foreach(predictor=predictors_comb) %do% {
-    #print(paste(length(models) + 1, "/", length(predictors_comb)))
-    #print(paste0("predictor: ", paste0(predictor, collapse = "+"), " month: ", month_initialisation))
-    # Preprocess input data
-    data_input <- preprocess_data(
-      datetime_initialisation = lubridate::make_date(2022, month_initialisation, 1),
-      forecast_mode = "cv",
-      catchment_code = catchment_code,
-      predictor_list = predictor
-    )
-    
+    foreach(predictor=predictors_comb ) %do% {
+      #for (predictor in predictors_comb[31]) {
+     # Preprocess input data
+      x = select(data_input$X_train,all_of(predictor)) 
+      
+    #   data_input <- preprocess_data(
+    #     datetime_initialisation = lubridate::make_date(2022, month_initialisation),
+    #     forecast_mode = "cv",
+    #     catchment_code = catchment_code,
+    #     predictor_list = predictor
+    #   )
+    #   
+    # x = data_input$X_train
+    y = data_input$y_train$volume
     # Train regression model
-    regression_model <- train_regression_model(data_input$X_train,
-                                               data_input$y_train$volume,
-                                               method = "lm"
-                                                )
-    
+    regression_model <- 
+    train(
+      x,
+      y,
+      metric = "RMSE",
+      trControl = trainControl(method = "LOOCV",savePredictions = "all"),
+      method = "lm",
+      preProcess = c("center", "scale")
+    )
     # Calculate model metrics
     metrics <- calculate_model_metrics(regression_model)
 
     # Calculate variable importance if there are multiple predictors
-    imp_var <- if (length(predictor) > 1) relaimpo::calc.relimp(regression_model$finalModel, rela = TRUE)$lmg else list(x = 0)
+    imp_var <- if (length(predictor) > 1) relaimpo::calc.relimp(regression_model$finalModel, rela = TRUE)$lmg else setNames(1, predictor)
   
-    
     # Save results
     #models[[length(models) + 1]] 
     model <- save_model_results(data.frame(month_initialisation,catchment_code),
-                                                       list(predictor = data_input$info$predictor_list),
+                                                       list(predictor = predictor),
                                                        regression_model,
                                                        data.frame(t(imp_var)),
                                                        metrics)
-  }
+    
+   }
 }
 
 stopCluster(cl)
+  
 # ------------------------------
 #   Post-process the results
 # ------------------------------
@@ -154,19 +189,78 @@ model_list <- purrr::transpose(models)
 predictor_list =  rbindlist(model_list$predictor)
 
 
-
-best <- cbind( rbindlist(model_list$df_info),
+summary_df <- cbind( rbindlist(model_list$df_info),
             rbindlist(model_list$metrics),
             predictor_list,
-            select(rbindlist(model_list$imp_var,fill = T),-x),
+            rbindlist(model_list$imp_var,fill = T),
             model = model_list$reg_model
-            ) %>%
+            )
+best = summary_df %>% 
   group_by(month_initialisation,catchment_code) %>% 
   slice(which.min(aic))
 
-return(list(model = best,
-            unique_predictors = unique(unlist(predictor_list))))
+return(list(best_results = best,
+            unique_predictors = unique(unlist(predictor_list)),
+            summary_df = summary_df))
 }
 
 best = select_best_models(models)
 
+
+library(tidyverse)
+# Create a new data frame for the plot
+
+data_importancia <- best$best_results %>%
+  select(month_initialisation, catchment_code,matches(best$unique_predictors)) %>%
+  tidyr::pivot_longer(cols = -c(month_initialisation, catchment_code), names_to = "predictor", values_to = "importance") %>%
+  filter(!is.na(importance)) %>% 
+  group_by(month_initialisation, catchment_code) %>%
+  mutate(total_importance = sum(importance),
+         percentage = importance / total_importance * 100) %>%
+  ungroup() %>% 
+  mutate(var = tstrsplit(predictor, "_", fixed = TRUE)[[1]]) %>% 
+  arrange(month_initialisation) %>%
+  mutate(date_label = paste0("1˚ ", lubridate::month(lubridate::make_date(year = 2001, month = month_initialisation), label = TRUE)),
+         date_label = factor(date_label, levels = unique(date_label)))
+
+
+# Load the RColorBrewer package
+
+# Create a custom color palette
+unique_vars <- unique(data_importancia$var)
+palette_size <- length(unique_vars)
+
+# Create the custom_colors vector, excluding the color for the "STORAGE" predictor
+custom_colors <- c("#3B9AB2", "#78B7C5", "#EBCC2A", "#E1AF00")
+
+# Match the number of colors in the custom_colors vector with the number of unique variables (excluding "STORAGE")
+palette_size <- palette_size - 1
+
+if (length(custom_colors) > palette_size) {
+  custom_colors <- custom_colors[1:palette_size]
+} else if (length(custom_colors) < palette_size) {
+  custom_colors <- rep(custom_colors, length.out = palette_size)
+}
+
+# Add the color for the "STORAGE" predictor and create the color_palette
+color_palette <- c(setNames(custom_colors, unique_vars[unique_vars != "STORAGE"]),
+                   "STORAGE" = "#ff6d5c")
+
+  
+# Create the ggplot with updated x-axis labels
+ggplot(data_importancia, aes(x = date_label, y = importance, fill = var)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), position = position_stack(vjust = 0.5), size = 3) +
+  labs(x = "Mes de emisión",
+       y = "Importancia del predictor",
+       fill = "Variable",
+       title = "Contribución de cada predictor por mes") +
+  scale_fill_manual(values = color_palette) +
+  scale_x_discrete( expand = c(0, 0)) +
+  scale_y_continuous( expand = c(0, 0)) +
+  theme_minimal()+
+  theme(
+    legend.position = "bottom",
+    legend.key.width = unit(0.1,"in")
+  )
+  

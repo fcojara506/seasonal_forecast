@@ -149,6 +149,35 @@ plot_X_y_train <- function(
   }
 }
 
+# Function to plot the metric
+plot_metric <- function(dataframe, metric, shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
+  ## usage
+  # dataframe <- best$best_results
+  # metric <- "pbias"
+  # plot <- plot_metric(dataframe, metric)
+  # print(plot)
+  
+  # Load required libraries
+  library(rgdal)
+  library(ggplot2)
+  library(sf) 
+  # Read the shapefile
+  shapefile <- st_read(shapefile_path)
+  
+  # Merge the shapefile and the dataframe using the common ID
+  merged_data <- merge(shapefile, dataframe, by.x = "gauge_id", by.y = "catchment_code")
+  
+  # Plot the metric using the merged data
+  plot <- ggplot() +
+    geom_sf(data = merged_data, aes(fill = !!sym(metric))) +
+    scale_fill_continuous(low = "blue", high = "red") + # Change the colors according to your preference
+    facet_wrap(~month_initialisation) +
+    labs(title = "", x = "Longitud", y = "Latitud", fill = metric)
+  
+  return(plot)
+}
+
+
 plot_vol_sim_obs <- function(
     data_fore,
     data_input,
