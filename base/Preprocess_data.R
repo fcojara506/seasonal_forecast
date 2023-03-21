@@ -269,7 +269,8 @@ get_forecast_horizon <- function(date_init,horizon) {
       datetime_initialisation = datetime_initialisation,
       volume_span_text    = volume_span_text,
       volume_span_text_v2 = volume_span_text_v2,
-      months_target_water_year = wy_holdout_months
+      months_target_water_year = wy_holdout_months,
+      wy_holdout = date_init$init_water_year
     )
   )
 }
@@ -430,8 +431,11 @@ predictant_generator <- function(
   
   #remove year when cummulative volume is zero
   remove_wy = which(y$volume == 0)
-  y = y[-remove_wy,]
-  q = q[-remove_wy,]
+  if (length(remove_wy)>0) {
+    y = y[-remove_wy,]
+    q = q[-remove_wy,]
+  }
+
   
   names(q)[names(q) != "wy_simple"] <- forecast_horizon$months_forecast_period
   
@@ -472,7 +476,7 @@ predictant_generator <- function(
     y_converted$volume_original = y_converted$volume
     y_converted$volume = volume_transformed
     
-    if (!identical(volume_transformed,y_converted$volume)) {
+    if (!identical(y_converted$volume,y_converted$volume_original)) {
       function_y = "log"
     } 
     
@@ -717,8 +721,8 @@ preprocess_data <- function(
 
 example_preprocess <- function(){
   
-  catchment_code <- "5730008"
-  datetime_initialisation = lubridate::make_date(2022,3)
+  catchment_code <- "4503001"
+  datetime_initialisation = lubridate::make_date(2022,5)
   horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
   predictor_list <- c("pr_mean_6months")
   remove_wys <- c(1990,1940,2013)

@@ -191,8 +191,9 @@ plot_vol_sim_obs <- function(
   library(broom)
   library(glue)
   
-  y_true = data_input$y_train
-  x = data_fore$y_cv[[1]]  
+  y_true = data_input$y_train$volume_original
+  x = data_fore$y_cv
+  
   y_df = 
   lapply(
     data_fore$y_cv, 
@@ -201,7 +202,7 @@ plot_vol_sim_obs <- function(
       data.frame(y_sim = x,y_true) %>%
       rownames_to_column(var = "wy") %>% 
       mutate(wy = as.numeric(wy)) %>% 
-      dplyr::rename(y_true = volume)
+      dplyr::rename(y_true = volume_original)
       
       ) %>% 
     rbindlist(idcol = "ens")
@@ -444,9 +445,9 @@ data_plot_backtest_volume <- function(data_input,data_fore) {
   
   y_ens_cv = data_fore$y_ens_cv
   y_ens_fore = data_fore$y_ens_fore
-  y_train = data_input$y_train$volume
+  y_train = data_input$y_train$volume_original
   wy_train = data_input$wy_train
-  wy_holdout = data_input$wy_holdout
+  wy_holdout = data_input$time_horizon$wy_holdout
   
   # quantiles observations and ensemble forecast of hold-out year
   quantiles_obs = quantile(y_train, probs = c(0.05, 0.5, 0.95) )
@@ -482,14 +483,14 @@ data_plot_backtest_volume <- function(data_input,data_fore) {
   
   y_ens_medians =
     aggregate(
-    formula = volume ~ wy_simple,
+    x = volume ~ wy_simple,
     data = y_ens,
     FUN = median
     )
   
   df_train =
     merge(df_train,y_ens_medians) %>%
-    rename(sim_median = volume) %>% 
+    dplyr::rename(sim_median = volume) %>% 
     mutate(error_median = round((obs-sim_median)/obs*100,2))
   
   y_ens = merge(y_ens,df_train)
@@ -523,7 +524,7 @@ plot_backtest_volume <- function(
   
   ##################### cronological order
   xticks_colours  <- unique(y_ens$wy_simple) %>%
-    {(.== data_input$wy_holdout)} %>%
+    {(.== data_input$time_horizon$wy_holdout)} %>%
     ifelse("red","black")
   
   p = vol_subplot(
@@ -533,6 +534,7 @@ plot_backtest_volume <- function(
     xticks_colours = xticks_colours,
     quantiles_obs = plot_data$quantiles_obs
     )
+  print(p)
   
     p1 = p
     
@@ -548,7 +550,7 @@ plot_backtest_volume <- function(
     y_ens$wy_simple <- factor(y_ens$wy_simple , levels=medians_forecast_order$wy_simple)
     
     xticks_colours  <- unique(medians_forecast_order$wy_simple) %>%
-      {(.== data_input$ wy_holdout)} %>%
+      {(.== data_input$time_horizon$wy_holdout)} %>%
       ifelse("red","black")
     
     p2 = vol_subplot(y_ens = y_ens,
@@ -556,7 +558,7 @@ plot_backtest_volume <- function(
                         xlabel =  "Año hidrológico (orden por mediana del pronóstico)",
                         xticks_colours = xticks_colours,
                         quantiles_obs = plot_data$quantiles_obs)
-    
+    plot(p2)
       if (subplot) {
     
     p2 = p2 + 
@@ -622,11 +624,12 @@ plot_backtest_volume <- function(
 
 data_plot_knn_flow <- function(data_input,q_ens_fore) {
   
-  months_wy_forecast = colnames(q_ens_fore)
-  months_wy_df = data.frame(wym_str = months_wy) %>% 
+  months_wy_forecast = data_input$time_horizon$months_forecast_period[[1]]
+  
+  months_wy_df = data.frame(wym_str = data_input$time_horizon$months_wy[[1]]) %>% 
     mutate(wym = row_number())
   # ensemble flow forecast
-  q_ens_fore = data.table(q_ens_fore) %>%
+  q_ens_fore = data.table(q_ens_fore$q_predict) %>%
     rowid_to_column("ens")
   
   q_ens = melt.data.table(q_ens_fore,

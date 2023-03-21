@@ -74,15 +74,24 @@ make_predictions <- function(regression_model, X_test) {
   return(y_fore)
 }
 
+
+
 # Main function that calls the above functions
-forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', preProcess = c("center", "scale"), forecast_mode = "both", ...) {
+forecast_vol_determinist <- function(X_train, y_train, X_test,function_y=NULL,method='lm', preProcess = c("center", "scale"), forecast_mode = "both", ...) {
   # check mode
   if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
   regression_model <- train_regression_model(X_train, y_train, method, preProcess,tuneLength = 10,...)
+  
+  if (!is.null(function_y)) {
+    regression_model$pred$obs = expo(regression_model$pred$obs)
+    regression_model$pred$pred = expo(regression_model$pred$pred)
+  }
+  
+  pred_obs_model <- merge(regression_model$bestTune,regression_model$pred)
+  
   # error from regression model
-  rmse_model <- merge(regression_model$bestTune,regression_model$results)$RMSE
-
+  rmse_model <- caret::RMSE(pred = pred_obs_model$pred ,obs = pred_obs_model$obs)
   #Initialise variables
   y_cv <- NULL
   rmse_cv <- NULL
@@ -100,6 +109,7 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,method='lm', prePr
     y_fore <- make_predictions(regression_model, X_test)
     
   }
+  
   
   return(list(y_cv = y_cv,
               y_fore = y_fore,
@@ -165,9 +175,25 @@ ensemble_generator <- function(y,rmse,n_members=1000){
     return(list(y_ens_fore = y_ens_fore))
   }
   
+  expo <- function(x) {
+    y = x
+    if (!is.null(x)) {
+      y = exp(x)
+    }
+    return(y)
+  }
+  
   ensemble_cv_and_test <- function(vol_deterministic, data_input, n_members, forecast_mode = c("both","cv", "prediction")) {
     # check mode
     if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please choose one of these: 'cv', 'prediction', 'both'")
+    
+    # if (!is.null(data_input$info$y_transform$function_y)) {
+    #   vol_deterministic$y_cv = expo(vol_deterministic$y_cv)
+    #   vol_deterministic$y_fore = expo(vol_deterministic$y_fore)
+    #   vol_deterministic$rmse_cv = expo(vol_deterministic$rmse_cv)
+    #   vol_deterministic$rmse_model = expo(vol_deterministic$rmse_model)
+    # }
+    # 
     # Initialise ensemble variables
     y_ens_cv = NULL
     y_ens_fore = NULL
@@ -195,17 +221,24 @@ forecast_vol_ensemble <- function(data_input,
   model_info$data_input <- NULL
   model_info$forecast_mode <- NULL
   model_info = lapply(model_info, function(x) if (length(x) > 1) list(x) else x)
+  
+ 
+  
+  
+  
   # Train and predict using regression model
     vol_deterministic =
       forecast_vol_determinist(
-        data_input$X_train,
-        data_input$y_train$volume,
-        data_input$X_test,
+        X_train = data_input$X_train,
+        y_train = data_input$y_train$volume,
+        X_test = data_input$X_test,
+        function_y = data_input$info$y_transform$function_y,
         method = method,
         preProcess = preProcess,
         forecast_mode = forecast_mode
       )
-   
+    
+
 
     #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
     

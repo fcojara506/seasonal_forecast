@@ -101,8 +101,11 @@ knn_cross_validation <- function(X_train,f_train,n_neighbours,weight_method,y_en
   wys = rownames(f_train)
   for (wy in wys) {
     # subset X_train using Leave-One-Out Cross-Validation (LOOCV)
-    X_train_cv = subset(X_train,!(rownames(X_train) == wy))
-    X_test_cv = subset(X_train,(rownames(X_train) == wy))
+    
+    X_train_cv = subset(cbind(X_train),!(rownames(X_train) == wy))
+    X_test_cv = subset(cbind(X_train),(rownames(X_train) == wy))
+    
+    
     # normalise predictors X_train and X_test using range normalization method
     pp = caret::preProcess(X_train_cv, method = "range")
     X_train_minmax_cv = predict(pp,X_train_cv)
@@ -145,7 +148,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   
   # target variables is f_i = Q_i/V of the forecast period (month i)
   f_train = rownames(q_train) %>% 
-    lapply(function(x){q_train[x,]/y_train[x,]}) %>%
+    lapply(function(x){q_train[x,]/y_train[x,'volume_original']}) %>%
     rbindlist() %>%
     as.matrix()
   rownames(f_train) = rownames(q_train)
@@ -193,7 +196,11 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   
 }
 
-run_q_forecast <- function(data_input, data_fore, n_neighbours = 6, weight_method="distance", forecast_mode=data_input$info$forecast_mode) {
+run_q_forecast <- function(data_input,
+                           data_fore,
+                           n_neighbours = 6,
+                           weight_method="distance",
+                           forecast_mode=data_input$info$forecast_mode) {
   # perform flow prediction or cross-validation using the knn_forecast function
   # inputs:
   # q_train = training flow data

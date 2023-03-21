@@ -1,11 +1,4 @@
-# Load required packages
-# library(lubridate)
-# library(dplyr)
-# library(caret)
-# library(foreach)
-# library(doSNOW)
-# library(data.table)
-# library(tidyverse)
+setwd("~/Documents/GitHub/seasonal_forecast")
 
 grid_pred  <- function(  variable,
                          agg_months,
@@ -71,21 +64,21 @@ save_model_results <- function(df_info,
   return(result)
 }
 
-select_best_models <- function(models) {
+select_best_models <- function(models, objective_metric = "aic") {
   library("data.table")
   model_list <- purrr::transpose(models)
   predictor_list =  model_list$predictor
   
   all_combinations <- cbind( rbindlist(model_list$df_info),
-                       rbindlist(model_list$metrics),
-                       predictors = predictor_list,
-                       rbindlist(model_list$imp_var, fill = T),
-                       model = model_list$reg_model
+                             rbindlist(model_list$metrics),
+                             predictors = predictor_list,
+                             rbindlist(model_list$imp_var, fill = T),
+                             model = model_list$reg_model
   )
   
   best_combination = dplyr::slice(dplyr::group_by(all_combinations,
-                                      month_initialisation,catchment_code),
-                 which.min(aic))
+                                                  month_initialisation,catchment_code),
+                                  which.min(.data[[objective_metric]]))
   
   all_combinations$model <- NULL
   
@@ -94,7 +87,9 @@ select_best_models <- function(models) {
               all_combinations = all_combinations))
 }
 
-plot_importance <- function(best_list) {
+
+
+plot_importance <- function(best_list,objective_metric) {
   library('dplyr')
   library('ggplot2')
   
@@ -114,23 +109,30 @@ plot_importance <- function(best_list) {
   # Load the RColorBrewer package
   
   # Create a custom color palette
-  unique_vars <- unique(predictor_importance$var)
-  palette_size <- length(unique_vars)
-  
+  #unique_vars <- unique(predictor_importance$var)
+  #palette_size <- length(unique_vars)
+  #
   # Create the custom_colors vector, excluding the color for the "STORAGE" predictor
-  custom_colors <- c("#3B9AB2", "#78B7C5", "#EBCC2A", "#E1AF00")
-  
-  # Match the number of colors in the custom_colors vector with the number of unique variables (excluding "STORAGE")
-  palette_size <- palette_size - 1
-  
-  if (length(custom_colors) > palette_size) {
-    custom_colors <- custom_colors[1:palette_size]
-  } else if (length(custom_colors) < palette_size) {
-    custom_colors <- rep(custom_colors, length.out = palette_size)
-  }
+  # custom_colors <- c("#3B9AB2", "#78B7C5", "#EBCC2A", "#E1AF00")
+  # 
+  # # # Match the number of colors in the custom_colors vector with the number of unique variables (excluding "STORAGE")
+  # palette_size <- palette_size - 1
+  # 
+  # if (length(custom_colors) > palette_size) {
+  #   custom_colors <- custom_colors[1:palette_size]
+  # } else if (length(custom_colors) < palette_size) {
+  #   custom_colors <- rep(custom_colors, length.out = palette_size)
+  # }
+  #catchment name
+  catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
+  cod_cuencas = read.csv(catchments_attributes_filename)
+  catchment_name = cod_cuencas[cod_cuencas$cod_cuenca == unique(best_list$best_combination$catchment_code),"gauge_name"]
   
   # Add the color for the "STORAGE" predictor and create the color_palette
-  color_palette <- c(setNames(custom_colors, unique_vars[unique_vars != "STORAGE"]),
+  color_palette <- c("NINO1.2" =  "#3B9AB2",
+                     "ONI" =  "#78B7C5",
+                     "PDO" =  "#EBCC2A",
+                     "SOI" =  "#E1AF00",
                      "STORAGE" = "#ff6d5c")
   
   
@@ -141,7 +143,8 @@ plot_importance <- function(best_list) {
     labs(x = "Mes de emisión",
          y = "Importancia del predictor",
          fill = "Variable",
-         title = "Contribución de cada predictor por mes") +
+         title = paste0("Contribución de cada predictor para el mejor modelo (",toupper(objective_metric),")"),
+         subtitle = catchment_name) +
     scale_fill_manual(values = color_palette) +
     scale_x_discrete( expand = c(0, 0)) +
     scale_y_continuous( expand = c(0, 0)) +
@@ -150,13 +153,18 @@ plot_importance <- function(best_list) {
       legend.position = "bottom",
       legend.key.width = unit(0.1,"in")
     )
-  return(p)
+  ggsave(filename = paste0("data_output/figuras/importancia_predictores/importancia_predictores_",objective_metric,"_",unique(best_list$best_combination$catchment_code),'.png'),
+         width = 6, height = 6,dpi = 400)
+  return(predictor_importance)
 }
 
+#month_initialisation = 5
 
 select_predictor <- function(
     catchment_code = "4503001",
     months_initialisation = 5:9,
+    objective_metric = "aic",
+    save = F,
     chart = F) {
   
   library('doSNOW')
@@ -164,7 +172,7 @@ select_predictor <- function(
   predictors <- grid_pred(c("SOI", "PDO", "ONI","NINO1.2"), 1, "mean")
   predictors <- c(predictors, grid_pred(c("STORAGE"), 1, "last"))
   
-  cl <- makeCluster(parallel::detectCores() - 1L)
+  cl <- makeCluster(parallel::detectCores() - 3L)
   registerDoSNOW(cl)
   
   models <- foreach(month_initialisation = months_initialisation, .combine = "c", .export=c('remove_correlated_predictors','calculate_model_metrics','save_model_results')) %dopar% { 
@@ -180,7 +188,7 @@ select_predictor <- function(
       predictor_list = predictors
     )
     
-    predictor_list <- data_input$info$predictor_list[[1]]
+    predictor_list <- data_input$info$predictor_list
     predictors_uncorrelated <- remove_correlated_predictors(data_input$X_train, predictor_list)
     
     predictors_comb <- unlist(lapply(seq_along(predictors_uncorrelated), function(i)
@@ -217,15 +225,39 @@ select_predictor <- function(
   
   stopCluster(cl)
   
-  best_list = select_best_models(models)
   
+  best_list = select_best_models(models, objective_metric)
+  
+  if (chart) {
+    p = plot_importance(best_list,objective_metric)
+    best_list = append(list(importance = p),best_list)
+  }
+  if (save) {
+    saveRDS(best_list,file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,'_may-sep.RDS') )
+  }
   return(best_list)
 }
 
 # Run the function
-results <- select_predictor()
 
-#plot_importance(results)
+
+#results <- select_predictor(chart = T,objective_metric = "aic",save = F,months_initialisation = 5:9)
+
+
+#all available catchments, no data 6008005, 7317005, 7355002, 8106001
+catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
+cod_cuencas = read.csv(catchments_attributes_filename)$cod_cuenca [-c(32,40,45,49)]
+
+
+  for (catchment_code in cod_cuencas) {
+    print(catchment_code)
+    select_predictor(catchment_code = catchment_code,
+                     chart = T,
+                     objective_metric = "aic",
+                     save = T,
+                     months_initialisation = 5:9)
+
+}
 
 
 
