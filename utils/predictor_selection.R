@@ -210,7 +210,7 @@ best = select_best_models(models)
 library(tidyverse)
 # Create a new data frame for the plot
 
-data_importancia <- best$best_results %>%
+data_importance <- best$best_results %>%
   select(month_initialisation, catchment_code,matches(best$unique_predictors)) %>%
   tidyr::pivot_longer(cols = -c(month_initialisation, catchment_code), names_to = "predictor", values_to = "importance") %>%
   filter(!is.na(importance)) %>% 
@@ -246,7 +246,7 @@ if (length(custom_colors) > palette_size) {
 color_palette <- c(setNames(custom_colors, unique_vars[unique_vars != "STORAGE"]),
                    "STORAGE" = "#ff6d5c")
 
-  
+
 # Create the ggplot with updated x-axis labels
 ggplot(data_importancia, aes(x = date_label, y = importance, fill = var)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -263,4 +263,4 @@ ggplot(data_importancia, aes(x = date_label, y = importance, fill = var)) +
     legend.position = "bottom",
     legend.key.width = unit(0.1,"in")
   )
-  
+

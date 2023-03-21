@@ -8,12 +8,6 @@ check_normality <- function(y) {
   return(shapiro_test$p.value)
 }
 
-# Function to visualize the distribution with a histogram and a Q-Q plot
-plot_distribution <- function(y, title) {
-  hist(y, main = title, xlab = "Volume")
-  qqnorm(y, main = paste("Q-Q plot of", title))
-  qqline(y)
-}
 
 # Function to apply a log transformation if the data is not normally distributed
 apply_log_transform <- function(y, p_value) {
@@ -27,17 +21,38 @@ apply_log_transform <- function(y, p_value) {
   }
 }
 
+pass_test <- function(p_value,threshold = 0.05) {
+  if (p_value>=threshold) {
+    p_value_test = "(pasa)"
+  }else{p_value_test = "(no pasa)"}
+  
+  return(p_value_test)
+}
 # Function to generate a combined plot with histograms and Q-Q plots
-plot_combined_distribution <- function(y, y_transformed, title) {
+plot_transform_predictant_distribution <- function(y, y_transformed,p_value, p_value_transform, title_text, chart_name) {
+  
+
+  png(filename = chart_name,width = 1500,height = 1500,res=200)
+  
   par(mfrow = c(2, 2), mar = c(4, 4, 1, 1), oma = c(0, 0, 2, 0))
   
-  hist(y, main = paste("Histogram of", title), xlab = "Volume")
-  qqnorm(y, main = paste("Q-Q plot of", title))
+  hist(y, main = paste("Histograma original"), xlab = "Volumen",ylab = "Frecuencia")
+  qqnorm(y, main = paste("Q-Q plot original"), xlab = "Cuantiles Teóricos",ylab = "Cuantiles de la muestra")
   qqline(y)
+  text(x = 0.2,
+       y = 1*min(y),
+       paste("P-value Shapiro-Wilk test:", 
+             format(p_value, scientific = T, big.mark = ",",digits = 3), pass_test(p_value) ))
   
-  hist(y_transformed, main = paste("Histogram of the (transformed)", title), xlab = "Volume")
-  qqnorm(y_transformed, main = paste("Q-Q plot of the (transformed)", title))
+  
+  hist(y_transformed, main = paste("Histograma transformado"), xlab = "log Volumen",ylab = "Frecuencia")
+  qqnorm(y_transformed, main = paste("Q-Q plot transformado"), xlab = "Cuantiles Teóricos",ylab = "Cuantiles de la muestra")
   qqline(y_transformed)
+  text(x = 0.2,
+       y = 1*min(y_transformed),
+       paste("P-value Shapiro-Wilk test:",
+             format(p_value_transform, scientific = T, big.mark = ",",digits = 3), pass_test(p_value_transform)))
   
-  title(main = "Combined Distribution Plot", outer = TRUE)
-}
+  title(main = paste0("Transformación del volumen ", title_text),adj=0, outer = TRUE)
+  dev.off()
+  }
