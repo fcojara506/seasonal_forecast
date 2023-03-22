@@ -249,12 +249,13 @@ catchments_attributes_filename = "data_input/attributes/attributes_49catchments_
 cod_cuencas = read.csv(catchments_attributes_filename)$cod_cuenca [-c(32,40,45,49)]
 
 
+
   for (catchment_code in cod_cuencas) {
     print(catchment_code)
     select_predictor(catchment_code = catchment_code,
                      chart = T,
-                     objective_metric = "aic",
-                     save = T,
+                     objective_metric = "rmse",
+                     save = F,
                      months_initialisation = 5:9)
 
 }

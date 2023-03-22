@@ -2,152 +2,95 @@ library(data.table)
 library(ggplot2)
 library(lubridate)
 
-### plot predictors vs volume
-plot_X_y_train <- function(
-    data_input,
-    export = FALSE,
-    show_chart = FALSE) {
+# Plot predictors vs volume
+plot_X_y_train <- function(data_input) {
   
-  if (show_chart) {
-    
+  
     library(ggplot2)
     library(ggpmisc)
     library(broom)
     library(glue)
     library(ggpubr)
     
-    # format X_train and y_train
-    X_train_df= lapply(
-      data_input$X_train, 
-      function(x) rownames_to_column(data.frame(x),var = "wy_simple")) %>% 
-      rbindlist(idcol = "ens")
+    # Format X_train and y_train
+    X_train_df <- rownames_to_column(data_input$X_train, var = "wy_simple")
+    y_train_df <- rownames_to_column(data_input$y_train, var = "wy_simple")[, c("wy_simple", "volume")]
     
-    y_train_df = data_input$y_train %>% 
-      rownames_to_column(var = "wy_simple")
+    # Merge X_train and y_train by water year
+    train_data_df <- merge(X_train_df, y_train_df, by = "wy_simple", all = TRUE) %>% 
+      reshape2::melt(id.vars = c("wy_simple", "volume")) %>% 
+      mutate(wy_simple = as.numeric(wy_simple)) %>% 
+      mutate(var = tstrsplit(variable, "_", fixed = TRUE)[[1]])
     
-    # merge X_train and y_train by water year
-    train_data_df = merge(X_train_df,
-                          y_train_df, 
-                          by="wy_simple",
-                          all=TRUE) %>% 
-      reshape2::melt(id.vars = c("wy_simple","volume","ens")) %>% 
-      mutate(wy_simple = as.numeric(wy_simple))
-    
-    test_data_df = lapply(
-      data_input$X_test, 
-      function(x) rownames_to_column(data.frame(x),var = "wy_simple")) %>% 
-      rbindlist(idcol = "ens") %>% 
-      reshape2::melt(id.vars = c("wy_simple","ens"))
-    # test stats min max
-    test_data_df_stats =  
-      aggregate(value ~ variable,
-                data = test_data_df, 
-                FUN = function(x) c( min=min(x), max=max(x) ) )
-    ## add historical predictors
-    
-    p=ggplot(
-      data = train_data_df,
-             aes(
-               x = value,
-               y = volume,
-               col = wy_simple)
-      )+
-      geom_point()+
-      facet_wrap(~variable, scales = "free_x",nrow = 1)+
-      scale_color_viridis_b()
-   
-    ## add smooth line and metrics
-    p = p +
-      geom_smooth(formula = y ~ x,
-                  fullrange=T,
-                  method = "loess",
-                  se = F ) +
+    # Add historical predictors
+    p <- ggplot(data = train_data_df, mapping = aes(x = value, y = volume, col = wy_simple)) +
+      geom_point() +
+      facet_wrap(~var, scales = "free_x", nrow = 1) +
+      scale_color_viridis_b() +
+      labs(
+        title = "Volumen vs Predictores",
+        subtitle = paste(data_input$raw_data$attributes_catchment$gauge_name),
+        x = "predictor",
+        y = glue("Volumen observado ({data_input$info$units_y}) ", data_input$time_horizon$volume_span_text),
+        col = "Año hidrológico",
+        caption = glue("Emisión {format(data_input$time_horizon$datetime_initialisation, '1˚ %b')}")
+      ) +
+      theme(legend.position = "bottom", legend.key.width = unit(0.5, "in")) +
+      geom_smooth(formula = y ~ x, method = "lm", se = F) +
       stat_regline_equation(
         aes(label = ..eq.label..),
-        size=3,
+        size = 3,
         label.x.npc = 0.3,
         label.y.npc = 0.11
-        ) +
+      ) +
       stat_regline_equation(
-        aes(label =..rr.label..),
+        aes(label = ..rr.label..),
         size = 3,
         label.x.npc = 0.3,
         label.y.npc = 0.2
-        )+
-      stat_fit_glance(method = "lm",
-                      label.y = "bottom",
-                      label.x = 0.73,
-                      mapping = aes(label = 
-                                      sprintf('P-value = %.1e',
-                                                     after_stat(p.value))
-                                    ),
-                      size=3,
-                      parse = F)
-    
-  
-    ## add test/current predictors
-
-
-    
-    p = p +
-      geom_vline(data =  test_data_df_stats,
-                 aes(xintercept = value[,"min"]),
-                 size = 0.3)+
-      geom_vline(data =  test_data_df_stats,
-                 aes(xintercept = value[,"max"]),
-                 size = 0.3)
-
-
-
-    
-    ## labels
-    p = p + 
-      labs(
-        title = "Volumen vs Predictores" ,
-        subtitle = paste("Cuenca:",data_input$raw_data$attributes_catchment$gauge_name),
-        x= "predictor",
-        y= glue("Volumen observado ({data_input$info$units_y}) ", data_input$time_horizon$volume_span_text),
-        col="Año hidrológico",
-        caption = glue("Emisión {data_input$time_horizon$date_initialisation}")
-      )+ theme(
-        legend.position = "bottom",
-        legend.key.width = unit(0.5,"in")
-      )+ 
-      expand_limits(y=0)
-    
-    
-    # add vertical text for the target year
-    p=p+
-      geom_label(
-        data = test_data_df_stats,
-        aes(x = value[,"max"]-(value[,"max"]-value[,"min"])/2 ),
-        y= max(train_data_df$volume)*0.95,
-        label= paste("predictor \n wy",data_input$wy_holdout),
-        col='black',
-        label.padding = unit(0.1, "lines"),
-        size=3
       )
-  if (!(is.null(data_input$y_test$volume))) {
     
-  p=p+
-    geom_label(
-      aes(x = Inf),
-      y = data_input$y_test$volume,
-      label= paste("volumen \n wy",data_input$wy_holdout),
-      col='black',
-      label.padding = unit(0.1, "lines"),
-      size=3,
-      hjust   = 1
-    )+
-    geom_hline(yintercept = data_input$y_test$volume)
+    
+    # Add test/current predictors
+    if (!is.null(data_input$X_test)) {
+      test_data_df <- rownames_to_column(data_input$X_test, var = "wy_simple") %>% 
+        reshape2::melt(id.vars = c("wy_simple"))
+      
+      test_data_df_stats <- aggregate(value ~ variable, data = test_data_df, FUN = function(x) c(min = min(x), max = max(x)))
+      
+      p <- p +
+        geom_vline(data = test_data_df_stats, aes(xintercept = value[, "min"]), size = 0.3) +
+        geom_vline(data = test_data_df_stats, aes(xintercept = value[, "max"]), size = 0.3) +
+        geom_label(
+          data = test_data_df_stats,
+          aes(x = value[, "max"] - (value[, "max"] - value[, "min"]) /2),
+          y = max(train_data_df$volume) * 0.95,
+          label = paste("predictor \n wy", data_input$wy_holdout),
+          col = 'black',
+          label.padding = unit(0.1, "lines"),
+          size = 3
+        )
+    }
+    
+    if (!is.null(data_input$y_test$volume)) {
+      p <- p +
+        geom_label(
+          aes(x = Inf),
+          y = data_input$y_test$volume,
+          label = paste("volumen \n wy", data_input$wy_holdout),
+          col = 'black',
+          label.padding = unit(0.1, "lines"),
+          size = 3,
+          hjust = 1
+        ) +
+        geom_hline(yintercept = data_input$y_test$volume)
+    }
   
-  }
-    plot(p)
     
     return(p)
-    
   }
-}
+
+                
 
 # Function to plot the metric
 plot_metric <- function(dataframe, metric, shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
@@ -180,134 +123,79 @@ plot_metric <- function(dataframe, metric, shapefile_path = "data_input/SIG/shap
 
 plot_vol_sim_obs <- function(
     data_fore,
-    data_input,
-    export = FALSE,
-    show_chart=FALSE) {
+    data_input) {
   
-  if (show_chart) {
+  
   
   library(ggplot2)
   library(ggpmisc)
   library(broom)
   library(glue)
   
-  y_true = data_input$y_train$volume_original
+  y_true = data_input$y_train %>%
+    select(volume_original) %>% 
+    rownames_to_column(var = "wy_simple")
+  
   x = data_fore$y_cv
   
-  y_df = 
-  lapply(
-    data_fore$y_cv, 
-    function(x) 
+  y_df =  data.frame(y_sim = data_fore$y_cv, y_true) %>%
+      mutate(wy_simple = as.numeric(wy_simple)) %>%
+    dplyr::rename(y_true = volume_original)
       
-      data.frame(y_sim = x,y_true) %>%
-      rownames_to_column(var = "wy") %>% 
-      mutate(wy = as.numeric(wy)) %>% 
-      dplyr::rename(y_true = volume_original)
-      
-      ) %>% 
-    rbindlist(idcol = "ens")
   
   v_line = t(as.data.frame(data_fore$y_fore)) %>%
     data.frame(y_fore=.)
-  #geom_jitter(data = v_line, aes(x=y_fore,y=data_input$y_test$volume), col="red")+ 
+  
+  
+  
 p = 
-    ggplot(data = y_df, aes(x=y_sim,y=y_true,col=wy))+
+    ggplot(data = y_df, aes(x=y_sim,y=y_true,col=wy_simple))+
     geom_point()+
-    geom_abline(slope = 1)+
-    geom_vline(xintercept =  mean(v_line$y_fore))+
+  geom_abline(slope = 1)+
+  geom_vline(xintercept =  mean(v_line$y_fore))+
   scale_color_viridis_b()+
     labs(
       x = glue("Volumen simulado {data_input$time_horizon$volume_span_text} ({data_input$info$units_y})"),
       y = glue("Volumen observado {data_input$time_horizon$volume_span_text} ({data_input$info$units_y})"),
-      title = "Volumen observado vs simulado en validación cruzada",
-      subtitle = paste("Cuenca:", data_input$raw_data$attributes_catchment$gauge_name),
+      title = "Volumen obs vs sim en validación cruzada",
+      subtitle = paste(data_input$raw_data$attributes_catchment$gauge_name),
       col = "Año Hidrológico",
-      caption = glue("Emisión {data_input$time_horizon$date_initialisation}")
+      caption = glue("Emisión {format(data_input$time_horizon$datetime_initialisation, '1˚ %b')}")
     )+ theme(
       legend.position = "bottom",
-      legend.key.width = unit(0.5,"in"),
-      aspect.ratio=1
+      legend.key.width = unit(0.5,"in")
     )+
-    coord_equal()+
-    expand_limits(y=0,x=0)
- 
-  p = p +
+    expand_limits(y=0,x=0)+
     stat_poly_eq(aes(label = paste(..rr.label..)),
                  label.x.npc = 0.95,
                  label.y.npc = 0.1,
                  formula = y ~ x,
                  parse = TRUE,
                  size = 3)+
-    stat_fit_glance(method = "lm",
-                    label.y = "bottom",
-                    label.x = 0.95,
-                    method.args = list(formula = y ~ x),
-                    mapping = aes(
-                      label = (sprintf('italic(P-value)~"="~%.2g',
-                                                   after_stat(p.value)))),
-                    size=3,
-                    parse = TRUE)
-
-  # add vertical's text for the target year
-  p=p+
     geom_label(
              label= paste("wy",data_input$wy_holdout),
              x=mean(v_line$y_fore),
              y=max(y_df$y_true),
              col='black'
-             )
-  
+             )+
   # add identity function text
-  p = p+
     geom_label(
       label= " y = x",
-      x=min(y_df$y_sim)*0.2,
-      y=min(y_df$y_sim)*0.2,
+      x=max(y_df$y_sim)*0.9,
+      y=max(y_df$y_sim)*0.9,
       col='black'
-    )
-  
+    )+tune::coord_obs_pred()
+
+ 
+
   if (!(is.null(data_input$y_test$volume))) {
     p =p+geom_jitter(data = v_line, aes(x=y_fore,y=data_input$y_test$volume), col="red")
   }
   
-  # # add coefficients
-  # coeff = data.frame(
-  #   val=round(coef(data_fore$regression_model$finalModel),2)) %>% 
-  #   rownames_to_column(var = "coef")
-  # 
-  # coeff2 = data.frame(summary(data_fore$regression_model)$coef) %>%
-  #   rownames_to_column(var = "coef") %>% 
-  #   select(coef,Estimate,Std..Error,Pr...t..) %>% 
-  #   rename(coef_val = Estimate) %>% 
-  #   rename(std_error=Std..Error) %>% 
-  #   rename(p_value = Pr...t..) %>% 
-  #   mutate(coef_val = round(coef_val,2)) %>% 
-  #   mutate(std_error = round(std_error,1)) %>% 
-  #   mutate(p_value = sprintf("%.2g",p_value))
-  # 
-  # p2=ggplot(data=data.frame(x=10,y=10))+
-  #   annotate(
-  #     geom = 'table',
-  #     x=0,
-  #     y=0,
-  #     vjust = -0.05,
-  #     hjust = 0.6,
-  #     label=list(coeff2))+
-  #   theme_void()
-  
-  #library(patchwork)
-  
-  #p3=p
-    #plot_layout(ncol = 1)
-    #plot_annotation(
-    #  tag_levels = "a",
-    #  tag_suffix = ') '
-    #  )
-  
-  plot(p)
+
 return(p)
 }
-}
+
 
 #### ensemble volume
 vol_subplot <- function(
@@ -315,7 +203,8 @@ vol_subplot <- function(
     df_train,
     xlabel,
     xticks_colours,
-    quantiles_obs
+    quantiles_obs,
+    data_input
     ) {
   
   library(ggplot2)
@@ -328,44 +217,22 @@ vol_subplot <- function(
   
   x_labels = unique(y_ens$wy_simple)
   x_limits = length(x_labels)
+  
+
   library(see)
   # plot ensembles
   p1 = ggplot() + 
-    geom_violinhalf(
-      data = y_ens,
-      aes(x = wy_simple,
-          y = volume,
-          fill = error_median
-          ),
-          #fill = volume#as.numeric(as.character(wy_simple))),
-          width = 0.9,
-          color = "black",
-          lwd = 0.1,
-      scale = "width"
-      ) +
     geom_boxplot(
       data = y_ens,
       aes(x = wy_simple,
           y = volume,
-          fill = error_median),
-      color = "black",
+          ),
       lwd = 0.1,
       width = 0.2,
-      outlier.size = 0.5
+      outlier.size = 0.1
     )+
-        scale_fill_gradient2(
-          guide = "legend",
-          low = "blue",
-          mid = "white",
-          high = "red",
-          na.value = NA,
-          breaks = seq(-100,100,10)
-        )
-      
-  # change labels
-  p2 = p1+
-    theme_light()+
-    labs(y =  glue("Volumen ({data_input$info$units_y})"),
+  # # change labels
+    labs(y =  glue("Volumen ({data_input$info$water_units$y})"),
          x = xlabel
          )+
     theme(
@@ -375,10 +242,8 @@ vol_subplot <- function(
         colour = xticks_colours
         )
     )+
-    ylim(0,NA)
-  
-  ## add observed data
-  p3 = p2 +
+  # 
+  # ## add observed data
     geom_point(data = df_train,
                aes(
                  x = wy_simple,
@@ -390,54 +255,47 @@ vol_subplot <- function(
     )+
     scale_color_manual(
       values = c(" " = "black"),
-      name="Medido/Natural")
-  
-  
-  # add observed quantiles 
-  p4 = p3 +
+      name="Caudal estación Fluviométrica")+
+  # add observed quantiles
     theme(plot.margin = unit(c(1,5,1,0.5), "lines"))+
     geom_text(data = quantiles_text,
               aes(x = x_limits+2,
                   y = quantiles_obs,
-                  label = glue("{quantiles} ({round(quantiles_obs,1)} mm)")),
+                  label = glue("{quantiles} ({round(quantiles_obs,1)} {data_input$info$water_units$y})")),
               vjust = 0.4,
               hjust = 0,
               size=2)+
-    coord_cartesian(xlim = c(0, x_limits+1), clip = "off")
-  
-  
-  p5 = p4 +
+    coord_cartesian(xlim = c(0, x_limits+1), clip = "off")+
     geom_segment(data = quantiles_text,
                  aes(x = 1,
                      xend = x_limits,
                      y=quantiles_obs,
                      yend = quantiles_obs),
-                 linetype="dashed")
-  
-  p6 = p5 +
+                 linetype="dashed")+
     theme(legend.position="bottom",
           legend.spacing.x = unit(0, 'cm'))+
-    guides(
-      fill = guide_legend(
-        label.position = "bottom",
-        nrow = 1,
-        title = "Error: (obs-sim)/obs (%)",
-        title.vjust = 0.8
-      ),
-      color=guide_legend(
-        title.vjust = 0.8,
-        nrow=2
-      )
-    )
-    #theme(legend.title = element_text(size = 5))+
-    #theme(legend.text = element_text(size = 5))+
-    #theme(legend.position = c(0.2,0.85))
-    #      legend.box = "horizontal",
-    #      legend.background = element_blank(),
-    #      legend.key.size = unit(0.3,"cm"))
+    # guides(
+    #   fill = guide_legend(
+    #     label.position = "bottom",
+    #     nrow = 1,
+    #     title = "Error: (obs-sim)/obs (%)",
+    #     title.vjust = 0.8
+    #   ),
+    #   color=guide_legend(
+    #     title.vjust = 0.8,
+    #     nrow=2
+    #   )
+    # )+
+    scale_y_continuous(expand = c(0,0))
+  # if (!is.null(data_input$info$y_transform$function_y)) {
+  #   p1=p1 + scale_y_continuous(trans='log')
+  # }
     
-  
-  return(p6)
+    
+
+
+
+  return(p1)
 }
 
 data_plot_backtest_volume <- function(data_input,data_fore) {
@@ -508,9 +366,8 @@ data_plot_backtest_volume <- function(data_input,data_fore) {
 plot_backtest_volume <- function(
     data_input,
     data_fore,
-    subplot = TRUE,
-    export = FALSE,
-    show_chart=TRUE) {
+    subplot = TRUE
+    ) {
   
   
   plot_data = data_plot_backtest_volume(
@@ -518,6 +375,7 @@ plot_backtest_volume <- function(
     data_fore = data_fore)
   
    y_ens = plot_data$y_ens
+   y_ens$wy_simple = as.factor(as.numeric(y_ens$wy_simple))
    df_train = plot_data$df_train
    medians_forecast = plot_data$y_ens_medians
   
@@ -527,21 +385,19 @@ plot_backtest_volume <- function(
     {(.== data_input$time_horizon$wy_holdout)} %>%
     ifelse("red","black")
   
-  p = vol_subplot(
+  p1 = vol_subplot(
     y_ens = y_ens,
     df_train = df_train,
     xlabel = "Año hidrológico (orden cronológico)",
     xticks_colours = xticks_colours,
-    quantiles_obs = plot_data$quantiles_obs
+    quantiles_obs = plot_data$quantiles_obs,
+    data_input = data_input
     )
-  print(p)
-  
-    p1 = p
     
     title =  glue("Pronóstico retrospectivo de volumen {data_input$time_horizon$volume_span_text}")
-    subcaption =
-      glue("Pronóstico de volumen {data_input$time_horizon$volume_span_text_v2}: {plot_data$text_forecast_range} (mediana ± rango intercuartil/2)\n",
-      "Emisión {data_input$time_horizon$date_initialisation}")
+    subcaption = glue("Emisión {format(data_input$time_horizon$datetime_initialisation, '1˚ %b')}")
+   
+    
     
   ##############
   # compute new order of x-axis based on median of the forecast
@@ -557,33 +413,33 @@ plot_backtest_volume <- function(
                         df_train = df_train,
                         xlabel =  "Año hidrológico (orden por mediana del pronóstico)",
                         xticks_colours = xticks_colours,
-                        quantiles_obs = plot_data$quantiles_obs)
-    plot(p2)
-      if (subplot) {
+                        quantiles_obs = plot_data$quantiles_obs,
+                     data_input = data_input)
     
-    p2 = p2 + 
-      labs(caption  = subcaption)+
-      theme(plot.caption = element_text(hjust = 0))
+  #     if (subplot) {
+  #   
+  #   p2 = p2 + 
+  #     labs(caption  = subcaption)
+  #    # theme(plot.caption = element_text(hjust = 0))
+  #   
+  #   library(patchwork)
+  #   p3 = (p1/p2) + 
+  #     plot_annotation(
+  #       title = title,
+  #       subtitle = data_input$raw_data$attributes_catchment$gauge_name,
+  #       tag_levels = "a"
+  #       )+
+  #     plot_layout(
+  #       #ncol = 1,
+  #       guides = "collect"
+  #       ) & 
+  #     theme(legend.position = 'bottom')
+  #   
+  #   # Figure size
+  #   width_p = 7.2
+  #   height_p = 6
+  # }else{
     
-    library(patchwork)
-    p3 = (p1/p2) + 
-      plot_annotation(
-        title = title,
-        subtitle = data_input$raw_data$attributes_catchment$gauge_name,
-        tag_levels = "a"
-        )+
-      plot_layout(
-        #ncol = 1,
-        guides = "collect"
-        ) & 
-      theme(legend.position = 'bottom')
-
-    #plot(p3)
-    
-    # Figure size
-    width_p = 7.2
-    height_p = 6
-  }else{
     p3 = p2 + 
       labs(
         title = title,
@@ -591,31 +447,12 @@ plot_backtest_volume <- function(
         caption  = subcaption)+
       theme(plot.caption = element_text(hjust = 0)
             )
-    # figure
+    
     width_p = 7.2
     height_p = 4
-  }
   
-  ## exportar
-  if (export) {
-    library("icesTAF")
-    # figure output folder
-    folder_output = glue("data_output/pronostico_volumen/Figures/ensemble_forecast/{data_input$info$catchment_code}/")
-    # create folder if it does not exist
-    mkdir(folder_output)
-    # filename
-    figure_vol_output = glue(
-      "{folder_output}EnsembleVolumeHindcast_{data_input$info$catchment_code}_",
-      "1st{data_input$info$month_initialisation}_{data_input$time_horizon$predictor_list_join}_",
-      "{data_input$time_horizon$volume_span_text}{data_input$wy_holdout}.png")
-    
-    ggsave(figure_vol_output,plot = p3, width = width_p, height = height_p)
-  }
   
-  if (show_chart) {
-    plot(p3)
     return(p3)
-  }
     
 }
 
@@ -689,9 +526,8 @@ data_plot_knn_flow <- function(data_input,q_ens_fore) {
 
 plot_knn_flow <- function(
     data_input,
-    q_ens_fore,
-    export = FALSE,
-    show_chart = FALSE) {
+    q_ens_fore
+    ) {
   
   library(ggplot2)
   library(see) # halfviolin
@@ -836,46 +672,27 @@ plot_knn_flow <- function(
     )+
     plot_layout(guides='collect') &
     theme(legend.position='bottom')
+  
+  # if (export) {
+  #   library("icesTAF")
+  #   # figure output folder
+  #   folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data_input$info$catchment_code}/")
+  #   # create folder if it does not exist
+  #   mkdir(folder_output)
+  #   width_p = 7.2
+  #   height_p = 4
+  #   #filename
+  #   figure_q_output = glue(
+  #     "{folder_output}flow_ensemble_forecast_{data_input$info$catchment_code}_",
+  #     "1st{data_input$info$month_initialisation}_{plot_text$predictor_list_join}_",
+  #     "{plot_text$volume_span_text}{data_input$wy_holdout}.png")
+  #   
+  #   ggsave(figure_q_output,plot = p2, width = width_p, height = height_p)
+  # }
+  
 
-  # library(png)
-  # library(RCurl)
-  # library(cowplot)
-  # library(magick)
-  # img <- readPNG(getURLContent(url = "https://i.imgur.com/EOc2V.png"))
-  # 
-  # p3 = ggdraw()+
-  #   draw_image(img,x = 0.3, y = 0.4, scale = .2)+
-  #   draw_plot(p2)
   
-  # p2 = p +
-  #   inset_element(p1,
-  #                 left = -0.02,
-  #                 bottom = 0.3,
-  #                 right = 0.5,
-  #                 top = 1.1)
-  
-  #plot(p2)
-  
-  if (export) {
-    library("icesTAF")
-    # figure output folder
-    folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data_input$info$catchment_code}/")
-    # create folder if it does not exist
-    mkdir(folder_output)
-    width_p = 7.2
-    height_p = 4
-    #filename
-    figure_q_output = glue(
-      "{folder_output}flow_ensemble_forecast_{data_input$info$catchment_code}_",
-      "1st{data_input$info$month_initialisation}_{plot_text$predictor_list_join}_",
-      "{plot_text$volume_span_text}{data_input$wy_holdout}.png")
-    
-    ggsave(figure_q_output,plot = p2, width = width_p, height = height_p)
-  }
-   if (show_chart) {
-    plot(p2)
-    return(p2)
-  }
+  return(p2)
   
   
 }

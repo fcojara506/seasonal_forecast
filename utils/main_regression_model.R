@@ -9,9 +9,13 @@ source("base/Export_data.R")
 
 forecast_mode = "cv"
 catchment_code = 5410002
-month_initialisation = 8
 ### Forecasts
-#for (catchment_code in c(7321002, 5410002, 5710001,3820001)) {
+for (catchment_code in c(7321002, 5410002, 5710001,4503001,3820001)) {
+  
+for (month_initialisation in 5:9) {
+  
+
+
   
 data_best_models = readRDS(
   file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-sep.RDS"))
@@ -39,64 +43,43 @@ scores = export_data(
   data_fore = data_fore,
   export = 'scores')
 
-# ensemble flow forecast
-q_ens_fore =
-  run_q_forecast(
-  data_input = data_input,
-  data_fore = data_fore,
-  forecast_mode = forecast_mode
-  )
-
-#df_platform_vol = export_volume_platform(data=data,data_fore=data_fore)
-#df_platform_q   = export_flow_platform(data=data,q_ens_fore = q_ens_fore)
+# # ensemble flow forecast
+# q_ens_fore =
+#   run_q_forecast(
+#   data_input = data_input,
+#   data_fore = data_fore,
+#   forecast_mode = forecast_mode
+#   )
 
 #### charts
 #predictors vs target variable
-# p1=
-#   plot_X_y_train(
-#   data_input = data_input,
-#   export = T,
-#   show_chart = T
-# )
-# 
-# ggsave(glue("{data_input$info$catchment_code}_scatter_xy.png"),plot=p1,width=6,height=4,dpi=400)
+p1=
+  plot_X_y_train(
+  data_input = data_input
+)
+ggsave(glue("data_output/figuras/scatter_xy/scatter_xy_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p1,width=6,height=4,dpi=400)
 
 
 #scatter volume of simulated vs observed in cross-validation
-# p2=
-#   plot_vol_sim_obs(
-#   data_input = data_input,
-#   data_fore = data_fore,
-#   export = F,
-#   show_chart = T
-# )
-# ggsave(glue("{data_input$info$catchment_code}_scatter_SimObs.png"),plot=p2,width=8,height=6,dpi=400)
+p2=
+  plot_vol_sim_obs(
+  data_input = data_input,
+  data_fore = data_fore
+)
+ggsave(glue("data_output/figuras/scatter_simobs/scatter_ysimobs_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p2,width=8,height=6,dpi=400)
 
 # #ensemble volume in hindcast (cross-validation)
-p3=
-  plot_backtest_volume(
+
+p3 = plot_backtest_volume(
   data_input = data_input,
   data_fore = data_fore,
-  subplot = F,
-  export = F,
-  show_chart = T
+  subplot = T
   )
 
-ggsave(glue("vol_hindcast_{data_input$info$catchment_code}.png"),plot=p3,width=15,height=8,dpi=400)
+ggsave(glue("data_output/figuras/hindcast_volumen/vol_hindcast_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p3,width=8,height=4,dpi=400)
 
-# #hydrogram of forecasted mean monthly flows
-# p4 =
-#   plot_knn_flow(
-#   data_input = data_input,
-#   q_ens_fore = q_ens_fore,
-#   export = F,
-#   show_chart = T
-# )
-# 
-# ggsave(glue("{data_input$info$catchment_code}_q_fore.png"),plot=p4,width=10,height=8,dpi=400)
-
-
-
+}
+}
 
 
 

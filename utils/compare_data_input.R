@@ -1,170 +1,109 @@
 rm(list = ls())
  
-library(ggplot2)
-
-source("utils/run_model_function.R")
-
-#test catchments
-attributes_catchments = 
-  "base/data_input/attributes/attributes_49catchments_ChileCentral.feather" %>% 
-  feather::read_feather()
-
-cod_cuencas1 = 
-  "base/data_input/storage_variables/hydro_variables_monthly_catchments_ChileCentral_ERA5Ens_SKGE.feather" %>%
-  feather::read_feather() %>%
-  select(cod_cuenca) %>% 
-  unique() %>% 
-  .[["cod_cuenca"]]
-
-cod_cuencas2 = attributes_catchments$cod_cuenca
-
-cod_cuencas = intersect(cod_cuencas1,cod_cuencas2)
-#test months initial
-months_initialisation = c("oct") #c('may','jun','jul','ago','sep','oct','nov','dic','ene','feb')
-
-#test meteo set 
-datasets_hydro = c(
-  "ERA5Ens_KGE+logNSE","ERA5Ens_SKGE","ERA5Ens_SKGE+logSNSE",
-  "ERA5Raw_KGE+logNSE","ERA5Raw_SKGE","ERA5Raw_SKGE+logSNSE"
-  )
-#test forecast order
-iterations = length(cod_cuencas)*length(months_initialisation)*length(datasets_hydro)
-message("Total iteraciones:", iterations)
-
-library(foreach)
-library(doParallel)
-#registerDoParallel(cores=8)
+source("base/Preprocess_data.R")
+library("foreach")
+library("ggplot2")
 
 
-   
-   
-
-join_x_info <- function(x,normalised = T) {
-  x_train = rownames_to_column(x[["X_train"]][[1]],var = "wy") 
-  y_train = rownames_to_column(x[["y_train"]],var = "wy")
-  
-  if (normalised) {
-    x_train = x_train %>% minmax(method = "range")
-    y_train = y_train %>% minmax(method = "range")
-  }
-  
-  xy_train = merge(x_train,y_train)
-  
-  df = xy_train %>% 
+join_x_info <- function(x,normalised = F) {
+  x_train = rownames_to_column(x[["X_train"]],var = "wy") 
+  info = x[["info"]]
+  df = x_train %>% 
     data.table() %>% 
-    melt.data.table(id.vars = c("wy","volume"),
+    melt.data.table(id.vars = c("wy"),
                     variable.name = "predictor_name",
                     value.name = "predictor_value") %>% 
-    c(x[["info"]])
+    mutate(catchment_code = info$catchment_code,
+           datetime_initialisation = info$datetime_initialisation)
     
   
   return(df)
   
 }
 
-dataset_data_input <- function(dataset_hydro,normalised = T) {
+
+
+
+# Set catchment code and months of initialization
+all_predictors <- grid_pred(c("SOI", "PDO", "ONI","NINO1.2"), 1, "mean")
+all_predictors <- c(all_predictors, grid_pred(c("STORAGE"), 1, "last"))
+
+#all available catchments, no data 6008005, 7317005, 7355002, 8106001
+catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
+attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
+cod_cuencas = attributes_catchments$cod_cuenca
+
+months_initialisation = 1:12
+
+#dataset_data_input <- function(dataset_hydro,normalised = T) {
 
   model_data <-
-    foreach(catchment_code=cod_cuencas) %dopar% {
+    foreach(catchment_code=cod_cuencas, .combine = "c") %do% {
+      foreach(month_initialisation = months_initialisation)%do% {
       
       preprocess_data(
+        datetime_initialisation = make_date(2022, 3) %m+% months(month_initialisation) ,
+        forecast_mode = "cv",
         catchment_code = catchment_code,
-        month_initialisation = "oct",
-        dataset_hydro = dataset_hydro,
-        dataset_region = "ChileCentral",
-        dataset_meteo  = "ens30avg",
-        horizon_strategy = "dynamic",
-        horizon_month_start = "oct",
-        horizon_month_end = "mar",
-        predictor_list = c(
-          "pr_sum_-1months",
-          #"tem_mean_-1months",
-          #"SP_last_1months",
-          "STORAGE_last_1months"
-          ## GR4J
-          #"PROD_last_1months",
-          #"ROUT_last_1months",
-          #"SM_last_1months",
-          ##TUW
-          #"SUZ_last_1months",
-          #"SLZ_last_1months",
-          #"UZT_last_1months",
-          ##SACRAMENTO
-          #"UZF_last_1months",
-          #"LZT_last_1months",
-          #"LZS_last_1months",
-          #"LZP_last_1months"
-        ),
-        wy_holdout = 2000,
-        remove_wys = NA,
-        units_q = "m3/s",#"m^3/s",#"mm/month",#"m^3/s",
-        units_y = "GL"#"GL"
+        predictor_list = all_predictors,
+        save_raw = F
       )
-      
-    }  
+
+      }
+    }
+  
+
+months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
   
 data_input = 
   lapply(model_data, 
-         function(x) join_x_info(x,normalised = normalised)) %>% 
-  rbindlist() %>% 
+         function(x) join_x_info(x,normalised = F)) %>% 
+rbindlist() %>% 
   merge(attributes_catchments,
         by.x = "catchment_code",
         by.y = "cod_cuenca"
   ) %>%
-  mutate(short_gauge_name = short_river_name(gauge_name))
+  #mutate(wy = as.numeric(wy)) %>% 
+  mutate(var = tstrsplit(predictor_name, "_", fixed = TRUE)[[1]]) %>% 
+  mutate(month_wy = as.factor(wateryearmonth(month = month(datetime_initialisation))))
+levels(data_input$month_wy) = paste0("1˚", months_wy[as.numeric(levels(data_input$month_wy) )])
 
-return(data_input)
-}
 
-minmax <- function(df,method = "range" ) {
-  library(caret)
-  library(dplyr)
-  
-  df2 =  df %>% 
-    preProcess(method = method) %>% 
-    predict(df)
-  
-}
-dataset_hydro="ERA5Ens_KGE+logNSE"
-#saveRDS(data_input,"utils/data_output/model_data_input_49catchments.RDS")
-plot_input <- function(dataset_hydro= "TUW_EVDSep") {
-
-normalised = TRUE
-data_input = dataset_data_input(dataset_hydro,normalised = normalised)
-
-data_input_mean = 
+data_input_stat = 
   aggregate(
-    formula = predictor_value  ~ catchment_code + predictor_name ,
+    x = predictor_value  ~ catchment_code + var + month_wy ,
       data  = data_input,
-        FUN = mean
-    )
+        FUN = median
+    ) %>%
+  dplyr::rename(median = predictor_value)
 
-ggplot(data = data_input,
-       aes(x = predictor_value, y=volume)) +
-geom_point()+
-geom_smooth(formula = y ~ x,
-              fullrange=F,
-              method = "loess",
-              se = F, 
-            size = 0.5
-              ) +
-geom_vline(data = data_input_mean,
-           aes(xintercept = predictor_value))+
-facet_grid(catchment_code ~ predictor_name,
-           scales = "free")+
-  labs(
-    x = "Predictor (Almacenamiento) [mm]",
-    y = "Volumen estacional [mm]",
-    title = "Volumen vs Predictores (forma: Variable_FuncionAgregacion_MesesAgregracion )",
-    subtitle = dataset_hydro
-  )+
-  scale_y_continuous(
-    limits = c(0,ifelse(normalised,1,max(data_input$volume)))
-  )
+all_data = merge(data_input,data_input_stat,by = c("catchment_code","var","month_wy"))
 
-ggsave(glue::glue("utils/data_output/figuras/xy_{dataset_hydro}.png"),
-       width = 6,
-       height = 45)
-}
+write.csv(x = all_data,file = "data_output/predictores/all_predictor_1981_2019_45cuencas.csv",row.names = F)
 
-sapply(datasets_hydro, plot_input)
+# ##chart
+# DGA_code = sample(cod_cuencas,1)
+# target_wy = "2016"
+# data_input = subset(all_data, catchment_code == DGA_code)
+# 
+# ggplot(data = data_input) +
+#   #add historical records
+#   geom_line(aes(x = month_wy, y = predictor_value, col = "1981-2020", group = wy)) +
+#   scale_x_discrete(expand = c(0, 0))+
+#   #add median
+#   geom_line(aes(x = month_wy, y = median, col = "median",group = "wy"))+
+# 
+#   #add a target year
+#   geom_line(data = subset(data_input,wy == target_wy),
+#             aes(x = month_wy, y = predictor_value, col = "target_wy",group = "wy"))+
+#   scale_color_manual(values = c("median" = "red",
+#                                 "1981-2020" = "grey50",
+#                                 "target_wy" = "blue"),
+#                      labels=c('Median', '1981-2019', target_wy))+
+#   facet_wrap(~var, scales = "free_y",ncol = 1)+
+#   labs(
+#     title = "Predictores",
+#     x = "fecha de emisión",
+#     y = "valor del predictor",
+#     col = "Años hidrológicos"
+#   )
