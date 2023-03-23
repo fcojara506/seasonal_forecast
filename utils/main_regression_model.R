@@ -8,11 +8,19 @@ source("base/Export_data.R")
 
 
 forecast_mode = "cv"
-catchment_code = 5410002
+
+#all available catchments, no data 6008005, 7317005, 7355002, 8106001
+catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
+attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
+cod_cuencas = attributes_catchments$cod_cuenca
+
+months_initialisation = 5:9
+
+ind = 1
+scores = vector(mode = "list", length = length(months_initialisation) * length(cod_cuencas))
 ### Forecasts
-for (catchment_code in c(7321002, 5410002, 5710001,4503001,3820001)) {
-  
-for (month_initialisation in 5:9) {
+for (catchment_code in cod_cuencas) {
+for (month_initialisation in months_initialisation) {
   
 
 
@@ -38,48 +46,50 @@ data_fore = forecast_vol_ensemble(
   forecast_mode = forecast_mode)
 
 #### metrics
-scores = export_data(
+scores[[ind]] = export_data(
   data_input = data_input,
   data_fore = data_fore,
   export = 'scores')
-
-# # ensemble flow forecast
-# q_ens_fore =
-#   run_q_forecast(
+ind = ind + 1 
+# # # ensemble flow forecast
+# # q_ens_fore =
+# #   run_q_forecast(
+# #   data_input = data_input,
+# #   data_fore = data_fore,
+# #   forecast_mode = forecast_mode
+# #   )
+# 
+# #### charts
+# #predictors vs target variable
+# p1=
+#   plot_X_y_train(
+#   data_input = data_input
+# )
+# ggsave(glue("data_output/figuras/scatter_xy/scatter_xy_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p1,width=6,height=4,dpi=400)
+# 
+# 
+# #scatter volume of simulated vs observed in cross-validation
+# p2=
+#   plot_vol_sim_obs(
+#   data_input = data_input,
+#   data_fore = data_fore
+# )
+# ggsave(glue("data_output/figuras/scatter_simobs/scatter_ysimobs_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p2,width=8,height=6,dpi=400)
+# 
+# # #ensemble volume in hindcast (cross-validation)
+# 
+# p3 = plot_backtest_volume(
 #   data_input = data_input,
 #   data_fore = data_fore,
-#   forecast_mode = forecast_mode
+#   subplot = T
 #   )
-
-#### charts
-#predictors vs target variable
-p1=
-  plot_X_y_train(
-  data_input = data_input
-)
-ggsave(glue("data_output/figuras/scatter_xy/scatter_xy_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p1,width=6,height=4,dpi=400)
-
-
-#scatter volume of simulated vs observed in cross-validation
-p2=
-  plot_vol_sim_obs(
-  data_input = data_input,
-  data_fore = data_fore
-)
-ggsave(glue("data_output/figuras/scatter_simobs/scatter_ysimobs_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p2,width=8,height=6,dpi=400)
-
-# #ensemble volume in hindcast (cross-validation)
-
-p3 = plot_backtest_volume(
-  data_input = data_input,
-  data_fore = data_fore,
-  subplot = T
-  )
-
-ggsave(glue("data_output/figuras/hindcast_volumen/vol_hindcast_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p3,width=8,height=4,dpi=400)
+# 
+# ggsave(glue("data_output/figuras/hindcast_volumen/vol_hindcast_{data_input$info$catchment_code}_{month_initialisation}.png"),plot=p3,width=8,height=4,dpi=400)
 
 }
 }
+
+saveRDS(object = (scores) ,"data_output/scores/RDS/scores_20230323.RDS")
 
 
 

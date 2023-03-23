@@ -1211,3 +1211,67 @@ plot_pheatmap_EDA3 <- function(
   
   return(plot_list)
 }
+
+
+# Load required libraries
+library(rgdal)
+library(ggplot2)
+library(sf) 
+
+# Function to plot the metric
+plot_metric <- function(dataframe, metric, shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
+  # Read the shapefile
+  shapefile <- st_read(shapefile_path)
+  
+  # Merge the shapefile and the dataframe using the common ID
+  merged_data <- merge(shapefile, dataframe, by.x = "gauge_id", by.y = "catchment_code")
+  
+  # Plot the metric using the merged data
+  plot <- ggplot() +
+    geom_sf(data = merged_data, aes(fill = !!sym(metric))) +
+    scale_fill_continuous(low = "blue", high = "red") + # Change the colors according to your preference
+    theme_minimal() +
+    facet_wrap(~month_initialisation) +
+    labs(title = "", x = "Longitud", y = "Latitud", fill = metric)
+  
+  return(plot)
+}
+
+
+library("ggplot2")
+library("sf")
+# Function to plot all catchments and highlight target catchments
+plot_catchments <- function(shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp",
+                            target_catchment = NULL,
+                            simplify = TRUE,
+                            tolerance = 4000,
+                            make_valid = TRUE) {
+  # Read the shapefile
+  shapefile <- read_sf(shapefile_path)
+  
+  # Make the shapefile valid if requested
+  if (make_valid) {
+    shapefile <- st_make_valid(shapefile)
+  }
+  
+  # Simplify the shapefile if requested
+  if (simplify) {
+    shapefile <- st_simplify(shapefile, dTolerance = tolerance)
+  }
+  
+  # Plot all catchments
+  plot <- ggplot() +
+    geom_sf(data = shapefile, fill = "grey") +
+    scale_x_continuous(breaks = seq(-69,-72,by = -1),labels = seq(-69,-72,by = -1)) +
+    scale_y_continuous(breaks = seq(-27, -37, by = -1),labels = seq(-27, -37, by = -1))+
+    labs(title = "")
+  
+  print(plot)
+  # Highlight target catchments if provided
+  if (!is.null(target_catchment)) {
+    target_data <- shapefile[shapefile$gauge_id %in% target_catchment,]
+    plot <- plot + geom_sf(data = target_data, fill = "red")
+  }
+  
+  return(plot)
+}

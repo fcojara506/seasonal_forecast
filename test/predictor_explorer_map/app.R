@@ -6,7 +6,6 @@ cod_cuencas = unique(all_data$catchment_code)
 all_data$var = factor(all_data$var, levels=c("STORAGE","NINO1.2","ONI","PDO","SOI"))
 #sort month names
 months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
-
 all_data$month_wy = factor(all_data$month_wy, levels = paste0("1˚",months_wy) )
 
 library(shiny)
