@@ -620,12 +620,13 @@ preprocess_data <- function(
     datetime_initialisation , #lubridate::make_date(2016,6,1),
     predictor_list, #= c("pr_sum_-1months","tem_mean_2months"),
     horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3),
-    data_location_paths = get_default_datasets_path(meteo = "ens30avg",hydro = "ERA5Ens_SKGE"),
+    data_location_paths = get_default_datasets_path(meteo = "ens30avg",hydro = "ERA5Ens_SKGE+logSNSE"),
     water_units = waterunits(q = "m^3/s", y = "GL"),
     forecast_mode = "both",
     remove_wys = NULL,
     save_raw = F,
-    y_transform = list(log_transform = T, plot_transform_predictant = F)
+    y_transform = list(log_transform = T,
+                       plot_transform_predictant = F)
 ) {
   
   # save arguments
@@ -724,13 +725,13 @@ example_preprocess <- function(){
   catchment_code <- "4503001"
   datetime_initialisation = lubridate::make_date(2022,5)
   horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
-  predictor_list <- c("pr_mean_6months")
+  predictor_list <- c("STORAGE_last_1months")
   remove_wys <- c(1990,1940,2013)
   water_units = waterunits(q = "m^3/s", y = "GL")
   forecast_mode <- "cv"
-  data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE")
+  data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE+logSNSE")
   save_raw = F
-  y_transform = list(log_transform = T, plot_transform_predictant = T)
+  y_transform = list(log_transform = T, plot_transform_predictant = F)
   
   data1 <- preprocess_data(
     catchment_code = catchment_code,
@@ -740,7 +741,7 @@ example_preprocess <- function(){
     remove_wys = remove_wys,
     water_units = water_units,
     forecast_mode = forecast_mode,
-    save_raw = save_raw,
+    save_raw = T,
     y_transform = y_transform
   )
   

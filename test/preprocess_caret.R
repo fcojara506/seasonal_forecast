@@ -53,3 +53,13 @@ cm2 <- preprocess_within_train(x_train, y_train, c("center", "scale"), x_test)
 
 # Compare the performance
 identical(cm1,cm2)
+
+
+# Function for preprocessing data before training
+preprocess_before_train <- function(x, y, preProcMethod = c("center", "scale")) {
+  # Preprocess data
+  preProcData <- preProcess(x, method = preProcMethod)
+  # Get preprocessed data
+  x_pp <- predict(preProcData, newdata = x)
+  return(x_pp)
+}

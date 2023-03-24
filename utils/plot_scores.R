@@ -1,92 +1,102 @@
-#rm(list = ls())
+rm(list = ls())
+
+library(dplyr)
 library(data.table)
 
-
 join_x_info <- function(x) {
-  
   data = x[["scores_volume"]]
   info_x = x[["info"]]
   
-  info = 
-    info_x[c("predictor_list",
-             "predictor_list_corrected")] %>% 
-    rbind()
-  
+  predictor_list = rbind(info_x[c("predictor_list")])
+  #sort month names
+  months_es <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
   df = data.table(data) %>% 
-    cbind(info) %>% 
-    mutate(datetime_initialisation = info_x$datetime_initialisation) %>% 
+    cbind(predictor_list) %>% 
+    mutate(month_initialisation = paste0("1˚",months_es[(month(info_x$datetime_initialisation))])) %>% 
     mutate(catchment_code = info_x$catchment_code)
-  
   
   return(df)
   
 }
 
-dummy_predictors <- function(variables) {
-  predictors = data$predictor_list
+sort_months <- function(scores) {
+  #sort month names
+  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
+  scores$month_initialisation = factor(scores$month_initialisation, levels = paste0("1˚",months_wy) )
   
-  # Find the maximum length of the lists in 'predictors'
-  max_len <- max(sapply(predictors, length))
-  # Extend each list to the maximum length using NA as filler
-  extended_predictors <- lapply(predictors, function(x) {
-    length(x) <- max_len
-    x
-  })
-  library(tidyverse)
-  # Create a data frame
-  df <- data.frame(do.call(rbind, extended_predictors),
-                   stringsAsFactors = F) %>% 
-    mutate(id = row_number()) %>% 
-    reshape2::melt(id.var = "id",value.name = "predictor") %>% 
-    select(-"variable") %>%
-    drop_na("predictor") %>% 
-    mutate(var = tstrsplit(predictor, "_", fixed = TRUE)[[1]]) %>% 
-    reshape2::acast(id ~ var,value.var = "predictor")
-  
-  dummy_vars = !is.na(df)
-  return(dummy_vars)
+  return(scores)
 }
 
+scores = readRDS(file = "data_output/scores/RDS/scores_20230324.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist()%>% 
+  sort_months()
 
+scores_ref = readRDS(file = "data_output/scores/RDS/scores_reference_20230324.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist() %>% 
+  sort_months() 
 
-
-
-scores = readRDS(file = "data_output/scores/RDS/scores_20230323.RDS")
-data = lapply(scores, join_x_info) %>% rbindlist()
-dummy_pred = dummy_predictors()
-predictors = colnames(dummy_pred)
-
-dataframe = cbind(data[,-c("predictor_list","predictor_list_corrected")],dummy_pred) %>% 
+df_ref = scores_ref %>%
   data.table() %>%
-  melt.data.table(
-     id.vars = c("catchment_code","datetime_initialisation"),
-     measure.vars = predictors
-     )%>% 
-  mutate(month_initialisation = month(datetime_initialisation))
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+                  variable.name = "metric_name",value.name = "metric_value")
 
-library("ggplot2")
-library("sf")
-shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp"
-# Read the shapefile
-shapefile <- st_read(shapefile_path,quiet = T)
-shapefile <- st_make_valid(shapefile)
-shapefile <- st_simplify(shapefile, dTolerance = 4000)
+df = scores %>%
+  data.table() %>%
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+       variable.name = "metric_name",value.name = "metric_value")
 
-# Merge the shapefile and the dataframe using the common ID
-merged_data <- merge(shapefile,
-                     dataframe,
-                     by.x = "gauge_id",
-                     by.y = "catchment_code") 
+df_comb = merge.data.table(df,df_ref,
+                by=c("catchment_code","month_initialisation","metric_name"),
+                suffixes = c("_best","_ref")  )
+###############
 
-# Plot the metric using the merged data
-#plot <- 
-  ggplot() +
-  geom_sf(data = merged_data, aes(fill = value)) +
-  #scale_fill_continuous(low = "blue", high = "red") + # Change the colors according to your preference
-  theme_minimal() +
-  facet_grid(month_initialisation ~ variable) +
-    scale_x_continuous(breaks = seq(-65,-75,by = -2),labels = seq(-65,-75,by = -2)) +
-    scale_y_continuous(breaks = seq(-27, -37, by = -2),labels = seq(-27, -37, by = -2))+
-    labs(title = "", x = "Longitud", y = "Latitud")+
-    coord_sf(xlim = c(-65, -75), ylim = c(-27, -37))
-  
+
+attributes_catchments <- fread("data_input/attributes/attributes_49catchments_ChileCentral.csv" )
+
+
+
+df_crpss = df_comb %>%
+  subset(metric_name == "crps_ens") %>%
+  mutate(crpss_storage = 1 - (metric_value_best /metric_value_ref)) %>% 
+  select(c("catchment_code","month_initialisation","crpss_storage")) %>% 
+  merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
+
+df_avgens = df_comb %>%
+  subset(!(metric_name %in% c("crps_ens","crpss_climatology"))) %>%
+  dplyr::rename("ref" = "metric_value_ref") %>% 
+  dplyr::rename("best" = "metric_value_best") %>% 
+  melt.data.table(id.vars =c("catchment_code","month_initialisation","metric_name"),
+                  variable.name = "version",
+                  value.name = "metric_value")%>% 
+  merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
+
+
+library(ggplot2)
+
+# plot of deterministic metrics
+ggplot(data = df_avgens)+
+  geom_boxplot(aes(x = month_initialisation,y = metric_value,col = version))+
+  facet_wrap(~metric_name,scales = "free_y")
+
+
+ggplot(data = df_avgens,aes(x = metric_value,y = gauge_lat, col = month_initialisation))+
+  geom_point()+
+  facet_wrap(~metric_name,scales = "free_x")
+
+#plot of CRPSS respect to the storage (initial condition)
+ggplot(data = df_crpss)+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = crpss_storage))
+
+##
+ggplot(data = df_crpss,aes(x = crpss_storage,y = gauge_lat, col = month_initialisation))+
+  geom_point()
+
+ggplot(data = df_avgens,aes(x = metric_value,fill=month_initialisation))+
+  geom_histogram(aes(y=after_stat(count)/sum(after_stat(count))))+
+  facet_wrap(~metric_name,scales = "free")
+

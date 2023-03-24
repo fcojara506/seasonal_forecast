@@ -9,6 +9,14 @@ grid_pred  <- function(  variable,
   return(predictors)
 }
 
+# Function for preprocessing data before training
+preprocess_before_train <- function(x, preProcMethod = c("center", "scale")) {
+  # Preprocess data
+  preProcData <- preProcess(x, method = preProcMethod)
+  # Get preprocessed data
+  x_pp <- predict(preProcData, newdata = x)
+  return(x_pp)
+}
 
 remove_correlated_predictors <- function(X_train, predictor_list, cutoff = 0.8) {
   cor_matrix <- cor(X_train)
@@ -24,25 +32,16 @@ remove_correlated_predictors <- function(X_train, predictor_list, cutoff = 0.8) 
 calculate_model_metrics <- function(regression_model) {
   library('locfit')
   mlrmod <- regression_model$finalModel
-  pr <- resid(mlrmod) / (1 - lm.influence(mlrmod)$hat)
+  #pr <- resid(mlrmod) / (1 - lm.influence(mlrmod)$hat)
   
-  pred <- mlrmod$fitted.values
-  obs <- regression_model$trainingData$.outcome
-  
-  rmse <- RMSE(pred, obs)
-  r2 <- R2(pred, obs)
-  mae <- MAE(pred, obs)
-  pbias <- abs(mean((obs - pred) / obs))
+  #pred <- mlrmod$fitted.values
+  #obs <- regression_model$trainingData$.outcome
   
   metrics <- list(
-    gcv = unlist(locfit::gcv(mlrmod, maxk = 1e6)[[4]]),
-    bic = BIC(mlrmod),
-    press = sum(pr^2),
-    aic = AIC(mlrmod),
-    rmse = rmse,
-    r2 = r2,
-    mae = mae,
-    pbias = pbias
+    #gcv = unlist(locfit::gcv(mlrmod, maxk = 1e6)[[4]]),
+    #bic = BIC(mlrmod),
+    #press = sum(pr^2),
+    aic = AIC(mlrmod)
   )
   
   return(metrics)
@@ -50,13 +49,13 @@ calculate_model_metrics <- function(regression_model) {
 
 save_model_results <- function(df_info,
                                predictor,
-                               regression_model,
+                               #regression_model,
                                imp_var,
                                metrics) {
   result <- list(
     df_info = df_info,
     predictor = list(predictor),
-    reg_model = regression_model,
+    #reg_model = regression_model,
     imp_var = (imp_var),
     metrics = (metrics)
   )
@@ -92,7 +91,10 @@ select_best_models <- function(models, objective_metric = "aic") {
 plot_importance <- function(best_list,objective_metric) {
   library('dplyr')
   library('ggplot2')
+  months_es <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
+  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
   
+ 
   # Create a new data frame for the plot
   predictor_importance <- best_list$best_combination %>%
     select(month_initialisation, catchment_code,matches(best_list$unique_predictors)) %>%
@@ -103,9 +105,11 @@ plot_importance <- function(best_list,objective_metric) {
            percentage = importance / total_importance * 100) %>%
     ungroup() %>% 
     mutate(var = tstrsplit(predictor, "_", fixed = TRUE)[[1]]) %>% 
-    arrange(month_initialisation) %>%
-    mutate(date_label = paste0("1˚ ", lubridate::month(lubridate::make_date(year = 2001, month = month_initialisation), label = TRUE)),
-           date_label = factor(date_label, levels = unique(date_label)))
+    mutate(date_label = paste0("1˚",months_es[month_initialisation]))
+  
+  predictor_importance$date_label = factor(predictor_importance$date_label, levels = paste0("1˚",months_wy) )
+  
+  
   # Load the RColorBrewer package
   
   # Create a custom color palette
@@ -153,12 +157,12 @@ plot_importance <- function(best_list,objective_metric) {
       legend.position = "bottom",
       legend.key.width = unit(0.1,"in")
     )
-  ggsave(filename = paste0("data_output/figuras/importancia_predictores/importancia_predictores_",objective_metric,"_",unique(best_list$best_combination$catchment_code),'.png'),
+  ggsave(filename = paste0("data_output/figuras/importancia_predictores/importancia_predictores_",objective_metric,"_",unique(best_list$best_combination$catchment_code),'_v2.png'),
          width = 6, height = 6,dpi = 400)
   return(predictor_importance)
 }
 
-#month_initialisation = 5
+month_initialisation = 5
 
 select_predictor <- function(
     catchment_code = "4503001",
@@ -175,30 +179,35 @@ select_predictor <- function(
   cl <- makeCluster(parallel::detectCores() - 3L)
   registerDoSNOW(cl)
   
-  models <- foreach(month_initialisation = months_initialisation, .combine = "c", .export=c('remove_correlated_predictors','calculate_model_metrics','save_model_results')) %dopar% { 
+  models <- foreach(month_initialisation = months_initialisation,
+                    .combine = "c",
+                    .export=c('remove_correlated_predictors','calculate_model_metrics','save_model_results','preprocess_before_train')) %dopar% { 
     source("base/Preprocess_data.R")
     library("foreach")
     library("caret")
     library("locfit")
     
     data_input <- preprocess_data(
-      datetime_initialisation = lubridate::make_date(2022, month_initialisation),
+      datetime_initialisation = lubridate::make_date(2021, 12) %m+% months(month_initialisation),
       forecast_mode = "cv",
       catchment_code = catchment_code,
       predictor_list = predictors
     )
+     month_initialisation = month(data_input$info$datetime_initialisation)
     
     predictor_list <- data_input$info$predictor_list
-    predictors_uncorrelated <- remove_correlated_predictors(data_input$X_train, predictor_list)
+    x_train = data_input$X_train
+    x_train_normalised = preprocess_before_train(x_train)
+    predictors_uncorrelated <- remove_correlated_predictors(x_train_normalised, predictor_list)
     
     predictors_comb <- unlist(lapply(seq_along(predictors_uncorrelated), function(i)
       combn(predictors_uncorrelated, i, simplify = FALSE)), recursive = FALSE)
-    
+    #var creation
     model_results <- vector("list", length(predictors_comb))
     
     foreach(predictor = predictors_comb) %dopar% {
       
-      x = dplyr::select(data_input$X_train, dplyr::all_of(predictor))
+      x = dplyr::select(x_train_normalised, dplyr::all_of(predictor))
       y = data_input$y_train$volume
       
       
@@ -208,7 +217,7 @@ select_predictor <- function(
         metric = "RMSE",
         trControl = trainControl(method = "LOOCV", savePredictions = "all"),
         method = "lm",
-        preProcess = c("center", "scale")
+        preProcess = NULL
       )
       
       metrics <- calculate_model_metrics(regression_model)
@@ -217,7 +226,7 @@ select_predictor <- function(
       
       model <- save_model_results(data.frame(month_initialisation, catchment_code),
                                   predictor,
-                                  regression_model,
+                                  #regression_model,
                                   data.frame(t(imp_var)),
                                   metrics)
     }
@@ -233,7 +242,7 @@ select_predictor <- function(
     best_list = append(list(importance = p),best_list)
   }
   if (save) {
-    saveRDS(best_list,file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,'_may-sep.RDS') )
+    saveRDS(best_list,file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,'_may-mar.RDS') )
   }
   return(best_list)
 }
@@ -241,7 +250,7 @@ select_predictor <- function(
 # Run the function
 
 
-#results <- select_predictor(chart = T,objective_metric = "aic",save = F,months_initialisation = 5:9)
+
 
 
 #all available catchments, no data 6008005, 7317005, 7355002, 8106001
@@ -254,9 +263,9 @@ cod_cuencas = read.csv(catchments_attributes_filename)$cod_cuenca [-c(32,40,45,4
     print(catchment_code)
     select_predictor(catchment_code = catchment_code,
                      chart = T,
-                     objective_metric = "rmse",
-                     save = F,
-                     months_initialisation = 5:9)
+                     objective_metric = "aic",
+                     save = T,
+                     months_initialisation = 5:15)
 
 }
 

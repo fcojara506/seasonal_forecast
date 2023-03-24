@@ -1,18 +1,11 @@
 deterministic_scores <- function(y_true,y_pred) {
   library(caret)
-  # library(hydroGOF)
-  # 
-  # scores  = hydroGOF::gof.data.frame(
-  #   sim = y_pred,
-  #   obs = y_true)
-  # scores["RMSE",][[1]]
-  
-  rmse            =  caret::RMSE(pred = y_pred, obs = y_true)
-  R2              = caret::R2(pred =  y_pred,obs = y_true)
   
   return(list(
-    rmse_det = rmse,
-    r2_det = R2
+    rmse_avg = caret::RMSE(y_pred, y_true),
+    r2_avg = caret::R2(y_pred, y_true),
+    mae_avg = caret::MAE(y_pred, y_true),
+    pbias_avg = mean((y_true - y_pred) / y_true)
   ))
 }
 
@@ -21,7 +14,7 @@ ensemble_scores <- function(y_train,y_ens) {
   library(caret)
   #ensemble scores
   
-  obs_climate               <- rep(mean(y_train), times = nrow(y_train)) %>% 
+  obs_climate               <- rep(mean(y_train), times = nrow(y_train) ) %>% 
     as.matrix()
   
   crps_ensembles            <- mean(
@@ -42,9 +35,9 @@ ensemble_scores <- function(y_train,y_ens) {
   
 }
 
-y_scores <- function(data_fore,data_input) {
+y_scores <- function(data_fore) {
   #volume data
-  y_train = data_input$y_train$volume %>% as.matrix()
+  y_train = data_fore$regression_model$pred$obs %>% as.matrix()
   #ensemble monthly average
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()
