@@ -44,9 +44,6 @@ data_fore = forecast_vol_ensemble(
   data_input = data_input,
   forecast_mode = forecast_mode)
 
-
-# plot(m1$pred$obs,m1$pred$pred)
-# plot(log(m2$pred$obs),log(m2$pred$pred))
 #### metrics
 scores[[ind]] = export_data(
   data_input = data_input,
@@ -83,11 +80,6 @@ for (catchment_code in cod_cuencas) {
       data_input = data_input,
       forecast_mode = forecast_mode)
     
-    #### metrics
-    scores_reference[[ind]] = export_data(
-      data_input = data_input,
-      data_fore = data_fore,
-      export = 'scores')
     ind = ind + 1 
     
   }

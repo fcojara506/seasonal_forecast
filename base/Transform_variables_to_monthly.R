@@ -32,8 +32,8 @@ aggregate_variable <- function(filename,
       value.name = "var"
     ) %>% 
     mutate(cod_cuenca = as.character(cod_cuenca)) %>%
-    mutate(wym = month_to_wym(lubridate::month(date))) %>%
-    mutate(wy_simple = wy(date)) %>%
+    mutate(wym = wateryearmonth(lubridate::month(date))) %>%
+    mutate(wy_simple = wateryear(date)) %>%
     select(-date) %>%
     .[, .(var = round(fx(var), 3)),
       by = list(cod_cuenca, wym, wy_simple)]

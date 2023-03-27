@@ -701,12 +701,12 @@ plot_knn_flow <- function(
 
 
 
-filename_input  = filename_input  = "data_output/scores/RDS/model_results_singles_models_2023-03-15.RDS"
-metric_variable = "crpss_climatology"
-filename_export = "CRPSS_vol_climate_indices_pheatmap"
-legend_title = "CRPSS (climatología)"
-plot_absolute = F
-threshold_for_x = 0.1
+# filename_input  = filename_input  = "data_output/scores/RDS/model_results_singles_models_2023-03-15.RDS"
+# metric_variable = "crpss_climatology"
+# filename_export = "CRPSS_vol_climate_indices_pheatmap"
+# legend_title = "CRPSS (climatología)"
+# plot_absolute = F
+# threshold_for_x = 0.1
 
 
 

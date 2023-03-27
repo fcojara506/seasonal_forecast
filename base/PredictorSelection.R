@@ -173,8 +173,7 @@ select_predictor <- function(
   
   library('doSNOW')
   # Set catchment code and months of initialization
-  predictors <- grid_pred(c("SOI", "PDO", "ONI","NINO1.2"), 1, "mean")
-  predictors <- c(predictors, grid_pred(c("STORAGE"), 1, "last"))
+  predictors <- grid_pred(c("SOI", "PDO", "ONI","NINO1.2","STORAGE"), 1, "mean")
   
   cl <- makeCluster(parallel::detectCores() - 3L)
   registerDoSNOW(cl)

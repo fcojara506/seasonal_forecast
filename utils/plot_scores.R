@@ -27,12 +27,12 @@ sort_months <- function(scores) {
   return(scores)
 }
 
-scores = readRDS(file = "data_output/scores/RDS/scores_20230324.RDS") %>% 
+scores = readRDS(file = "data_output/scores/RDS/scores_20230327.RDS") %>% 
   lapply(join_x_info) %>% 
   rbindlist()%>% 
   sort_months()
 
-scores_ref = readRDS(file = "data_output/scores/RDS/scores_reference_20230324.RDS") %>% 
+scores_ref = readRDS(file = "data_output/scores/RDS/scores_reference_20230327.RDS") %>% 
   lapply(join_x_info) %>% 
   rbindlist() %>% 
   sort_months() 
@@ -60,11 +60,17 @@ attributes_catchments <- fread("data_input/attributes/attributes_49catchments_Ch
 
 
 df_crpss = df_comb %>%
-  subset(metric_name == "crps_ens") %>%
+  subset(metric_name == "crps_ens" ) %>%
   mutate(crpss_storage = 1 - (metric_value_best /metric_value_ref)) %>% 
   select(c("catchment_code","month_initialisation","crpss_storage")) %>% 
   merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
 
+df_crpss_avg = df_comb %>%
+  subset(metric_name == "crpss_climatology") %>% 
+  select(-"metric_name") %>% 
+  melt.data.table(id.vars = c("catchment_code","month_initialisation")) %>%
+  merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
+  
 df_avgens = df_comb %>%
   subset(!(metric_name %in% c("crps_ens","crpss_climatology"))) %>%
   dplyr::rename("ref" = "metric_value_ref") %>% 
@@ -99,4 +105,10 @@ ggplot(data = df_crpss,aes(x = crpss_storage,y = gauge_lat, col = month_initiali
 ggplot(data = df_avgens,aes(x = metric_value,fill=month_initialisation))+
   geom_histogram(aes(y=after_stat(count)/sum(after_stat(count))))+
   facet_wrap(~metric_name,scales = "free")
+
+#plot of CRPSS respect to the storage (initial condition)
+ggplot(data = df_crpss_avg)+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = value,color = variable))
+
 

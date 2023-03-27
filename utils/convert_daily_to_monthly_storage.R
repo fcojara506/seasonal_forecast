@@ -2,7 +2,7 @@ rm(list = ls())
 source("base/Transform_variables_to_monthly.R")
 
 #storage
-for (model in c("ERA5Ens","ERA5Raw")) {
+for (model in c("ERA5Ens")) {
   for (fo in c("KGE+logNSE","SKGE","SKGE+logSNSE")) {
   
   #filenames list
