@@ -730,7 +730,7 @@ example_preprocess <- function(){
   water_units = waterunits(q = "m^3/s", y = "GL")
   forecast_mode <- "cv"
   data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE+logSNSE")
-  save_raw = T
+  save_raw = F
   y_transform = list(log_transform = T, plot_transform_predictant = F)
   
   data1 <- preprocess_data(
@@ -741,7 +741,7 @@ example_preprocess <- function(){
     remove_wys = remove_wys,
     water_units = water_units,
     forecast_mode = forecast_mode,
-    save_raw = T,
+    save_raw = F,
     y_transform = y_transform
   )
   

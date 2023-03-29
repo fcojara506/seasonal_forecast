@@ -34,7 +34,9 @@ get_results <- function(catchment_code, month_initialisation) {
 
 #all available catchments, no data 6008005, 7317005, 7355002, 8106001
 catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
-cod_cuencas = read.csv(catchments_attributes_filename)$cod_cuenca [-c(32,40,45,49)]
+cod_cuencas = read.csv(catchments_attributes_filename) %>%
+  subset(!(cod_cuenca %in% c(6008005, 7317005, 7355002, 8106001,7381001,4531002,4522002,4515002))) %>% 
+  select(cod_cuenca) %>% unlist()
 
 
 results = list()

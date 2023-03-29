@@ -13,7 +13,7 @@ forecast_mode <- "cv"
 catchments_attributes_filename <- "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
 attributes_catchments <- read.csv(catchments_attributes_filename)[-c(32,40,45,49),]#13,14,15,
 cod_cuencas <- attributes_catchments$cod_cuenca
-
+cod_cuencas = c(7321002,7350003,7354002,7112001,7115001)
 # Define months for initialization
 months_initialisation <- c(5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3)
 
@@ -22,19 +22,20 @@ perform_forecast <- function(catchment_code, month_initialisation, forecast_mode
   
   # Preprocess the data
   datetime_emission = lubridate::make_date(2022, month_initialisation)
-  if (month_initialisation<4) {
-    datetime_emission = datetime_emission %m+% months(12)
-  }
+  if (month_initialisation<4) {datetime_emission = datetime_emission %m+% months(12)}
+  
   data_input <- preprocess_data(datetime_initialisation = datetime_emission ,
                                 forecast_mode = forecast_mode,
                                 catchment_code = catchment_code,
                                 predictor_list = predictor_list,
                                 remove_wys = c(2020,2021),
+                                water_units = waterunits(q="mm",y="mm"),
                                 #y_transform = list(log_transform = T,plot_transform_predictant = F),
                                 save_raw = T)
   
   # Perform volume forecast
-  data_fore <- forecast_vol_ensemble(data_input = data_input, forecast_mode = forecast_mode)
+  data_fore <- forecast_vol_ensemble(data_input = data_input,
+                                     forecast_mode = forecast_mode)
   
   # Calculate and return scores
   export_data(data_input = data_input, data_fore = data_fore, export = 'scores')
@@ -58,7 +59,7 @@ scores <- lapply(cod_cuencas, function(catchment_code) {
 }) %>% purrr::flatten()
 
 # Save the scores
-saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230327.RDS")
+saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230329_maule.RDS")
 
 # Perform forecasts for reference
 scores_reference <- lapply(cod_cuencas, function(catchment_code) {
@@ -69,4 +70,4 @@ scores_reference <- lapply(cod_cuencas, function(catchment_code) {
 })%>% purrr::flatten()
 
 # Save the scores
-saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230327.RDS")
+saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230329_maule.RDS")

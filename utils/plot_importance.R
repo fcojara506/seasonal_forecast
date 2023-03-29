@@ -38,20 +38,32 @@ shapefile <- st_simplify(shapefile, dTolerance = 4000)
 merged_data <- merge(shapefile,
                      dataframe,
                      by.x = "gauge_id",
-                     by.y = "catchment_code") 
+                     by.y = "catchment_code",) 
 
 
 
 # Plot the metric using the merged data
 #plot <- 
 ggplot() +
-  geom_sf(data = merged_data, aes(fill = percentage)) +
+  geom_sf(data = merged_data, aes(fill = percentage, colour="")) +
+
+  scale_colour_manual(values=NA) + 
   scale_fill_continuous(low = "white", high = "#6495ED",na.value="red") + # Change the colors according to your preference
+  #scale_color_manual(values = 'red', labels = 'Missing value') +
   facet_grid(var ~ date_label)+
   #facet_grid( date_label ~ var)+
-  scale_x_continuous(breaks = seq(-65,-75,by = -5),labels = seq(-65,-75,by = -5)) +
+  scale_x_continuous(breaks = seq(-68,-74,by = -4),
+                     labels = seq(-68,-74,by = -4)) +
   #scale_y_continuous(breaks = seq(-27, -37, by = -2),labels = seq(-27, -37, by = -2))+
-  labs(title = "", x = "Longitud", y = "Latitud",fill = "Importancia (%)")+
-  coord_sf(xlim = c(-65, -75), ylim = c(-27, -37))
-  #theme(panel.spacing.x = unit(1, "lines"))
+  labs(
+       x = "Longitud",
+       y = "Latitud",
+       fill = "Importancia (%)",
+       title = "Importancia de los predictores por fecha de emisión")+
+  coord_sf(xlim = c(-68, -74), ylim = c(-27, -37))+
+  theme(legend.position = "bottom",
+        legend.spacing.x = unit(0, 'cm'))+
+  guides(colour=guide_legend("No relevancia", override.aes=list(colour="red")))
 
+ggsave("data_output/figuras/importancia_predictores/importancia_predictores_geo.png",
+       width = 8,height = 7)

@@ -8,24 +8,14 @@ source("base/Export_data.R")
 
 
 forecast_mode = "cv"
+catchment_code = 4531002
 
-#all available catchments, no data 6008005, 7317005, 7355002, 8106001
-catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
-attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
-cod_cuencas = attributes_catchments$cod_cuenca
-cod_cuencas = 7321002# 4531002# 4531002 7321002
 # Define months for initialization
-months_initialisation <- 7 #c(5, 6, 7, 8, 9)
+month_initialisation <- 5 #c(5, 6, 7, 8, 9)
 
-ind = 1
-scores = vector(mode = "list", length = length(months_initialisation) * length(cod_cuencas))
 
-### Forecasts best combination
-for (catchment_code in cod_cuencas) {
-for (month_initialisation in months_initialisation) {
-  
 data_best_models = readRDS(
-  file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-sep.RDS"))
+  file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
 
 best_combination = data_best_models$best_combination
 best_combination = best_combination[best_combination$month_initialisation == month_initialisation,]
@@ -45,33 +35,19 @@ data_fore = forecast_vol_ensemble(
   forecast_mode = forecast_mode)
 
 #### metrics
-scores[[ind]] = export_data(
+scores_best = export_data(
   data_input = data_input,
   data_fore = data_fore,
   export = 'scores')
-
-ind = ind + 1 
-
-}
-}
-
-#saveRDS(object = (scores) ,"data_output/scores/RDS/scores_20230324.RDS")
+scores_best_vol = scores_best$scores_volume
 
 
-### Forecasts reference
-
-ind = 1
-scores_reference = vector(mode = "list", length = length(months_initialisation) * length(cod_cuencas))
-
-for (catchment_code in cod_cuencas) {
-  for (month_initialisation in months_initialisation) {
-    
     
     data_input <- preprocess_data(
       datetime_initialisation = lubridate::make_date(2022, month_initialisation),
       forecast_mode = forecast_mode,
       catchment_code = catchment_code,
-      predictor_list = "STORAGE_last_1months",
+      predictor_list = "STORAGE_mean_1months",
       save_raw = T
     )
     
@@ -80,10 +56,14 @@ for (catchment_code in cod_cuencas) {
       data_input = data_input,
       forecast_mode = forecast_mode)
     
-    ind = ind + 1 
+    #### metrics
+    scores_ref = export_data(
+      data_input = data_input,
+      data_fore = data_fore,
+      export = 'scores')
     
-  }
-}
+  scores_ref_vol = scores_ref$scores_volume
+    
 
 #saveRDS(object = scores_reference ,"data_output/scores/RDS/scores_reference_20230324.RDS")
 

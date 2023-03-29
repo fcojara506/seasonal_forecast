@@ -8,6 +8,7 @@ deterministic_scores <- function(y_true,y_pred,normalise = F) {
     mae_avg = caret::MAE(y_pred, y_true),
     pbias_avg = mean((y_true - y_pred) / y_true)
   )
+  
   if (normalise) {
     scores =
       list(
@@ -53,7 +54,7 @@ y_scores <- function(data_fore) {
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()
 
-  uni_scores = deterministic_scores(y_true = y_train,y_pred = y_ens_cv_avg, normalise = T)
+  uni_scores = deterministic_scores(y_true = y_train,y_pred = y_ens_cv_avg, normalise = F)
   ens_scores = ensemble_scores(y_train = y_train, y_ens = y_ens)
   
   scores = data.frame( c(uni_scores,ens_scores))
