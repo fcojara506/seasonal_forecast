@@ -29,36 +29,93 @@ sort_months <- function(scores) {
   return(scores)
 }
 
-scores = readRDS(file = "data_output/scores/RDS/scores_20230327.RDS") %>% 
+scores_loocv = readRDS(file = "data_output/scores/RDS/scores_20230330.RDS") %>% 
   lapply(join_x_info) %>% 
   rbindlist()%>% 
   sort_months()
 
-scores_ref = readRDS(file = "data_output/scores/RDS/scores_reference_20230327.RDS") %>% 
+scores_ref_loocv = readRDS(file = "data_output/scores/RDS/scores_reference_20230330.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist() %>% 
+  sort_months()
+
+scores_cv = readRDS(file = "data_output/scores/RDS/scores_20230330_cv.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist()%>% 
+  sort_months()
+
+scores_ref_cv = readRDS(file = "data_output/scores/RDS/scores_reference_20230330_cv.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist() %>% 
+  sort_months()
+
+scores_cv2 = readRDS(file = "data_output/scores/RDS/scores_20230330_cv2k.RDS") %>% 
+  lapply(join_x_info) %>% 
+  rbindlist()%>% 
+  sort_months()
+
+scores_ref_cv2 = readRDS(file = "data_output/scores/RDS/scores_reference_20230330_cv2k.RDS") %>% 
   lapply(join_x_info) %>% 
   rbindlist() %>% 
   sort_months()
 
 
 
+df_ref1 = scores_ref_loocv %>%
+  data.table() %>%
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+                  variable.name = "metric_name",value.name = "metric_value")
 
-df_ref = scores_ref %>%
+df1 = scores_loocv %>%
   data.table() %>%
   select(-c("predictor_list","mae_obs")) %>%
   melt.data.table(id.vars = c("catchment_code","month_initialisation"),
                   variable.name = "metric_name",value.name = "metric_value")
 
 
-df = scores %>%
+df_ref2 = scores_ref_cv2 %>%
+  data.table() %>%
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+                  variable.name = "metric_name",value.name = "metric_value")
+
+df2 = scores_cv2 %>%
+  data.table() %>%
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+                  variable.name = "metric_name",value.name = "metric_value")
+
+df_ref3 = scores_ref_cv %>%
+  data.table() %>%
+  select(-c("predictor_list","mae_obs")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation"),
+                  variable.name = "metric_name",value.name = "metric_value")
+
+df3 = scores_cv %>%
   data.table() %>%
   select(-c("predictor_list","mae_obs")) %>%
   melt.data.table(id.vars = c("catchment_code","month_initialisation"),
        variable.name = "metric_name",value.name = "metric_value")
 
-df_comb = merge.data.table(df,df_ref,
-                by=c("catchment_code","month_initialisation","metric_name"),
-                suffixes = c("_best","_ref")  )
 
+df_comb1 = merge.data.table(df1,df_ref1,
+                by=c("catchment_code","month_initialisation","metric_name"),
+                suffixes = c("_best","_ref")  ) %>% 
+            mutate(resampling = "loocv")
+
+df_comb2 = merge.data.table(df2,df_ref2,
+                            by=c("catchment_code","month_initialisation","metric_name"),
+                            suffixes = c("_best","_ref")  ) %>% 
+  mutate(resampling = "cvk2")
+
+
+df_comb3 = merge.data.table(df3,df_ref3,
+                           by=c("catchment_code","month_initialisation","metric_name"),
+                           suffixes = c("_best","_ref")  )%>% 
+  mutate(resampling = "cvk3")
+
+df_comb = rbind(df_comb1,df_comb2,df_comb3)
 ###############
 
 
@@ -70,13 +127,13 @@ mutate(cod_cuenca = as.numeric(cod_cuenca)) %>%
 df_crpss = df_comb %>%
   subset(metric_name == "crps_ens" ) %>%
   mutate(crpss_storage = 1 - (metric_value_best /metric_value_ref)) %>% 
-  select(c("catchment_code","month_initialisation","crpss_storage")) %>% 
+  select(c("catchment_code","month_initialisation","crpss_storage","resampling")) %>% 
   merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
 
 df_crpss_avg = df_comb %>%
   subset(metric_name == "crpss_climatology") %>% 
   select(-"metric_name") %>% 
-  melt.data.table(id.vars = c("catchment_code","month_initialisation")) %>%
+  melt.data.table(id.vars = c("catchment_code","month_initialisation","resampling")) %>%
   merge.data.table(attributes_catchments,by.x = "catchment_code",by.y = "cod_cuenca")
    
 df_crpss_avg$version = factor(df_crpss_avg$variable,
@@ -193,7 +250,8 @@ ggsave(filename = "data_output/figuras/scores/crpss_ref.png",
 p6=ggplot(data = df_crpss_avg)+
   geom_boxplot(aes(x = month_initialisation,
                    y = value,
-                   color = version
+                   color = version,
+                   fill = resampling
                    ))+
   #scale_color_manual(values = c("red","blue"),labels = c("Mejor combinación", "Referencia"))+
   labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
@@ -202,6 +260,7 @@ p6=ggplot(data = df_crpss_avg)+
        color = "versión"
        )+
   theme(legend.position = "bottom")
+plot(p6)
 
 ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best.png",
        width = 7,height = 4, plot = p6)

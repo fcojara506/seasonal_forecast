@@ -14,9 +14,7 @@ catchment_code = 4531002
 month_initialisation <- 5 #c(5, 6, 7, 8, 9)
 
 
-data_best_models = readRDS(
-  file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
-
+data_best_models = readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
 best_combination = data_best_models$best_combination
 best_combination = best_combination[best_combination$month_initialisation == month_initialisation,]
 

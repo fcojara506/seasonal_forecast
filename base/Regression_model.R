@@ -30,16 +30,23 @@ rmse_LOO <- function(simulated_values, observed_values) {
 }
 ############## REGRESSION
 # Function for training the linear regression model
-train_regression_model <- function(X_train, y_train,method = "lm",preProcess = c("center", "scale"),resampling_method = "LOOCV",metric = "RMSE",...) {
+train_regression_model <- function(X_train, y_train,method = "lm",
+                                   preProcess = c("center", "scale"),
+                                   resampling_method,
+                                   metric = "RMSE",
+                                   number_cv = 19,
+                                   ...) {
   library(caret)
   #Train a regression model using the provided data and method
+  set.seed(42)
 
   train(
     X_train,
     y_train,
     metric = metric,
     trControl = trainControl(method = resampling_method,
-                             savePredictions = "all"),
+                             savePredictions = "all",
+                             number = number_cv),
     method = method,
     preProcess = preProcess,
     ...
@@ -88,7 +95,9 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,function_y=NULL,me
     regression_model$pred$pred = expo(regression_model$pred$pred)
   }
   
-  pred_obs_model <- merge(regression_model$bestTune,regression_model$pred)
+  pred_obs_model <- merge(regression_model$bestTune,
+                          regression_model$pred) %>%
+    arrange(rowIndex)
   
   # error from regression model
   rmse_model <- caret::RMSE(pred = pred_obs_model$pred ,obs = pred_obs_model$obs)
@@ -187,13 +196,6 @@ ensemble_generator <- function(y,rmse,n_members=1000){
     # check mode
     if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please choose one of these: 'cv', 'prediction', 'both'")
     
-    # if (!is.null(data_input$info$y_transform$function_y)) {
-    #   vol_deterministic$y_cv = expo(vol_deterministic$y_cv)
-    #   vol_deterministic$y_fore = expo(vol_deterministic$y_fore)
-    #   vol_deterministic$rmse_cv = expo(vol_deterministic$rmse_cv)
-    #   vol_deterministic$rmse_model = expo(vol_deterministic$rmse_model)
-    # }
-    # 
     # Initialise ensemble variables
     y_ens_cv = NULL
     y_ens_fore = NULL
@@ -215,6 +217,7 @@ forecast_vol_ensemble <- function(data_input,
                                   n_members=1000,
                                   method='lm',
                                   preProcess = c("center", "scale"),
+                                  resampling_method = "LOOCV",
                                   forecast_mode = data_input$info$forecast_mode
                                   ){
   model_info = as.list(environment())
@@ -223,8 +226,6 @@ forecast_vol_ensemble <- function(data_input,
   model_info = lapply(model_info, function(x) if (length(x) > 1) list(x) else x)
   
  
-  
-  
   
   # Train and predict using regression model
     vol_deterministic =
@@ -235,7 +236,8 @@ forecast_vol_ensemble <- function(data_input,
         function_y = data_input$info$y_transform$function_y,
         method = method,
         preProcess = preProcess,
-        forecast_mode = forecast_mode
+        forecast_mode = forecast_mode,
+        resampling_method = resampling_method
       )
     
 
