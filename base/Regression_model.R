@@ -90,6 +90,9 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,function_y=NULL,me
   #Train the regression model using the provided data and method
   regression_model <- train_regression_model(X_train, y_train, method, preProcess,tuneLength = 10,...)
   
+  regression_model$pred = regression_model$pred %>%
+    arrange(rowIndex)
+  
   if (!is.null(function_y)) {
     regression_model$pred$obs = expo(regression_model$pred$obs)
     regression_model$pred$pred = expo(regression_model$pred$pred)
@@ -128,9 +131,9 @@ forecast_vol_determinist <- function(X_train, y_train, X_test,function_y=NULL,me
 }
 
 # Function to generate an ensemble of predictions
-ensemble_generator <- function(y,rmse,n_members=1000){
+ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
   
-  library(truncnorm)
+  
   # Check that the lengths of observed values and rmse match
   if (length(y) != length(rmse)) {
     stop("Size of observed values is NOT equal to rmse in ensemble generation")
@@ -143,13 +146,28 @@ ensemble_generator <- function(y,rmse,n_members=1000){
     center = y[i_year]
     variation = rmse[i_year]
     # volume ensemble = center +- variation
+    if (norm == "rnorm") {
+      
+    
     # Generate random perturbations using truncated normal distribution
-    ensemble_vol[,i_year] <-  rtruncnorm(n = n_members,
-                                         mean = center,
-                                         sd = variation,
-                                         a = 0,
-                                         b = Inf) %>%
+    ensemble_vol[,i_year] <-  rnorm(n = n_members,
+                                     mean = center,
+                                     sd = variation) %>%
       matrix(n_members,1)
+  } else if (norm == "rtruncnorm") {
+      library(truncnorm)
+      ensemble_vol[,i_year] <-  rtruncnorm(n = n_members,
+                                           mean = center,
+                                           sd = variation,
+                                           a = 0,
+                                           b = Inf) %>%
+        matrix(n_members,1)
+      
+  } else {
+      stop("ERROR. Need a correct distribution for ensembles")
+    }
+
+
   }  
 
   return(ensemble_vol)

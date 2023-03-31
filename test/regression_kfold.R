@@ -14,6 +14,8 @@ data_input <- preprocess_data(
   save_raw = T
 )
 
+data_fore = forecast_vol_ensemble(data_input = data_input,
+                                  resampling_method = "cv")
 # Train and predict using regression model
 
 

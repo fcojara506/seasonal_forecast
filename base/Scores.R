@@ -48,15 +48,18 @@ ensemble_scores <- function(y_train,y_ens) {
 }
 
 y_scores <- function(data_fore) {
-  #volume data
+  ##### volume data
   y_train = data_fore$regression_model$pred$obs %>% as.matrix()
-  #ensemble monthly average
+  ##### ensemble monthly average
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()
-
+  ##### ensemble scores
   uni_scores = deterministic_scores(y_true = y_train,y_pred = y_ens_cv_avg, normalise = F)
   ens_scores = ensemble_scores(y_train = y_train, y_ens = y_ens)
+  #### regression scores
+  reg_scores = deterministic_scores(y_true = y_train,y_pred = data_fore$regression_model$pred$pred)
   
+  ###### altogether
   scores = data.frame( c(uni_scores,ens_scores))
   return(scores)
 }
