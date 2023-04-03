@@ -16,7 +16,7 @@ cod_cuencas = fread(catchments_attributes_filename) %>%
   #no hydrological model data
   subset(!(cod_cuenca %in% c(6008005, 7317005, 7355002, 8106001))) %>%
   #bad scores
-  subset(!(cod_cuenca %in% c(7381001,4531002,4522002,4515002))) %>% 
+  #subset(!(cod_cuenca %in% c(7381001,4531002,4522002,4515002))) %>% 
   select(cod_cuenca) %>% unlist()
 
 

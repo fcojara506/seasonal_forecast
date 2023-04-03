@@ -46,24 +46,26 @@ merged_data <- merge(shapefile,
 #plot <- 
 ggplot() +
   geom_sf(data = merged_data, aes(fill = percentage, colour="")) +
-
-  scale_colour_manual(values=NA) + 
-  scale_fill_continuous(low = "white", high = "#6495ED",na.value="red") + # Change the colors according to your preference
+  scale_colour_manual(values=NA) +
+  scale_fill_viridis_b(na.value = "#d9c7af",direction = -1)+
+  #scale_fill_continuous(low = "white", high = "#005AB5",na.value="#d9c7af") + # Change the colors according to your preference
   #scale_color_manual(values = 'red', labels = 'Missing value') +
   facet_grid(var ~ date_label)+
   #facet_grid( date_label ~ var)+
-  scale_x_continuous(breaks = seq(-68,-74,by = -4),
-                     labels = seq(-68,-74,by = -4)) +
+  #scale_x_continuous(breaks = seq(-68,-74,by = -4),
+  #                   labels = seq(-68,-74,by = -4)) +
   #scale_y_continuous(breaks = seq(-27, -37, by = -2),labels = seq(-27, -37, by = -2))+
   labs(
        x = "Longitud",
        y = "Latitud",
        fill = "Importancia (%)",
-       title = "Importancia de los predictores por fecha de emisión")+
-  coord_sf(xlim = c(-68, -74), ylim = c(-27, -37))+
+       title = "Importancia relativa de los predictores por mes de inicialización",
+       col = "No relevancia")+
+  coord_sf(xlim = c(-69, -74), ylim = c(-27, -37))+
+  theme_void()+
   theme(legend.position = "bottom",
-        legend.spacing.x = unit(0, 'cm'))+
-  guides(colour=guide_legend("No relevancia", override.aes=list(colour="red")))
+        legend.spacing.x = unit(.2, 'cm'))+
+  guides(colour=guide_legend(override.aes=list(fill="#d9c7af")))
 
 ggsave("data_output/figuras/importancia_predictores/importancia_predictores_geo.png",
        width = 8,height = 7)

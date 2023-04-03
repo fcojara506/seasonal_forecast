@@ -1,5 +1,5 @@
 setwd("~/Documents/GitHub/seasonal_forecast")
-
+library(data.table)
 grid_pred  <- function(  variable,
                          agg_months,
                          agg_func) {
@@ -18,7 +18,7 @@ preprocess_before_train <- function(x, preProcMethod = c("center", "scale")) {
   return(x_pp)
 }
 
-remove_correlated_predictors <- function(cor_matrix, predictor_list, cutoff = 0.8) {
+remove_correlated_predictors <- function(cor_matrix, predictor_list, cutoff = 0.6) {
 
   high_cor <- caret::findCorrelation(cor_matrix, cutoff = cutoff, verbose = FALSE)
   
@@ -120,7 +120,7 @@ plot_importance <- function(best_list,objective_metric) {
     mutate(date_label = factor(date_label, levels = paste0("1˚",months_wy)))
   
   predictor_importance = merge(xx, predictor_importance)
-  print(predictor_importance)
+  #print(predictor_importance)
   #catchment name
   catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
   cod_cuencas = fread(catchments_attributes_filename)
@@ -169,7 +169,7 @@ select_predictor <- function(
   
   library('doSNOW')
   # Set catchment code and months of initialization
-  predictors <- grid_pred(c("SOI", "PDO", "ONI","NINO1.2","STORAGE"), 1, "mean")
+  predictors <- grid_pred(c("SOI", "PDO","NINO1.2","STORAGE"), 1, "mean")
   
   cl <- makeCluster(parallel::detectCores() - 3L)
   registerDoSNOW(cl)
@@ -203,16 +203,16 @@ select_predictor <- function(
     
     ### correlacion entre predictores
     cor_matrix <- cor(x_train_normalised,method = "spearman")
-    #guardar grafico de correlaciones
-    
-      png(file = glue("data_output/figuras/correlacion_predictores/cor_spearman_{catchment_code}_{month_initialisation}.png"),
-          width=5,height=5,units = "in",res = 400)
-      corrplot::corrplot(corr = cor_matrix,method = "number",
-                         type = "lower",
-                         diag = F,
-                         title = paste(catchment_code,month_initialisation));
-      dev.off()
-    
+    # #guardar grafico de correlaciones
+    # 
+    #   png(file = glue("data_output/figuras/correlacion_predictores/cor_spearman_{catchment_code}_{month_initialisation}.png"),
+    #       width=5,height=5,units = "in",res = 400)
+    #   corrplot::corrplot(corr = cor_matrix,method = "number",
+    #                      type = "lower",
+    #                      diag = F,
+    #                      title = paste(catchment_code,month_initialisation));
+    #   dev.off()
+    # 
     
 
            

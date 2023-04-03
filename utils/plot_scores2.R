@@ -57,12 +57,12 @@ merge_scores <- function(scores_data) {
   df_comb1 <- merge.data.table(df1, df_ref1,
                                by = c("catchment_code", "month_initialisation", "metric_name"),
                                suffixes = c("_best", "_ref")) %>% 
-    mutate(resampling = "loocv")
+    mutate(resampling = "Leave 1 out")
   
   df_comb3 <- merge.data.table(df3, df_ref3,
                                by = c("catchment_code", "month_initialisation", "metric_name"),
                                suffixes = c("_best", "_ref")) %>%
-    mutate(resampling = "cvk3")
+    mutate(resampling = "Leave 3 out")
   
   df_comb <- rbind(df_comb1, df_comb3)
   
@@ -101,10 +101,9 @@ df_crpss_avg <- df_comb %>%
   subset(metric_name == "crpss_climatology") %>%
   select(-"metric_name") %>%
   melt.data.table(id.vars = c("catchment_code", "month_initialisation", "resampling")) %>%
-  merge.data.table(attributes_catchments, by.x = "catchment_code", by.y = "cod_cuenca")
-
-df_crpss_avg$version <- factor(df_crpss_avg$variable,
-                               labels = c("Mejor combinación", "Referencia"))
+  merge.data.table(attributes_catchments, by.x = "catchment_code", by.y = "cod_cuenca") %>% 
+  mutate(version=factor(variable,labels = c("Mejor combinación", "Referencia"))) %>% 
+  mutate(version_sampling = paste(version,resampling))
 
 df_avgens <- df_comb %>%
   subset(!(metric_name %in% c("crps_ens", "crpss_climatology"))) %>%
@@ -137,7 +136,8 @@ p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")) +
     col = "Versión",
     title = "Error cuadrático medio normalizado "
   ) +
-  theme(legend.position = "bottom",ncol = 2)
+  theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))
   
 
 plot(p1)
@@ -146,37 +146,35 @@ ggsave(filename = "data_output/figuras/scores/RMSE_normalizado_best_ref.png",
        width = 7, height = 4, plot = p1)
 
 
-ggsave(filename = "data_output/figuras/scores/RMSE_normalizado_best_ref.png",
-       width = 7, height = 4, plot = p1)
-
-
-
 p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg"))+
   geom_boxplot(aes(x = month_initialisation,
                    y = metric_value,
-                   col = version,
-                   fill = resampling))+
+                   col = version_sampling))+
   labs(
     x = "fecha de emisión",
     y = "R2 [-]",
     col = "Versión",
     title = "Coeficiente de determinación"
-  ) + theme(legend.position = "bottom")
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))
+
 plot(p2)
+
 ggsave(filename = "data_output/figuras/scores/R2_best_ref.png",
        width = 7,height = 4,plot = p2)
 
 p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg"))+
   geom_boxplot(aes(x = month_initialisation,
                    y = metric_value,
-                   col = version,
-                   fill = resampling))+
+                   col = version_sampling))+
   labs(
     x = "fecha de emisión",
     y = "MAE/(volumen promedio) [-]",
     col = "Versión",
     title = "Error absoluto medio (MAE) normalizado"
-  ) + theme(legend.position = "bottom")
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))
+print(p3)
 
 ggsave(filename = "data_output/figuras/scores/MAE_normalizado_best_ref.png",
        width = 7,height = 4, plot = p3)
@@ -184,16 +182,16 @@ ggsave(filename = "data_output/figuras/scores/MAE_normalizado_best_ref.png",
 p4 = ggplot(data = subset(df_avgens,metric_name == "pbias_avg"))+
   geom_boxplot(aes(x = month_initialisation,
                    y = metric_value,
-                   col = version,
-                   fill = resampling
+                   col = version_sampling
                    ))+
   labs(
     x = "fecha de emisión",
     y = "Sesgo porcentual [-]",
     col = "Versión",
     title = "Sesgo porcentual (pBIAS)"
-  ) + theme(legend.position = "bottom")
-
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))
+print(p4)
 ggsave(filename = "data_output/figuras/scores/pbias_best_ref.png",
        width = 7,height = 4, plot = p4)
 
@@ -219,8 +217,7 @@ ggsave(filename = "data_output/figuras/scores/pbias_best_ref.png",
 p6=ggplot(data = df_crpss_avg)+
   geom_boxplot(aes(x = month_initialisation,
                    y = value,
-                   color = version,
-                   fill = resampling
+                   color = version_sampling
                    ))+
   #scale_color_manual(values = c("red","blue"),labels = c("Mejor combinación", "Referencia"))+
   labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
@@ -228,8 +225,9 @@ p6=ggplot(data = df_crpss_avg)+
        y = "CRPSS [-] respecto a volumén climatológico",
        color = "versión"
        )+
-  theme(legend.position = "bottom")
-
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 2))
+print(p6)
 ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best.png",
        width = 7,height = 4, plot = p6)
 
