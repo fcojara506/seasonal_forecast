@@ -28,7 +28,9 @@ perform_forecast <- function(catchment_code,
                              month_initialisation,
                              forecast_mode,
                              predictor_list = NULL,
-                             resampling_method = "LOOCV") {
+                             resampling_method = "LOOCV",
+                             number_cv = NULL
+                             ) {
   
   # Preprocess the data
   datetime_emission = lubridate::make_date(2022, month_initialisation)
@@ -46,7 +48,9 @@ perform_forecast <- function(catchment_code,
   # Perform volume forecast
   data_fore <- forecast_vol_ensemble(data_input = data_input,
                                      forecast_mode = forecast_mode,
-                                     resampling_method = resampling_method)
+                                     resampling_method = resampling_method,
+                                     number_cv = number_cv
+                                     )
   
   # Calculate and return scores
   export_data(data_input = data_input, data_fore = data_fore, export = 'scores')
@@ -83,7 +87,7 @@ saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230331.RDS")
 
 
 
-# Perform forecasts for REFERNCE
+# Perform forecasts for REFERENCE
 scores_reference <- lapply(cod_cuencas, function(catchment_code) {
   lapply(months_initialisation, function(month_initialisation) {
     # Perform reference forecasts with only one predictor - 'STORAGE_last_1months'
@@ -104,7 +108,7 @@ saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_referen
 
 
 
-# Perform forecasts for BEST combinations
+# Perform forecasts for BEST combinations (leave-3-out)
 scores <- lapply(cod_cuencas, function(catchment_code) {
   lapply(months_initialisation, function(month_initialisation) {
     # Read the best models for the given catchment
@@ -120,7 +124,8 @@ scores <- lapply(cod_cuencas, function(catchment_code) {
                      month_initialisation,
                      forecast_mode,
                      unlist(best_combination$predictors),
-                     resampling_method = "cv"
+                     resampling_method = "cv",
+                     number_cv = 13
                      )
     
   })
@@ -133,7 +138,7 @@ saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230331_cv3k.RDS
 
 
 
-# Perform forecasts for REFERNCE
+# Perform forecasts for REFERENCE (leave-3-out)
 scores_reference <- lapply(cod_cuencas, function(catchment_code) {
   lapply(months_initialisation, function(month_initialisation) {
     # Perform reference forecasts with only one predictor - 'STORAGE_last_1months'
@@ -141,8 +146,100 @@ scores_reference <- lapply(cod_cuencas, function(catchment_code) {
                      month_initialisation,
                      forecast_mode,
                      "STORAGE_mean_1months",
-                     resampling_method = "cv")
+                     resampling_method = "cv",
+                     number_cv = 13)
   })
 })%>% purrr::flatten()
 # Save the scores
 saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230331_cv3k.RDS")
+
+
+
+
+# Perform forecasts for BEST combinations (leave-5-out)
+scores <- lapply(cod_cuencas, function(catchment_code) {
+  lapply(months_initialisation, function(month_initialisation) {
+    # Read the best models for the given catchment
+    data_best_models <- readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
+    
+    # Perform forecasts for the best combination of predictors
+    best_combination = data_best_models$best_combination
+    # Get the best combination of predictors for the given catchment and month
+    best_combination <- best_combination[best_combination$month_initialisation == month_initialisation,]
+    
+    # Perform forecast for the best combination of predictors
+    perform_forecast(catchment_code,
+                     month_initialisation,
+                     forecast_mode,
+                     unlist(best_combination$predictors),
+                     resampling_method = "cv",
+                     number_cv = 8
+    )
+    
+  })
+}) %>% purrr::flatten()
+# Save the scores
+saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230331_cv5k.RDS")
+
+
+# Perform forecasts for REFERENCE (leave-5-out)
+scores_reference <- lapply(cod_cuencas, function(catchment_code) {
+  lapply(months_initialisation, function(month_initialisation) {
+    # Perform reference forecasts with only one predictor - 'STORAGE_last_1months'
+    perform_forecast(catchment_code,
+                     month_initialisation,
+                     forecast_mode,
+                     "STORAGE_mean_1months",
+                     resampling_method = "cv",
+                     number_cv = 8)
+  })
+})%>% purrr::flatten()
+# Save the scores
+saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230331_cv5k.RDS")
+
+
+
+
+
+
+
+# Perform forecasts for BEST combinations (leave-20-out)
+scores <- lapply(cod_cuencas, function(catchment_code) {
+  lapply(months_initialisation, function(month_initialisation) {
+    # Read the best models for the given catchment
+    data_best_models <- readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
+    
+    # Perform forecasts for the best combination of predictors
+    best_combination = data_best_models$best_combination
+    # Get the best combination of predictors for the given catchment and month
+    best_combination <- best_combination[best_combination$month_initialisation == month_initialisation,]
+    
+    # Perform forecast for the best combination of predictors
+    perform_forecast(catchment_code,
+                     month_initialisation,
+                     forecast_mode,
+                     unlist(best_combination$predictors),
+                     resampling_method = "cv",
+                     number_cv = 2
+    )
+    
+  })
+}) %>% purrr::flatten()
+# Save the scores
+saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230331_cv20k.RDS")
+
+
+# Perform forecasts for REFERENCE (leave-20-out)
+scores_reference <- lapply(cod_cuencas, function(catchment_code) {
+  lapply(months_initialisation, function(month_initialisation) {
+    # Perform reference forecasts with only one predictor - 'STORAGE_last_1months'
+    perform_forecast(catchment_code,
+                     month_initialisation,
+                     forecast_mode,
+                     "STORAGE_mean_1months",
+                     resampling_method = "cv",
+                     number_cv = 2)
+  })
+})%>% purrr::flatten()
+# Save the scores
+saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230331_cv20k.RDS")

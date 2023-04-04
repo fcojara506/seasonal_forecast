@@ -34,12 +34,12 @@ train_regression_model <- function(X_train, y_train,method = "lm",
                                    preProcess = c("center", "scale"),
                                    resampling_method,
                                    metric = "RMSE",
-                                   number_cv = 19,
+                                   number_cv = length(y_train),
                                    ...) {
   library(caret)
   #Train a regression model using the provided data and method
   set.seed(42)
-
+  
   train(
     X_train,
     y_train,
@@ -84,7 +84,14 @@ make_predictions <- function(regression_model, X_test) {
 
 
 # Main function that calls the above functions
-forecast_vol_determinist <- function(X_train, y_train, X_test,function_y=NULL,method='lm', preProcess = c("center", "scale"), forecast_mode = "both", ...) {
+forecast_vol_determinist <- function(X_train,
+                                     y_train,
+                                     X_test,
+                                     function_y=NULL,
+                                     method='lm',
+                                     preProcess = c("center", "scale"),
+                                     forecast_mode = "both",
+                                     ...) {
   # check mode
   if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
@@ -236,6 +243,7 @@ forecast_vol_ensemble <- function(data_input,
                                   method='lm',
                                   preProcess = c("center", "scale"),
                                   resampling_method = "LOOCV",
+                                  number_cv = 13,
                                   forecast_mode = data_input$info$forecast_mode
                                   ){
   model_info = as.list(environment())
@@ -255,7 +263,8 @@ forecast_vol_ensemble <- function(data_input,
         method = method,
         preProcess = preProcess,
         forecast_mode = forecast_mode,
-        resampling_method = resampling_method
+        resampling_method = resampling_method,
+        number_cv = number_cv
       )
     
 
