@@ -41,13 +41,21 @@ merged_data <- merge(shapefile,
                      by.y = "catchment_code",) 
 
 
-
+a = merged_data %>%
+  select(percentage,var,date_label) %>% 
+  group_by(var,date_label) %>% 
+  reframe(
+    num = length(percentage[!is.na(percentage)])
+    )
+    
+merged_data2 = merge(a,merged_data)
 # Plot the metric using the merged data
 #plot <- 
-ggplot() +
-  geom_sf(data = merged_data, aes(fill = percentage, colour="")) +
+ggplot(data = merged_data2) +
+  geom_sf(aes(fill = percentage,geometry = geometry, colour="")) +
   scale_colour_manual(values=NA) +
   scale_fill_viridis_b(na.value = "#d9c7af",direction = -1)+
+  geom_text(aes(x = -69.5, y = -32, label = paste0("n > 0:\n ", num)),size=2) +
   #scale_fill_continuous(low = "white", high = "#005AB5",na.value="#d9c7af") + # Change the colors according to your preference
   #scale_color_manual(values = 'red', labels = 'Missing value') +
   facet_grid(var ~ date_label)+

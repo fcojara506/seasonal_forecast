@@ -1,11 +1,3 @@
-# rmse_LOO is used to calculate the RMSE in Leave One Out cross-validation
-# train_regression_model is used to train the linear regression model
-# cross_validation is used to perform cross-validation on the trained model
-# make_predictions is used to make predictions on the test data
-# forecast_vol_determinist is the main function that calls the above functions and returns the results of the deterministic forecast
-# ensemble_generator is used to generate an ensemble of predictions
-# ensemble_post is used to post-process the ensemble of predictions
-# forecast_vol_ensemble is the main function that calls the above functions and returns the results of the ensemble forecast
 
 library(caret)
 
@@ -138,9 +130,9 @@ forecast_vol_determinist <- function(X_train,
 }
 
 # Function to generate an ensemble of predictions
-ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
+ensemble_generator <- function(y,rmse,n_members=1000,norm = "bootstrap"){
   
-  
+  print(norm)
   # Check that the lengths of observed values and rmse match
   if (length(y) != length(rmse)) {
     stop("Size of observed values is NOT equal to rmse in ensemble generation")
@@ -169,13 +161,16 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
                                            a = 0,
                                            b = Inf) %>%
         matrix(n_members,1)
-      
+  } else if (norm == "bootstrap") {
+        residuals <- variation * rnorm(n_members, mean = 0, sd = 1)
+        ensemble_vol[, i_year] <- (center + residuals) %>%
+          matrix(n_members,1)
   } else {
       stop("ERROR. Need a correct distribution for ensembles")
     }
+}
 
-
-  }  
+    
 
   return(ensemble_vol)
 }

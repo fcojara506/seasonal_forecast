@@ -2,6 +2,13 @@ rm(list = ls())
 source("base/Preprocess_data.R")
 source("base/Regression_model.R")
 
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  legend
+}
+
 #all available catchments, no data 6008005, 7317005, 7355002, 8106001
 catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
 attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
@@ -52,6 +59,7 @@ y_ens = melt.data.table(y_ens,
                         variable.factor = F)
 
 y_ens$catchment_code = catchment_code
+y_ens$wy_simple_num = y_ens$wy_simple
 y_ens$wy_simple = as.factor(y_ens$wy_simple)
 y_ens$month_initialisation = month_initialisation
 df_train = data_input_best$y_train %>% rownames_to_column(var = "wy_simple")
@@ -66,9 +74,55 @@ months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "en
 y_ens = a$y_ens %>% rbindlist()
 y_ens$date_label = factor(paste0("1˚",months_es[y_ens$month_initialisation]),levels = paste0("1˚",months_wy))
 
-df_train = a$df_train %>% rbindlist() %>% distinct()
-data_input = a$data_input[[1]]
 
+min_wy = min(as.numeric(as.character(y_ens$wy_simple)))
+max_wy = max(as.numeric(as.character(y_ens$wy_simple)))
+library(purrr)
+
+pl = map(list(c(min_wy, 1993), c(1993, 2006),c(2006, max_wy)), 
+         ~ ggplot(y_ens %>% filter(wy_simple_num >= .x[1], wy_simple_num <= .x[2])) +
+           geom_boxplot(
+             aes(x = wy_simple,
+                 y = volume,
+                 fill = date_label),
+             lwd = 0.1,
+             outlier.size = 0.01
+           )+
+           geom_hline(aes(yintercept = mean(df_train$volume_original)))+
+           geom_point(
+             data = df_train %>% filter(wy_simple >= .x[1], wy_simple <= .x[2]),
+             aes(x = wy_simple,
+                 y = volume_original,
+                 col = " "),
+             shape = "_",
+             size  = 10
+           )+
+           theme(axis.text.x = element_text(
+             angle = 90,
+             vjust = 0.5,
+             hjust = 1
+           )) +
+           scale_color_manual(values = c(" " = "red"),
+                              name = "Caudal estación Fluviométrica")+
+           theme(legend.position = "bottom",
+                 legend.spacing.x = unit(0, 'cm')) +
+           scale_y_continuous(expand = c(0, 0))+
+           scale_fill_brewer()+
+           labs(x = "", y = "")+
+           theme(strip.background=element_blank(),
+                 strip.text=element_blank(),
+                 axis.title=element_blank())
+)
+         
+         
+         
+# Extract legend as a separate graphics object
+leg = g_legend(pl[[1]])        
+
+p1 = grid.arrange(arrangeGrob(grobs=map(pl, function(p) p + guides(colour="none",fill = "none")), ncol=1),
+             leg, ncol=2, widths=c(10,1), left="Value", bottom="Year")
+
+   
 p1 = ggplot() +
   geom_boxplot(
     data = y_ens,
@@ -97,7 +151,7 @@ p1 = ggplot() +
   theme(legend.position = "bottom",
         legend.spacing.x = unit(0, 'cm')) +
   scale_y_continuous(expand = c(0, 0))+
-  scale_fill_brewer() +
+  scale_fill_brewer()+
     # # change labels
   labs(y =  glue("Volumen ({data_input$info$water_units$y})"),
        x = "Año hidrológico (orden cronológico)",
@@ -105,8 +159,18 @@ p1 = ggplot() +
        title =  glue("Pronóstico retrospectivo de volumen {data_input$time_horizon$volume_span_text} 1981-2019 para emisiones desde el 1 de mayo al 1 de septiembre"),
        subtitle = glue("{data_input$raw_data$attributes_catchment$gauge_name} ({catchment_code})")
   )
+  
+
+
+
+
+library(gridExtra)
 
 ggsave(plot = p1,
-  filename = paste0("data_output/figuras/hindcast_volumen/per_catchment/vol_hindcast_",catchment_code,"1may_1sep.png"),
-       width = 14, height = 5)
+  filename = paste0("data_output/figuras/hindcast_volumen/per_catchment/vol_hindcast_",catchment_code,"1may_1sep_v3.png"),
+       width = 14, height = 10)
 }
+min_wy = min(as.numeric(as.character(y_ens$wy_simple)))
+max_wy = max(as.numeric(as.character(y_ens$wy_simple)))
+
+

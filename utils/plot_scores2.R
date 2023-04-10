@@ -106,9 +106,10 @@ attributes_catchments_file <- "data_input/attributes/Cuencas_Fondef-DGA_v1.csv"
 attributes_catchments <- fread(attributes_catchments_file)
 
 df_crpss <- df_comb %>%
+  subset(resampling == "Leave 1 out") %>% 
   subset(metric_name == "crps_ens") %>%
   mutate(crpss_storage = 1 - (metric_value_best / metric_value_ref)) %>%
-  select(c("catchment_code", "month_initialisation", "crpss_storage", "resampling")) %>%
+  select(c("catchment_code", "month_initialisation", "crpss_storage", "resampling")) %>% 
   merge.data.table(attributes_catchments, by.x = "catchment_code", by.y = "gauge_id")
 
 df_crpss_avg <- df_comb %>%
@@ -116,13 +117,13 @@ df_crpss_avg <- df_comb %>%
   select(-"metric_name") %>%
   melt.data.table(id.vars = c("catchment_code", "month_initialisation", "resampling")) %>%
   merge.data.table(attributes_catchments, by.x = "catchment_code", by.y = "gauge_id") %>% 
-  mutate(version=factor(variable,labels = c("Mejor combinación", "Referencia"))) %>% 
+  mutate(version=factor(variable,labels = c("Mejor combinación", "Referencia"))) %>%
   mutate(version_sampling = paste(version,resampling))
 
 df_avgens <- df_comb %>%
   subset(!(metric_name %in% c("crps_ens", "crpss_climatology"))) %>%
   dplyr::rename("ref" = "metric_value_ref") %>%
-  dplyr::rename("best" = "metric_value_best") %>%
+  dplyr::rename("best" = "metric_value_best") %>% 
   melt.data.table(id.vars = c("catchment_code", "month_initialisation", "metric_name", "resampling"),
                   variable.name = "version",
                   value.name = "metric_value") %>%
@@ -208,17 +209,17 @@ ggsave(filename = "data_output/figuras/scores/pbias_best_ref.png",
 
 
 
-# 
-# #plot of CRPSS respect to the storage (initial condition)
-# p5 = ggplot(data = df_crpss)+
-#   geom_boxplot(aes(x = month_initialisation,
-#                    y = crpss_storage))+
-#   labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
-#        x = "fecha de emisión",
-#        y = "CRPSS [-] respecto al caso sólo CHI")
-# 
-# ggsave(filename = "data_output/figuras/scores/crpss_ref.png",
-#        width = 7,height = 4, plot = p5)
+
+#plot of CRPSS respect to the storage (initial condition)
+p5 = ggplot(data = df_crpss)+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = crpss_storage))+
+  labs(title = "CRPSS L1OCV de los volúmenes para distintas fechas de inicialización",
+       x = "fecha de emisión",
+       y = "CRPSS [-] respecto a la CHI")
+print(p5)
+ggsave(filename = "data_output/figuras/scores/crpss_ref.png",
+       width = 7,height = 4, plot = p5)
 
 
 #plot of CRPSS respect to the storage (initial condition)
@@ -253,6 +254,24 @@ df_crpss_avg <- df_crpss_avg %>%
                              right = FALSE,
                              labels = paste0(seq(0, max(aridity_cr2met_1979_2010), by = 1), " - ", 
                                              seq(1, max(aridity_cr2met_1979_2010) + 1, by = 1))))
+
+
+
+
+
+
+
+# Create the boxplot
+  labs(title = "CRPSS de los volúmenes vs aridez",
+       x = "mes de emisión",
+       y = "CRPSS [-] respecto al caso sólo CHI",
+       fill = "Índice de aridez [-]") +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  guides(col = guide_legend(ncol = 2))
+  
+
+
 
 # Create the boxplot
 p7 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
@@ -355,3 +374,5 @@ print(p10)
 # Save the plot
 ggsave(filename = "data_output/figuras/scores/crpss_best_runoff_coef.png",
        width = 7, height = 4, plot = p10)
+
+
