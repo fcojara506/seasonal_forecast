@@ -24,7 +24,7 @@ rmse_LOO <- function(simulated_values, observed_values) {
 # Function for training the linear regression model
 train_regression_model <- function(X_train, y_train,method = "lm",
                                    preProcess = c("center", "scale"),
-                                   resampling_method,
+                                   resampling_method = "LOOCV",
                                    metric = "RMSE",
                                    number_cv = length(y_train),
                                    ...) {
@@ -32,6 +32,7 @@ train_regression_model <- function(X_train, y_train,method = "lm",
   #Train a regression model using the provided data and method
   set.seed(42)
   
+  regression_model = 
   train(
     X_train,
     y_train,
@@ -43,6 +44,32 @@ train_regression_model <- function(X_train, y_train,method = "lm",
     preProcess = preProcess,
     ...
   )
+  
+  
+}
+
+library(caret)
+
+train_bagging_model <- function(X_train,
+                                y_train,
+                                method,
+                                preProcess = c("center", "scale"),
+                                metric = "RMSE",
+                                ...) {
+  regression_model =
+    train(
+      X_train,
+      y_train,
+      metric = metric,
+      trControl = trainControl(method="repeatedcv",
+                               number=20,
+                               repeats = 100,
+                               savePredictions = "all",
+                               allowParallel = T
+                               ),
+      method = method,
+      preProcess = preProcess
+    )
 }
 
 # Function for performing cross validation
@@ -73,8 +100,63 @@ make_predictions <- function(regression_model, X_test) {
   return(y_fore)
 }
 
-
-
+forecast_vol_bagging <- function(X_train,
+                                     y_train,
+                                     X_test,
+                                     function_y=NULL,
+                                     method='lm',
+                                     preProcess = c("center", "scale"),
+                                     forecast_mode = "both",
+                                     ...) {
+  # check mode
+  if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
+  #Train the regression model using the provided data and method
+  regression_model <- train_bagging_model(X_train, y_train, method, preProcess)
+  regression_model$pred = arrange(regression_model$pred,rowIndex)
+  
+  if (!is.null(function_y)) {
+    regression_model$pred$obs = expo(regression_model$pred$obs)
+    regression_model$pred$pred = expo(regression_model$pred$pred)
+  }
+  
+  pred_obs_model <- merge(regression_model$bestTune,regression_model$pred) %>%
+    arrange(rowIndex)
+  
+  # error from regression model
+  rmse_model <- caret::RMSE(pred = pred_obs_model$pred ,obs = pred_obs_model$obs)
+  #Initialise variables
+  y_ens_cv <- NULL
+  rmse_cv <- NULL
+  y_fore <- NULL
+  wys = rownames(regression_model$trainingData)
+  
+  if (forecast_mode == "both" || forecast_mode == "cv") {
+    y_ens_cv = regression_model$pred %>%
+      mutate(wy = wys[rowIndex]) %>% 
+      as.data.table()
+    y_ens_cv[, number := seq_len(.N), by = "wy"] # create your sequence
+    y_ens_cv = dcast.data.table(y_ens_cv,formula = number ~ wy,value.var = "pred")
+    y_ens_cv$number = NULL
+    y_ens_cv = as.matrix(y_ens_cv)
+    # Perform cross validation and get the results
+    #y_cv <- cv_results$y_cv
+    #rmse_cv <- cv_results$rmse_cv
+  }
+  
+  if (forecast_mode == "both" || forecast_mode == "prediction") {
+    # Make predictions on the test data
+    #y_fore <- make_predictions(regression_model, X_test)
+    
+  }
+  
+  
+  return(list(y_ens_cv = y_ens_cv,
+              y_fore = y_fore,
+              rmse_cv = rmse_cv,
+              rmse_model = rmse_model,
+              regression_model = regression_model)
+         )
+}
 # Main function that calls the above functions
 forecast_vol_determinist <- function(X_train,
                                      y_train,
@@ -87,10 +169,9 @@ forecast_vol_determinist <- function(X_train,
   # check mode
   if(!(forecast_mode %in% c("cv","prediction","both"))) stop("Invalid mode provided, please provide one of these cv,prediction,both.")
   #Train the regression model using the provided data and method
-  regression_model <- train_regression_model(X_train, y_train, method, preProcess,tuneLength = 10,...)
-  
-  regression_model$pred = regression_model$pred %>%
-    arrange(rowIndex)
+  regression_model <- train_regression_model(X_train, y_train, method, preProcess,...)
+  regression_model$pred = arrange(regression_model$pred,rowIndex)
+
   
   if (!is.null(function_y)) {
     regression_model$pred$obs = expo(regression_model$pred$obs)
@@ -130,7 +211,7 @@ forecast_vol_determinist <- function(X_train,
 }
 
 # Function to generate an ensemble of predictions
-ensemble_generator <- function(y,rmse,n_members=1000,norm = "bootstrap"){
+ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
   
   print(norm)
   # Check that the lengths of observed values and rmse match
@@ -161,10 +242,6 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "bootstrap"){
                                            a = 0,
                                            b = Inf) %>%
         matrix(n_members,1)
-  } else if (norm == "bootstrap") {
-        residuals <- variation * rnorm(n_members, mean = 0, sd = 1)
-        ensemble_vol[, i_year] <- (center + residuals) %>%
-          matrix(n_members,1)
   } else {
       stop("ERROR. Need a correct distribution for ensembles")
     }
@@ -238,36 +315,59 @@ forecast_vol_ensemble <- function(data_input,
                                   method='lm',
                                   preProcess = c("center", "scale"),
                                   resampling_method = "LOOCV",
-                                  number_cv = 13,
+                                  ensemble_method = "bootstrap_residuals",
+                                  number_cv = length(data_input$y_train$volume),
                                   forecast_mode = data_input$info$forecast_mode
                                   ){
+  
   model_info = as.list(environment())
   model_info$data_input <- NULL
   model_info$forecast_mode <- NULL
   model_info = lapply(model_info, function(x) if (length(x) > 1) list(x) else x)
   
- 
   
+  X_train = data_input$X_train
+  y_train = data_input$y_train$volume
+  X_test = data_input$X_test
+  function_y = data_input$info$y_transform$function_y
+  
+  
+  if (ensemble_method == "bootstrap_residuals") {
+    
   # Train and predict using regression model
     vol_deterministic =
       forecast_vol_determinist(
-        X_train = data_input$X_train,
-        y_train = data_input$y_train$volume,
-        X_test = data_input$X_test,
-        function_y = data_input$info$y_transform$function_y,
+        X_train = X_train,
+        y_train = y_train,
+        X_test = X_test,
+        function_y = function_y,
         method = method,
         preProcess = preProcess,
         forecast_mode = forecast_mode,
         resampling_method = resampling_method,
         number_cv = number_cv
       )
-    
-
-
-    #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
-    
+  
     # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,forecast_mode)
-
+  }else if(ensemble_method == "bagging"){
+    # Train and predict using regression model
+    vol_ensemble =
+      forecast_vol_bagging(
+        X_train = X_train,
+        y_train = y_train,
+        X_test = X_test,
+        function_y = function_y,
+        method = method,
+        preProcess = preProcess,
+        forecast_mode = forecast_mode,
+        resampling_method = resampling_method,
+        number_cv = number_cv
+      )
+    y_forecast = vol_ensemble
+  }
+  
+  #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
+  
     return(append(y_forecast,list(model_info = model_info)))
 }

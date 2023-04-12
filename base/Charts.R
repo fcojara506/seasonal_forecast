@@ -1221,7 +1221,9 @@ library(sf)
 # Function to plot the metric
 plot_metric <- function(dataframe, metric, shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
   # Read the shapefile
-  shapefile <- st_read(shapefile_path)
+  shapefile <- read_sf(shapefile_path)
+  shapefile <- st_make_valid(shapefile)
+  shapefile <- st_simplify(shapefile, dTolerance = 4000)
   
   # Merge the shapefile and the dataframe using the common ID
   merged_data <- merge(shapefile, dataframe, by.x = "gauge_id", by.y = "catchment_code")
@@ -1242,22 +1244,12 @@ library("ggplot2")
 library("sf")
 # Function to plot all catchments and highlight target catchments
 plot_catchments <- function(shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp",
-                            target_catchment = NULL,
-                            simplify = TRUE,
-                            tolerance = 4000,
-                            make_valid = TRUE) {
+                            target_catchment = NULL) {
   # Read the shapefile
   shapefile <- read_sf(shapefile_path)
+  shapefile <- st_make_valid(shapefile)
+  shapefile <- st_simplify(shapefile, dTolerance = 4000)
   
-  # Make the shapefile valid if requested
-  if (make_valid) {
-    shapefile <- st_make_valid(shapefile)
-  }
-  
-  # Simplify the shapefile if requested
-  if (simplify) {
-    shapefile <- st_simplify(shapefile, dTolerance = tolerance)
-  }
   
   # Plot all catchments
   plot <- ggplot() +

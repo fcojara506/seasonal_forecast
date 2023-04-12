@@ -102,6 +102,7 @@ df_comb <- merge_scores(scores_data)
 attributes_catchments_file <- "data_input/attributes/Cuencas_Fondef-DGA_v1.csv"
 attributes_catchments <- fread(attributes_catchments_file)
 
+
 df_crpss <- df_comb %>%
   subset(resampling == "Leave 1 out") %>% 
   subset(metric_name == "crps_ens") %>%
@@ -132,71 +133,195 @@ df_avgens <- df_comb %>%
 
 # Load required packages
 library(ggplot2)
+library(gridExtra)
 
+plot_metric <- function(dataframe,
+                        metric,
+                        metric_name = metric,
+                        shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
+  # Read the shapefile
+  shapefile <- read_sf(shapefile_path)
+  shapefile <- st_make_valid(shapefile)
+  shapefile <- st_simplify(shapefile, dTolerance = 2000)
+  
+  # Merge the shapefile and the dataframe using the common ID
+  merged_data <- merge(shapefile, dataframe, by.x = "gauge_id", by.y = "gauge_id")
+  
+  # Plot the metric using the merged data
+  plot <- ggplot() +
+    geom_sf(data = merged_data, aes(fill = !!sym(metric))) +
+    scale_fill_continuous(high = "blue", low = "red") + # Change the colors according to your preference
+    theme_void() +
+    labs(title = "", x = "Longitud", y = "Latitud", fill = metric_name)
+  
+  return(plot)
+}
 
+p_aridez = plot_metric(attributes_catchments,
+            metric = "aridity_cr2met_1979_2010",
+            metric_name = "")
+p_hfd = plot_metric(attributes_catchments,
+                       metric = "hfd_mean",
+                       metric_name = "")
+p_pmean = plot_metric(attributes_catchments,
+                       metric = "p_mean_cr2met_1979_2010",
+                       metric_name = "")
 
+p_runoffratio = plot_metric(attributes_catchments,
+                       metric = "runoff_ratio_cr2met_1979_2010",
+                       metric_name = "")
 
-p11 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
                    y = value,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p11)
+  facet_wrap(~month_initialisation) +
+  labs(x = "Indice aridez (P/PET) [mm/mm]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
-p13 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
+
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
+       width = 10, height = 7, plot = p1)
+
+
+
+
+
+p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
   geom_point(aes(  x =  hfd_mean ,
                    y = value,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p13)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Centroide del hidrograma (dia max q/365) [d/d]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs centroide del hidrograma del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
+
+p2 = grid.arrange(p2,p_hfd,ncol =2,widths = c(3,1))
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_hfd.png",
+       width = 10, height = 7, plot = p2)
 
 
-p14 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+
+
+
+
+p3 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
   geom_point(aes(  x =  p_mean_cr2met_1979_2010 ,
                    y = value,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p14)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Precipitación anual promedio 1979-2010 (CR2MET) [mm]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs Precipitación media anual del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
-p15 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+p3 = grid.arrange(p3,p_pmean,ncol =2,widths = c(3,1))
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_pmean.png",
+       width = 10, height = 7, plot = p3)
+
+p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
   geom_point(aes(  x =  runoff_ratio_cr2met_1979_2010 ,
                    y = value,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p15)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Coeficiente de escorrentía 1979-2010 (q/P) [mm/mm]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs coeficiente de escorrentía del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
+
+p4 = grid.arrange(p4,p_runoffratio,ncol =2,widths = c(3,1))
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_rr.png",
+       width = 10, height = 7, plot = p4)
 
 
 
 
+#### respecto a la referencia
 
-p11 <- ggplot(data = df_crpss) +
+
+
+
+p5 <- ggplot(data = df_crpss) +
   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
                    y = crpss_storage,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Indice aridez (P/PET) [mm/mm]",
+       y = "CRPSS c/r modelo referencia",
+       title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
-print(p11)
 
-p12 <- ggplot(data = df_crpss) +
+p5 = grid.arrange(p5,p_aridez,ncol =2,widths = c(3,1))
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_aridez.png",
+       width = 10, height = 7, plot = p5)
+
+p6 <- ggplot(data = df_crpss) +
   geom_point(aes(  x =  hfd_mean ,
                    y = crpss_storage,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p12)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Centroide del hidrograma (dia max q/365) [d/d]",
+       y = "CRPSS c/r modelo referencia",
+       title = "CRPSS vs centroide del hidrograma del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
+p6 = grid.arrange(p6,p_hfd,ncol =2,widths = c(3,1))
 
-p14 <- ggplot(data = df_crpss) +
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_hfd.png",
+       width = 10, height = 7, plot = p6)
+
+p7 <- ggplot(data = df_crpss) +
   geom_point(aes(  x =  p_mean_cr2met_1979_2010 ,
                    y = crpss_storage,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p14)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Precipitación anual promedio 1979-2010 (CR2MET) [mm]",
+       y = "CRPSS c/r modelo referencia",
+       title = "CRPSS vs Precipitación media anual del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
-p15 <- ggplot(data = df_crpss) +
+p7 = grid.arrange(p7,p_pmean,ncol =2,widths = c(3,1))
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_pmean.png",
+       width = 10, height = 7, plot = p7)
+
+p8 <- ggplot(data = df_crpss) +
   geom_point(aes(  x =  runoff_ratio_cr2met_1979_2010 ,
                    y = crpss_storage,
                    col = month_initialisation))+
-  facet_wrap(~month_initialisation)
-print(p15)
+  facet_wrap(~month_initialisation)+
+  labs(x = "Coeficiente de escorrentía 1979-2010 (q/P) [mm/mm]",
+       y = "CRPSS c/r modelo referencia",
+       title = "CRPSS vs coeficiente de escorrentía del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
+
+p8 = grid.arrange(p8,p_runoffratio,ncol =2,widths = c(3,1))
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_rr.png",
+       width = 10, height = 7, plot = p8)
 
 
