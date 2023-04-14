@@ -22,7 +22,9 @@ rmse_LOO <- function(simulated_values, observed_values) {
 }
 ############## REGRESSION
 # Function for training the linear regression model
-train_regression_model <- function(X_train, y_train,method = "lm",
+train_regression_model <- function(X_train,
+                                   y_train,
+                                   method = "lm",
                                    preProcess = c("center", "scale"),
                                    resampling_method = "LOOCV",
                                    metric = "RMSE",
