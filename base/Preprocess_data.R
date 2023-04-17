@@ -1,4 +1,3 @@
-
 library(data.table)
 library(dplyr)
 library(lubridate)
@@ -9,6 +8,7 @@ library(tibble)
 source("base/Convert_units.R")
 source("base/DatesWaterYear.R")
 source("base/CheckNormality.R")
+source("base/Pexc.R")
 
 
 get_default_datasets_path <- function(meteo=NULL, hydro=NULL) {
@@ -533,12 +533,15 @@ training_set <- function(predictors, predictant, water_year_target) {
   X_train <- predictors %>% subset_years(wy_train)
   y_train <- predictant$y %>% subset_years(wy_train)
   q_train <- predictant$q %>% subset_years(wy_train)
+  
+  
   return(
     list(
       X_train = X_train,
       y_train = y_train,
       q_train = q_train,
-      wy_train = wy_train
+      wy_train = wy_train,
+      y_train_pexc = pexc(y_train,"volume_original")
       #water_year_target = water_year_target
     )
   )
@@ -567,7 +570,8 @@ testing_set <- function(predictors, predictant, water_year_target) {
   return(list(
     X_test = X_test,
     y_test = y_test,
-    q_test = q_test
+    q_test = q_test,
+    wy_test = water_year_target
   ))
 }
 
@@ -601,18 +605,11 @@ grid_pred  <- function(  variable,
   return(predictors)
 }
 
-
 horizon_mode <- function(window_method,month_start,month_end) {
   return(as.list(environment()))
 }
 
 waterunits <- function(q, y) {return(list(q=q,y=y))}
-
-
-
-
-
-
 
 
 preprocess_data <- function(
@@ -679,6 +676,7 @@ preprocess_data <- function(
     )
   
   
+  
   # append corrected predictor list
   info_list$predictor_list_corrected <- 
     predictors %>%
@@ -689,7 +687,6 @@ preprocess_data <- function(
   results <- c(
     train_set,
     time_horizon = list(convert_items_to_lists(forecast_horizon)),
-    #info = list(convert_items_to_lists(info_list))
     info = list((info_list))
   )
   

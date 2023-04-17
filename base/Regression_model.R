@@ -278,7 +278,7 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
     }
     
     # Set column names for test mode
-    colnames(y_ens_fore) = data_input$info$wy_holdout
+    colnames(y_ens_fore) = data_input$time_horizon$wy_holdout
     
     return(list(y_ens_fore = y_ens_fore))
   }

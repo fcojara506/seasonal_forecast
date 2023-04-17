@@ -5,13 +5,14 @@ source("base/Regression_model.R")
 source("base/Knn_model.R")
 source("base/Charts.R")
 source("base/Export_data.R")
+source("base/Pexc.R")
 
 
-forecast_mode = "cv"
+forecast_mode = "both"
 catchment_code = 7321002
 
 # Define months for initialization
-month_initialisation <- 5 #c(5, 6, 7, 8, 9)
+month_initialisation <- 7 #c(5, 6, 7, 8, 9)
 
 
 data_best_models = readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,"_may-mar.RDS"))
@@ -20,24 +21,43 @@ best_combination = best_combination[best_combination$month_initialisation == mon
 
        
 data_input <- preprocess_data(
-  datetime_initialisation = lubridate::make_date(2022, month_initialisation),
+  datetime_initialisation = lubridate::make_date(2016, month_initialisation),
   forecast_mode = forecast_mode,
   catchment_code = catchment_code,
-  predictor_list = "STORAGE_mean_1months",
-  save_raw = T,
-  #remove_wys = c(2019,2018),
-  y_transform = list(log_transform = T, plot_transform_predictant = F)
-
+  predictor_list = unlist(best_combination$predictors),
+  save_raw = T
 )
 
 # ensemble volume forecast
 
-data_fore_boot = forecast_vol_ensemble(
+data_fore = forecast_vol_ensemble(
   data_input = data_input,
   forecast_mode = forecast_mode)
 
+#plot_pexc_forecast(data_input,data_fore)
 
+q_ens_forecast =
+  run_q_forecast(
+  data_input = data_input,
+  data_fore = data_fore,
+  forecast_mode = forecast_mode
+  )
 
+# #ensemble volume in hindcast (cross-validation)
+p3=plot_backtest_volume(
+  data_input =  data_input,
+  data_fore = data_fore,
+  subplot = T
+)
+
+print(p3)
+q_ens_fore = q_ens_forecast
+#hydrogram of forecasted mean monthly flows
+p4 = plot_knn_flow(
+  data_input =  data_input,
+  q_ens_fore = q_ens_forecast
+)
+print(p4)
 # 
 # # data_fore_bag = forecast_vol_ensemble(
 # #   data_input = data_input,

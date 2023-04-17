@@ -65,7 +65,7 @@ plot_X_y_train <- function(data_input) {
           data = test_data_df_stats,
           aes(x = value[, "max"] - (value[, "max"] - value[, "min"]) /2),
           y = max(train_data_df$volume) * 0.95,
-          label = paste("predictor \n wy", data_input$wy_holdout),
+          label = paste("predictor \n wy", data_input$time_horizon$wy_holdout),
           col = 'black',
           label.padding = unit(0.1, "lines"),
           size = 3
@@ -77,7 +77,7 @@ plot_X_y_train <- function(data_input) {
         geom_label(
           aes(x = Inf),
           y = data_input$y_test$volume,
-          label = paste("volumen \n wy", data_input$wy_holdout),
+          label = paste("volumen \n wy", data_input$time_horizon$wy_holdout),
           col = 'black',
           label.padding = unit(0.1, "lines"),
           size = 3,
@@ -173,7 +173,7 @@ p =
                  parse = TRUE,
                  size = 3)+
     geom_label(
-             label= paste("wy",data_input$wy_holdout),
+             label= paste("wy",data_input$time_horizon$wy_holdout),
              x=mean(v_line$y_fore),
              y=max(y_df$y_true),
              col='black'
@@ -459,21 +459,19 @@ plot_backtest_volume <- function(
 
 ### monthly stream flows from knn
 
-data_plot_knn_flow <- function(data_input,q_ens_fore) {
+data_plot_knn_flow <- function(data_input,q_ens_forecast) {
   
   months_wy_forecast = data_input$time_horizon$months_forecast_period[[1]]
   
   months_wy_df = data.frame(wym_str = data_input$time_horizon$months_wy[[1]]) %>% 
     mutate(wym = row_number())
   # ensemble flow forecast
-  q_ens_fore = data.table(q_ens_fore$q_predict) %>%
-    rowid_to_column("ens")
+  q_ens_fore = data.table(q_ens_forecast$q_predict[[1]])
   
   q_ens = melt.data.table(q_ens_fore,
                           variable.name = "wym_str",
                           variable.factor = F,
-                          measure.vars = months_wy_forecast,
-                          id.vars = "ens"
+                          measure.vars = months_wy_forecast
   )
   
   q_ens = merge.data.table(q_ens,
@@ -482,39 +480,42 @@ data_plot_knn_flow <- function(data_input,q_ens_fore) {
                            all.y = T) %>% 
     setkey(wym)
   
-  q_ens$wym_str <- factor(q_ens$wym_str , levels=data_input$time_horizon$months_wy)
+  q_ens$wym_str <- factor(q_ens$wym_str , levels=unlist(data_input$time_horizon$months_wy))
   
   # flow observations
   q_flows = data_input$raw_data$monthly_flows[,c("wy_simple", "wym", "Q_converted")]
   
   # flow observations only water year hold.out (if exists)
-  q_obs = subset(q_flows, wy_simple == data_input$wy_holdout)[,c("wym", "Q_converted")] %>%
+  q_obs = subset(q_flows, wy_simple == data_input$time_horizon$wy_holdout)[,c("wym", "Q_converted")] %>%
     mutate(variable = 'wy_holdout')
   
   colnames(q_obs) = c("wym","value","variable")
   
   q_obs = q_obs %>%
-    mutate(wym_str = data_input$time_horizon$months_wy[wym])
+    mutate(wym_str = unlist(data_input$time_horizon$months_wy)[wym])
   # flow observations
   #FUN = function(x){c(mean = mean(x), len = median(x))}
-  q_flow_sn_holdout = subset(q_flows, wy_simple != data_input$wy_holdout)[,c("wym", "Q_converted")]
+  q_flow_sn_holdout = subset(q_flows, wy_simple != data_input$time_horizon$wy_holdout)[,c("wym", "Q_converted")]
+  
+  probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
+  label_ranges <- sprintf("%d-%d", 100 * c(probs), 100 * c(probs[-1],1))
   
   q_obs_stats = 
     aggregate(
-    formula = Q_converted ~ wym,
+    x = Q_converted ~ wym,
     data = q_flow_sn_holdout,
     FUN = quantile,
-    probs = c(0.05,0.10,0.25,0.5,0.75,0.9,0.95),
+    probs = probs,
     drop = F
-      
   ) %>% 
     data.table() %>%
     melt.data.table(id.vars = "wym") %>%
     mutate(Pexc  = 100-as.numeric(stringr::str_extract_all(variable,"(?<=Q_converted.).+(?=.)"))) %>% 
-    mutate(wym_str = data_input$time_horizon$months_wy[wym])
-  
-  
-  
+    mutate(wym_str = unlist(data_input$time_horizon$months_wy)[wym]) %>% 
+    #mutate(Pexc_range = cut(Pexc, breaks = c(-Inf, 100 * probs, Inf), labels = label_ranges, right = FALSE)) %>%
+    mutate(Pexc_factor = factor(Pexc, labels = label_ranges))
+   #factor(q_obs_stats$Pexc)
+
   return(
     list(
       q_ens = q_ens,
@@ -534,25 +535,26 @@ plot_knn_flow <- function(
   
   plot_text = data_input$time_horizon
   
-  q_plot_data = data_plot_knn_flow(data_input = data_input,q_ens_fore=q_ens_fore)
+  q_plot_data = data_plot_knn_flow(data_input,q_ens_fore)
   q_plot_data$q_obs_stats$wym_str <- factor(q_plot_data$q_obs_stats$wym_str , levels=unique(q_plot_data$q_obs_stats$wym_str))
   
-  median_q_ens = apply(q_ens_fore, 2, median) %>%
+  median_q_ens = apply(q_ens_fore$q_predict[[1]], 2, median) %>%
     t %>%
     data.table() %>%
     melt.data.table(id.vars = NULL,
-                    measure.vars = all_of(colnames(q_ens_fore)) ,
+                    measure.vars = all_of(colnames(q_ens_fore$q_predict[[1]])) ,
                     variable.name = "wym_str",value.name = "median_flow")
   
     # observation stats
   p=ggplot()+ 
     geom_area(
       data = q_plot_data$q_obs_stats,
-      aes(x=wym_str,y = value,fill = as.factor(Pexc),group = Pexc),
-      alpha=0.6,
+      aes(x=wym_str,y = value,fill = Pexc_factor,group = Pexc),
+      #alpha=0.4,
       position = position_identity()
     )+
-    scale_fill_brewer(palette = "RdBu",direction = -1)+
+  scale_fill_viridis_d(direction = -1)+
+   # scale_fill_brewer(palette = "RdBu",direction = -1)
   # add forecast
     geom_violinhalf(
       data = q_plot_data$q_ens,
@@ -561,9 +563,9 @@ plot_knn_flow <- function(
       flip = T,
       lwd = 0.1,
       width=0.5,
-      alpha=0.2
+      alpha=0.4
     )+
-    geom_boxplot(
+  geom_boxplot(
       data = q_plot_data$q_ens,
       mapping =  aes(x=wym_str,y=value),
       #scale = "width",
@@ -577,33 +579,32 @@ plot_knn_flow <- function(
       size = 1,
       shape = 3
     )+
-    geom_line(
+  geom_line(
       data = q_plot_data$q_obs,
       mapping = aes(x=wym_str,y = value, group=variable, color = variable),
       size=0.3
     )+
-    geom_point(
+  geom_point(
       data = q_plot_data$q_obs,
       mapping = aes(x=wym_str,y = value, group=variable, color = variable),
-      size=0.5
+      size=2
     )+
   # add aestetics
     scale_color_manual(
       labels = c(
       glue(" Mediana Pronóstico"),
-      glue(" {data_input$wy_holdout}")
+      glue(" {data_input$time_horizon$wy_holdout}")
     ),
-    values=c("black","green")
-      
+    values=c("black","red")
   )+
     #scale_x_discrete(expand = c(0,0))+
     theme(legend.position="bottom",
-          legend.spacing.x = unit(0, 'cm'))+
+          legend.spacing.x = unit(0.2, 'cm'))+
     guides(
       fill = guide_legend(
       label.position = "bottom",
       nrow = 1,
-      title = "Prob. Excedencia (%)",
+      title = "P. Excedencia (%)",
       title.vjust = 0.8
       ),
       color=guide_legend(
@@ -615,10 +616,14 @@ plot_knn_flow <- function(
     scale_x_discrete(expand = c(0,0))+
     labs(
      x= "",
-     y = glue("Caudal ({data_input$info$units_q})")
-    )
+     #y = expression(paste("Caudal (",data_input$info$water_units$q,")"))
+    y = parse(text = glue("Caudal~~({data_input$info$water_units$q})"))
+    )+
+    ylim(0,NA)
   
-  #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+
+ 
+   #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
   ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
   
   max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
@@ -647,7 +652,7 @@ plot_knn_flow <- function(
       size=3
     )+
     scale_x_discrete(
-      limits=data_input$time_horizon$months_forecast_period,
+      limits=unlist(data_input$time_horizon$months_forecast_period),
       expand = c(0.05 ,0)
       )+
     scale_y_continuous(
@@ -655,42 +660,20 @@ plot_knn_flow <- function(
     )
     
 
-   
-  #print(p)
   
-
-  
-  # idea add an inset plot with forecast period
+  # add an inset plot with forecast period
   library(patchwork)
   
   p2 = (p)+
     plot_annotation(
          title=glue("Pronóstico del caudal medio mensual"),
          subtitle = data_input$raw_data$attributes_catchment$gauge_name,
-         caption = glue("Emisión {plot_text$date_initialisation}"),
-         tag_levels = "a"
+         caption = glue("Emisión {plot_text$datetime_initialisation}")
+         #tag_levels = "a"
     )+
     plot_layout(guides='collect') &
     theme(legend.position='bottom')
   
-  # if (export) {
-  #   library("icesTAF")
-  #   # figure output folder
-  #   folder_output = glue("data_output/pronostico_caudal/Figures/ensemble_forecast/{data_input$info$catchment_code}/")
-  #   # create folder if it does not exist
-  #   mkdir(folder_output)
-  #   width_p = 7.2
-  #   height_p = 4
-  #   #filename
-  #   figure_q_output = glue(
-  #     "{folder_output}flow_ensemble_forecast_{data_input$info$catchment_code}_",
-  #     "1st{data_input$info$month_initialisation}_{plot_text$predictor_list_join}_",
-  #     "{plot_text$volume_span_text}{data_input$wy_holdout}.png")
-  #   
-  #   ggsave(figure_q_output,plot = p2, width = width_p, height = height_p)
-  # }
-  
-
   
   return(p2)
   
@@ -1267,3 +1250,86 @@ plot_catchments <- function(shapefile_path = "data_input/SIG/shapefile_cuencas/c
   
   return(plot)
 }
+
+
+
+plot_pexc_forecast <- function(data_input,data_fore) {
+  
+  
+  pexc_training = data_input$y_train_pexc %>%
+    seco_normal_humedo_years()
+  
+  new_volume <- data_fore$y_ens_fore
+  
+  predicted_pexc <- predict_pexc(df = pexc_training,
+                                 volume_column = "volume_original",
+                                 new_volume) %>%
+    seco_normal_humedo_years()
+  
+  
+  # Calculate the median of the volume_original in new_data
+  new_data_median <- median(predicted_pexc$volume_original)
+  
+  # Find the index of the row with the closest volume_original value to the median
+  closest_index <- which.min(abs(predicted_pexc$volume_original - new_data_median))
+  
+  # Filter new_data to only include the row with the closest volume_original value to the median
+  new_data_filtered <- predicted_pexc[closest_index, ]
+  
+  # Create error bars data
+  new_data_error <- data.frame(
+    x = new_data_filtered$pexc,
+    ymin = quantile(predicted_pexc$volume_original,0.05),
+    ymax = quantile(predicted_pexc$volume_original,0.95)
+  )
+  
+  # Create horizontal error bars data
+  new_data_horiz_error <- data.frame(
+    y = new_data_filtered$volume_original,
+    xmin = quantile(predicted_pexc$pexc,0.05),
+    xmax = quantile(predicted_pexc$pexc,0.95)
+  )
+  
+  category_count <- predicted_pexc %>%
+    count(type_wy) %>%
+    mutate(percentage = round(n / sum(n) * 100,0))
+  
+  traffic_light_data <- data.frame(
+    type_wy = category_count$type_wy,
+    percentage = category_count$percentage) %>% 
+    mutate(
+      color = case_when(
+        type_wy == "seco" ~ "red",
+        type_wy == "normal" ~ "orange",
+        type_wy == "húmedo" ~ "green"
+      ))
+  
+  
+  p <- ggplot(data = traffic_light_data,
+              aes(x = 1, y = type_wy, fill = color, label = paste0(type_wy, ": ", percentage, "%"))) +
+    geom_bar(stat = "identity",width = 1) +
+    geom_text(aes(x = 0.5, y = type_wy), size = 3) +
+    scale_fill_identity() +
+    theme_void() +
+    theme(legend.position = "none")
+  
+  print(p)
+  
+  # Create the ggplot
+  p2 <- ggplot() +
+    geom_point(data = pexc_training, aes(x = pexc, y = volume_original), color = "blue") +
+    geom_point(data = new_data_filtered, aes(x = pexc, y = volume_original), color = "red") +
+    geom_errorbar(data = new_data_error, aes(x = x, ymin = ymin, ymax = ymax), width = 0.01) +
+    geom_errorbarh(data = new_data_horiz_error, aes(y = y, xmin = xmin, xmax = xmax), height = 50)+
+    facet_grid(~"month_initialisation")+
+    ylim(0,NA)
+  
+  p3 = p2 +
+    annotation_custom(
+      ggplotGrob(p), 
+      xmin = 0.8, xmax = 1, ymin = layer_scales(p2)$y$range$range[2]*0.7, ymax =layer_scales(p2)$y$range$range[2]*1.05
+    )
+  # Print the ggplot
+  return(p3)
+}
+
