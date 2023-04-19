@@ -138,7 +138,6 @@ plot_importance <- function(best_list,objective_metric) {
   p = ggplot(predictor_importance, aes(x = date_label, y = importance, fill = var)) +
     geom_bar(stat = "identity", position = "stack") +
     geom_text(aes(label = paste0(round(percentage, 1), "%")), position = position_stack(vjust = 0.5), size = 3) +
-    geom_text(aes(label = round(r2,2)),position = position_stack(vjust = 0.96))+
     labs(x = "Mes de emisión",
          y = "Importancia del predictor",
          fill = "Variable",
@@ -169,7 +168,7 @@ select_predictor <- function(
   
   library('doSNOW')
   # Set catchment code and months of initialization
-  predictors <- grid_pred(c("SOI", "PDO","NINO1.2","STORAGE"), 1, "mean")
+  predictors <- grid_pred(c("SOI","NINO1.2","STORAGE"), 1, "mean")
   
   cl <- makeCluster(parallel::detectCores() - 3L)
   registerDoSNOW(cl)

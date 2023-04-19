@@ -201,6 +201,15 @@ run_q_forecast <- function(data_input,
                            n_neighbours = 6,
                            weight_method="distance",
                            forecast_mode=data_input$info$forecast_mode) {
+  
+  data_input <- preprocess_data(
+    datetime_initialisation = data_input$info$datetime_initialisation,
+    forecast_mode = forecast_mode,
+    catchment_code = data_input$info$catchment_code,
+    predictor_list = unique(c("STORAGE_mean_1months","pr_sum_-1months",data_input$info$predictor_list)),
+    save_raw = T
+  )
+  
   # perform flow prediction or cross-validation using the knn_forecast function
   # inputs:
   # q_train = training flow data

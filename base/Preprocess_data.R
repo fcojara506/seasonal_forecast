@@ -541,7 +541,7 @@ training_set <- function(predictors, predictant, water_year_target) {
       y_train = y_train,
       q_train = q_train,
       wy_train = wy_train,
-      y_train_pexc = pexc(y_train,"volume_original")
+      y_train_pexc = pexc(y_train,"volume_original") %>% seco_normal_humedo_years()
       #water_year_target = water_year_target
     )
   )

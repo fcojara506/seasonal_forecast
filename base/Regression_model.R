@@ -201,6 +201,9 @@ forecast_vol_determinist <- function(X_train,
   if (forecast_mode == "both" || forecast_mode == "prediction") {
     # Make predictions on the test data
     y_fore <- make_predictions(regression_model, X_test)
+    if (!is.null(function_y)) {
+      y_fore = expo(y_fore)
+    }
     
   }
   
@@ -215,7 +218,6 @@ forecast_vol_determinist <- function(X_train,
 # Function to generate an ensemble of predictions
 ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
   
-  print(norm)
   # Check that the lengths of observed values and rmse match
   if (length(y) != length(rmse)) {
     stop("Size of observed values is NOT equal to rmse in ensemble generation")

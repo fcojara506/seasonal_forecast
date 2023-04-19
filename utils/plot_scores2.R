@@ -217,7 +217,7 @@ p5 = ggplot(data = df_crpss)+
   labs(title = "CRPSS L1OCV de los volúmenes para distintas fechas de inicialización",
        x = "fecha de emisión",
        y = "CRPSS [-] respecto a la CHI")
-print(p5)
+
 ggsave(filename = "data_output/figuras/scores/crpss_ref.png",
        width = 7,height = 4, plot = p5)
 
@@ -231,7 +231,7 @@ p6=ggplot(data = df_crpss_avg)+
   #scale_color_manual(values = c("red","blue"),labels = c("Mejor combinación", "Referencia"))+
   labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
        x = "fecha de emisión",
-       y = "CRPSS [-] respecto a volumén climatológico",
+       y = "CRPSS [-] respecto a volumen climatológico",
        color = "versión"
        )+
   theme(legend.position = "bottom")+

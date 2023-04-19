@@ -135,6 +135,55 @@ df_avgens <- df_comb %>%
 library(ggplot2)
 library(gridExtra)
 
+
+#plot of CRPSS respect to the storage (initial condition)
+p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = value,
+                   color = version
+  ))+
+  geom_hline(yintercept =  0)+
+  #scale_color_manual(values = c("red","blue"),labels = c("Mejor combinación", "Referencia"))+
+  labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
+       x = "fecha de emisión",
+       y = "CRPSS [-] c/r volumen promedio 1981-2019",
+       color = "",
+       caption = "Cada boxplot agrupa 45 cuencas"
+  )+
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 2)) +
+  scale_color_brewer(palette = "Set1",direction = -1)+
+  ylim(NA,1)
+
+print(p)
+ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p)
+
+
+
+p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>% subset(resampling == "Leave 1 out"))+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = metric_value,
+                   col = version))+
+  labs(
+    x = "fecha de emisión",
+    y = "R2 [-]",
+    col = "",
+    title = "R2 del volumen obs vs promedio del pronóstico",
+    caption = "Cada boxplot agrupa 45 cuencas"
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 2)) +
+  scale_color_brewer(palette = "Set1",direction = -1)+
+  ylim(NA,1)
+
+plot(p2)
+
+ggsave(filename = "data_output/figuras/scores/r2_ref_best_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p2)
+
+
 plot_metric <- function(dataframe,
                         metric,
                         metric_name = metric,
@@ -188,9 +237,6 @@ p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
 
 ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
        width = 10, height = 7, plot = p1)
-
-
-
 
 
 p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
