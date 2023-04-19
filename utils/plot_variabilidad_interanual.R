@@ -94,7 +94,7 @@ p = ggplot() +
   
 ggsave(
   glue(
-    "data_output/presentaciones/variabilidad_interanual_{data_input$info$catchment_code}.png"
+    "data_output/presentaciones/variabilidad_interanual/variabilidad_interanual_{data_input$info$catchment_code}.png"
   ),
   plot = p,
   width = 6,

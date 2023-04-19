@@ -13,7 +13,10 @@ cod_cuencas = fread(catchments_attributes_filename) %>%
 data_best_models = lapply(cod_cuencas, function(x)
   readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",x,"_may-mar.RDS"))$importance) %>% 
   rbindlist() %>% 
-  subset(month_initialisation %in% seq(5,9))
+  subset(month_initialisation %in% c(5,9))
+data_best_models$var = factor(data_best_models$var,
+                              levels = c("NINO1.2","SOI","STORAGE"),
+                              labels =  c("NIÑO1.2","SOI","CHI"))
 
 #sort month names
 
@@ -54,19 +57,20 @@ merged_data2 = merge(a,merged_data)
 ggplot(data = merged_data2) +
   geom_sf(aes(fill = percentage,geometry = geometry, colour="")) +
   scale_colour_manual(values=NA) +
-  scale_fill_viridis_b(na.value = "#d9c7af",direction = -1)+
+  scale_fill_viridis_b(na.value = "white",direction = -1)+
   geom_text(aes(x = -70.5, y = -37, label = paste0(num," cuencas")),size=2) +
-  facet_grid(var ~ date_label,shrink = T)+
+  facet_grid(date_label ~ var,shrink = T)+
   labs(
        x = "Longitud",
        y = "Latitud",
        fill = "Importancia (%)",
-       title = "Importancia relativa de los predictores",
+       title = "",
+       #title = "Importancia relativa de los predictores",
        col = "Sin importancia")+
- # coord_sf(xlim = c(-69, -74), ylim = c(-27, -37))+
+  #coord_sf(xlim = c(-69, -74), ylim = c(-27, -37))+
   theme_void()+
-  theme(legend.spacing.x = unit(.2, 'cm'))+
-  guides(colour=guide_legend(override.aes=list(fill="#d9c7af")))
+  #theme(legend.spacing.x = unit(.2, 'cm'))+
+  guides(colour=guide_legend(override.aes=list(fill="white")))
 
 ggsave("data_output/figuras/importancia_predictores/importancia_predictores_geo_v2.png",
        width = 4,height = 5,dpi = 400)

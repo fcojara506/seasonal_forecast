@@ -5,7 +5,7 @@ rm(list = ls())
 library(dplyr)
 library(data.table)
 library(feather)
-
+library(sf)
 # Define functions
 join_x_info <- function(x) {
   data <- x[["scores_volume"]]
@@ -129,12 +129,11 @@ df_avgens <- df_comb %>%
   mutate(version_sampling = paste(version,resampling)) %>% 
   merge.data.table(attributes_catchments, by.x = "catchment_code", by.y = "gauge_id")
 
-
-
 # Load required packages
 library(ggplot2)
 library(gridExtra)
 
+levels(df_crpss_avg$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
 
 #plot of CRPSS respect to the storage (initial condition)
 p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
@@ -151,7 +150,7 @@ p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
        caption = "Cada boxplot agrupa 45 cuencas"
   )+
   theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 2)) +
+  guides(col = guide_legend(ncol = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
 
@@ -159,7 +158,7 @@ print(p)
 ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
-
+levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
 
 p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>% subset(resampling == "Leave 1 out"))+
   geom_boxplot(aes(x = month_initialisation,
@@ -174,7 +173,7 @@ p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>% subset(resamplin
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 2)) +
+  guides(col = guide_legend(ncol = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
 
@@ -187,6 +186,9 @@ ggsave(filename = "data_output/figuras/scores/r2_ref_best_L1OCV.png",
 plot_metric <- function(dataframe,
                         metric,
                         metric_name = metric,
+                        by_x = "gauge_id",
+                        by_y = "gauge_id",
+                        all_x = T,
                         shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
   # Read the shapefile
   shapefile <- read_sf(shapefile_path)
@@ -194,7 +196,7 @@ plot_metric <- function(dataframe,
   shapefile <- st_simplify(shapefile, dTolerance = 2000)
   
   # Merge the shapefile and the dataframe using the common ID
-  merged_data <- merge(shapefile, dataframe, by.x = "gauge_id", by.y = "gauge_id")
+  merged_data <- merge(shapefile, dataframe, by.x = by_x, by.y = by_y,all.x=all_x)
   
   # Plot the metric using the merged data
   plot <- ggplot() +
@@ -202,6 +204,32 @@ plot_metric <- function(dataframe,
     scale_fill_continuous(high = "blue", low = "red") + # Change the colors according to your preference
     theme_void() +
     labs(title = "", x = "Longitud", y = "Latitud", fill = metric_name)
+  
+  return(plot)
+}
+
+plot_metric2 <- function(dataframe,
+                        metric,
+                        metric_name = metric,
+                        by_x = "gauge_id",
+                        by_y = "gauge_id",
+                        all_x = T,
+                        shapefile_path = "data_input/SIG/shapefile_cuencas/cuencas_fondef-dga.shp") {
+
+  # Read the shapefile
+  shapefile <- read_sf(shapefile_path)
+  shapefile <- st_make_valid(shapefile)
+  shapefile <- st_simplify(shapefile, dTolerance = 2000)
+  
+  # Merge the shapefile and the dataframe using the common ID
+  merged_data <- merge(shapefile, dataframe, by.x = by_x, by.y = by_y,all.x=all_x)
+  
+  # Plot the metric using the merged data
+  plot <- ggplot() +
+    geom_sf(data = merged_data, aes(fill = !!sym(metric))) +
+    scale_fill_continuous(high = "blue", low = "red") + # Change the colors according to your preference
+    theme_void() +
+    labs(x = "Longitud", y = "Latitud", title = metric_name,fill = "")
   
   return(plot)
 }
@@ -220,23 +248,85 @@ p_runoffratio = plot_metric(attributes_catchments,
                        metric = "runoff_ratio_cr2met_1979_2010",
                        metric_name = "")
 
-p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
-  geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
-                   y = value,
-                   col = month_initialisation))+
-  facet_wrap(~month_initialisation) +
-  labs(x = "Indice aridez (P/PET) [mm/mm]",
-       y = "CRPSS c/r volumen promedio",
-       title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
-       col = "mes emisión")+
-  theme(legend.position = "bottom") +
-  guides(col = guide_legend(nrow = 2))
+# p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+#   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
+#                    y = value,
+#                    col = month_initialisation))+
+#   facet_wrap(~month_initialisation) +
+#   labs(x = "Indice aridez (P/PET) [mm/mm]",
+#        y = "CRPSS c/r volumen promedio",
+#        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+#        col = "mes emisión")+
+#   theme(legend.position = "bottom") +
+#   guides(col = guide_legend(nrow = 2))
+# p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
+# 
+# print(p1)
 
-p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
+df = subset(df_crpss_avg, month_initialisation %in% c("1˚jul","1˚sep") &
+         version_sampling == "Mejor combinación Leave 1 out" & value<0.3)
+
+p_low = plot_metric(df,
+                       metric = "value",
+                        by_y = "catchment_code",
+                       metric_name = "")
+print(p_low)
+ggsave(filename = "data_output/figuras/scores/cuencas_conbajo_crpss.png",
+       width = 10, height = 7, plot = p_low)
 
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
-       width = 10, height = 7, plot = p1)
+
+
+df = df_crpss_avg %>% 
+  subset(version_sampling == "Mejor combinación Leave 1 out") %>% 
+  subset(month_initialisation %in% c("1˚jul"))
+
+df2 = subset(df_avgens,metric_name == "r2_avg") %>% 
+  subset(version_sampling == "Mejor combinación Leave 1 out") %>% 
+  subset(month_initialisation %in% c("1˚jul"))
+
+crpss_map = plot_metric2(df,
+                    metric = "value",
+                    by_y = "catchment_code",
+                    metric_name = "CRPSS",
+                    all_x = F)+
+  scale_fill_viridis_b(breaks = seq(0, 1, 0.25), limits = c(0, 1))+
+  guides(fill = FALSE)+
+  theme(plot.title = element_text(hjust = 0.5))
+
+r2_map = plot_metric2(df2,
+                                 metric = "metric_value",
+                                 by_y = "catchment_code",
+                                 metric_name = expression(R^2),
+                                 all_x = F)+
+  scale_fill_viridis_b(breaks = seq(0, 1, 0.25), limits = c(0, 1))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p_maps = grid.arrange(crpss_map,r2_map,ncol =2,widths = c(1,2))
+ggsave(filename = "data_output/figuras/scores/crpss_r2_mapa_jul.png",
+       width = 5, height = 7, plot = p_maps)
+# ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
+#                      version_sampling == "Mejor combinación Leave 1 out")) +
+#   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
+#                    y = value,
+#                    col = month_initialisation))+
+#   geom_text(
+#     data =subset(df_crpss_avg,value<0.3 & month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
+#                    version_sampling == "Mejor combinación Leave 1 out"),
+#     aes(label = gauge_name,
+#         x =  aridity_cr2met_1979_2010 ,
+#         y = value))+
+#   facet_wrap(~month_initialisation) +
+#   labs(x = "Indice aridez (P/PET) [mm/mm]",
+#        y = "CRPSS c/r volumen promedio",
+#        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+#        col = "mes emisión")+
+#   theme(legend.position = "bottom") +
+#   guides(col = guide_legend(nrow = 2))
+
+
+# ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
+#        width = 10, height = 7, plot = p1)
 
 
 p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
