@@ -1348,7 +1348,7 @@ plot_catchments <- function(shapefile_path = "data_input/SIG/shapefile_cuencas/c
     scale_y_continuous(breaks = seq(-27, -37, by = -1),labels = seq(-27, -37, by = -1))+
     labs(title = "")
   
-  print(plot)
+  #print(plot)
   # Highlight target catchments if provided
   if (!is.null(target_catchment)) {
     target_data <- shapefile[shapefile$gauge_id %in% target_catchment,]
@@ -1404,7 +1404,8 @@ plot_pexc_forecast <- function(data_input,data_fore) {
   
   pexc_training = data_input$y_train_pexc
   
-  new_volume <- data_fore$y_ens_fore %>% as.data.frame()
+  new_volume <- data_fore$y_ens_fore %>%
+    as.data.frame()
   
   predicted_pexc <- predict_pexc(df = pexc_training,
                                  volume_column = "volume_original",

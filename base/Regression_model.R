@@ -1,4 +1,4 @@
-
+source("base/Pexc.R")
 library(caret)
 
 set.seed(10)
@@ -233,7 +233,7 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
     if (norm == "rnorm") {
       
     
-    # Generate random perturbations using truncated normal distribution
+    # Generate random perturbations using normal or truncated normal distribution
     ensemble_vol[,i_year] <-  rnorm(n = n_members,
                                      mean = center,
                                      sd = variation) %>%
@@ -304,13 +304,32 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
     if (forecast_mode == "both" || forecast_mode == "cv") {
       # Perform cross validation and get the results
       y_ens_cv = ensemble_cv(vol_deterministic, data_input, n_members)
+     
+
+      pexc_ens_cv = predict_pexc(df = data_input$y_train_pexc,
+                                 volume_column = "volume_original",
+                                 new_volume = y_ens_cv[[1]]) %>%
+        seco_normal_humedo_years() %>% 
+        list()
     }
     if (forecast_mode == "both" || forecast_mode == "prediction") {
       # Make predictions on the test data
-      y_ens_fore = ensemble_test(vol_deterministic, data_input, n_members)
+      y_ens_fore = ensemble_test(vol_deterministic,
+                                 data_input,
+                                 n_members)
+      
+      pexc_ens_fore <- predict_pexc(df = data_input$y_train_pexc,
+                                    volume_column = "volume_original",
+                                    new_volume = y_ens_fore[[1]]) %>%
+       seco_normal_humedo_years() %>% 
+        list()
+      
     }
     
-    return(c(y_ens_cv,y_ens_fore,vol_deterministic))
+    return(c(y_ens_cv,y_ens_fore,
+             vol_deterministic,
+             pexc_ens_fore = pexc_ens_fore,
+             pexc_ens_cv = pexc_ens_cv))
   }
   
 

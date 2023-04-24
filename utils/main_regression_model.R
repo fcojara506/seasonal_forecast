@@ -13,7 +13,7 @@ forecast_mode = "both"
 for (catchment_code in c(7321002, 5410002)) {
   # Define months for initialization
   
-  for (month_initialisation in c(5, 9, 7)) {
+  for (month_initialisation in c(9,8,7,6,5)) {
     
     data_best_models = readRDS(
       file = paste0(
@@ -33,12 +33,13 @@ for (catchment_code in c(7321002, 5410002)) {
       predictor_list = unlist(best_combination$predictors),
       save_raw = T
     )
-    
+
     # ensemble volume forecast
     data_fore = forecast_vol_ensemble(data_input = data_input,
                                       forecast_mode = forecast_mode)
-    
-    
+   
+
+    stop()
     # ensemble flow forecast
     q_ens_forecast =
       run_q_forecast(
