@@ -39,7 +39,7 @@ for (catchment_code in c(7321002, 5410002)) {
                                       forecast_mode = forecast_mode)
    
 
-    stop()
+    scores_year_classification =  score_type_year(data_input,data_fore,univariable = FALSE)
     # ensemble flow forecast
     q_ens_forecast =
       run_q_forecast(

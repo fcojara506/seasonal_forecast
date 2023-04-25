@@ -55,7 +55,11 @@ perform_forecast <- function(catchment_code,
                                      )
   
   # Calculate and return scores
-  export_data(data_input = data_input, data_fore = data_fore, export = 'scores')
+  export_data(data_input = data_input,
+              data_fore = data_fore,
+              export = 'scores')
+  
+  
 }
 
 
@@ -82,7 +86,7 @@ scores <- lapply(cod_cuencas, function(catchment_code) {
   })
 }) %>% purrr::flatten()
 # Save the scores
-saveRDS(object = scores, file = "data_output/scores/RDS/scores_20230418.RDS")
+saveRDS(object = scores, file = "data_output/scores/RDS/scores_best_20230425.RDS")
 
 
 
@@ -101,7 +105,7 @@ scores_reference <- lapply(cod_cuencas, function(catchment_code) {
   })
 })%>% purrr::flatten()
 # Save the scores
-saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230418.RDS")
+saveRDS(object = scores_reference, file = "data_output/scores/RDS/scores_reference_20230425.RDS")
 ################################
 
 # 

@@ -45,18 +45,29 @@ seco_normal_humedo_years <- function(df,
   return(df)
 }
 
-score_type_year <- function(data_input,data_fore) {
+score_type_year <- function(data_input, data_fore, univariable = FALSE) {
   # Load required libraries
   library(caret)
   
-  pexc_true = data_input$y_train_pexc %>% 
-    dplyr::rename(type_wy_obs = type_wy) %>% 
-    select(wy_simple,type_wy_obs)
+  # Prepare pexc_true and pexc_sim data
+  pexc_true <- data_input$y_train_pexc %>%
+    dplyr::select(wy_simple, type_wy_obs = type_wy)
   
-  pexc_sim = data_fore$pexc_ens_cv %>% 
-    select(wy_simple,type_wy)
+  pexc_sim <- data_fore$pexc_ens_cv %>%
+    dplyr::select(wy_simple, type_wy)
   
-  df = merge(pexc_true,pexc_sim,by = "wy_simple")
+  # Apply univariable method if requested
+  if (univariable) {
+    pexc_sim <- pexc_sim %>%
+      dplyr::count(wy_simple, type_wy) %>%
+      dplyr::group_by(wy_simple) %>%
+      dplyr::top_n(n = 1, wt = n) %>%
+      dplyr::select(wy_simple, type_wy)
+  }
+  
+  # Merge pexc_true and pexc_sim data
+  df <- merge(pexc_true, pexc_sim, by = "wy_simple")
+  
   # Convert 'type_wy' and 'type_wy_obs' to factors with the same levels
   common_levels <- unique(c(levels(factor(df$type_wy)), levels(factor(df$type_wy_obs))))
   df$type_wy <- factor(df$type_wy, levels = common_levels)
@@ -67,15 +78,20 @@ score_type_year <- function(data_input,data_fore) {
   
   # Calculate performance metrics
   accuracy <- cm$overall["Accuracy"]
-  precision <- cm$byClass["Precision"]
-  recall <- cm$byClass["Recall"]
-  f1_score <- cm$byClass["F1"]
+  precision <- data.frame(cm$byClass)["Precision"]
+  recall <- data.frame(cm$byClass)["Recall"]
+  f1_score <- data.frame(cm$byClass)["F1"]
   
-  # Print the metrics
-  cat("Accuracy:", accuracy, "\n")
-  cat("Precision:", precision, "\n")
-  cat("Recall:", recall, "\n")
-  cat("F1-score:", f1_score, "\n")
-  }
+  # Prepare results data frame
+  results <- list(
+    Accuracy = accuracy,
+    Precision = precision$Precision,
+    Recall = recall$Recall,
+    F1 = f1_score$F1
+  ) %>% data.frame()
+  
+  rownames(results) <- rownames(precision)
+  return(results)
+}
 
 

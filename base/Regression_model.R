@@ -300,6 +300,8 @@ ensemble_generator <- function(y,rmse,n_members=1000,norm = "rnorm"){
     # Initialise ensemble variables
     y_ens_cv = NULL
     y_ens_fore = NULL
+    pexc_ens_fore = NULL
+    pexc_ens_cv = NULL
     
     if (forecast_mode == "both" || forecast_mode == "cv") {
       # Perform cross validation and get the results
