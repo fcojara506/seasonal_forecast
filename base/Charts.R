@@ -398,12 +398,12 @@ plot_backtest_volume <- function(
         title = title,
         subtitle = data_input$raw_data$attributes_catchment$gauge_name,
         caption  = subcaption)
-    p4 = p3+annotation_custom(
-      ggplotGrob(plot_semaforo(data_input,data_fore)), 
-      xmin = 2, xmax = 7, ymin = layer_scales(p3)$y$range$range[2]*0.65, ymax =layer_scales(p3)$y$range$range[2]*1.0
-    ) 
+    # p4 = p3+annotation_custom(
+    #   ggplotGrob(plot_semaforo(data_input,data_fore)), 
+    #   xmin = 2, xmax = 7, ymin = layer_scales(p3)$y$range$range[2]*0.65, ymax =layer_scales(p3)$y$range$range[2]*1.0
+    # ) 
     
-    return(p4)
+    return(p3)
     
 }
 

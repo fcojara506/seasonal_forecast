@@ -35,6 +35,7 @@ perform_forecast <- function(catchment_code,
   print(paste(month_initialisation,catchment_code))
   # Preprocess the data
   datetime_emission = lubridate::make_date(2022, month_initialisation)
+  
   if (month_initialisation<4) {datetime_emission = datetime_emission %m+% months(12)}
   
   data_input <- preprocess_data(datetime_initialisation = datetime_emission ,

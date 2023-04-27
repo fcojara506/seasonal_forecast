@@ -26,7 +26,7 @@ ensemble_scores <- function(y_train,y_ens) {
   library(caret)
   #ensemble scores
   
-  obs_climate               <- rep(mean(y_train), times = nrow(y_train) ) %>% 
+  obs_climate               <- rep(mean(y_train), times = length(y_train) ) %>% 
     as.matrix()
   
   crps_ensembles            <- mean(
@@ -47,9 +47,9 @@ ensemble_scores <- function(y_train,y_ens) {
   
 }
 
-y_scores <- function(data_fore) {
+y_scores <- function(data_fore,data_input) {
   ##### volume data
-  y_train = data_fore$regression_model$trainingData$.outcome %>%   as.matrix()
+  y_train = data_input$y_train$volume_original
   ##### ensemble monthly average
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()

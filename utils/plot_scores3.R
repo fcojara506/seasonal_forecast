@@ -49,26 +49,13 @@ process_files <- function(file_paths) {
 }
 
 merge_scores <- function(scores_data) {
-  df1 <- scores_data$scores_loocv
-  df_ref1 <- scores_data$scores_ref_loocv
+  df_best <- scores_data$scores_loocv
+  df_ref <- scores_data$scores_ref_loocv
   
-  df3 <- scores_data$scores_cv3
-  df_ref3 <- scores_data$scores_ref_cv3
-  
-  df5 <- scores_data$scores_cv5
-  df_ref5 <- scores_data$scores_ref_cv5
-  
-  df_comb1 <- merge.data.table(df1, df_ref1,
+  df_comb <- merge.data.table(df_best, df_ref,
                                by = c("catchment_code", "month_initialisation", "metric_name"),
                                suffixes = c("_best", "_ref")) %>% 
     mutate(resampling = "Leave 1 out")
-  
-  df_comb3 <- merge.data.table(df3, df_ref3,
-                               by = c("catchment_code", "month_initialisation", "metric_name"),
-                               suffixes = c("_best", "_ref")) %>%
-    mutate(resampling = "Leave 3 out")
-  
-  df_comb <- rbind(df_comb1, df_comb3)
   
   return(df_comb)
 }
@@ -81,26 +68,19 @@ read_attributes_catchments <- function(file_path) {
   return(attributes_catchments)
 }
 
-target_date <- "20230410"
-
 # Main script
-files <- c("data_output/scores/RDS/scores_20230331.RDS",
-           "data_output/scores/RDS/scores_reference_20230331.RDS",
-           "data_output/scores/RDS/scores_20230331_cv3k.RDS",
-           "data_output/scores/RDS/scores_reference_20230331_cv3k.RDS"
+files <- c("data_output/scores/RDS/scores_best_20230425.RDS",
+           "data_output/scores/RDS/scores_reference_20230425.RDS"
 )
 
-# Modify file names using the target_date variable
-files <- gsub("20230331", target_date, files)
-
-names(files) <- c("scores_loocv", "scores_ref_loocv",
-                  "scores_cv3", "scores_ref_cv3"
-)
+names(files) <- c("scores_loocv",
+                  "scores_ref_loocv")
 
 scores_data <- process_files(files)
 df_comb <- merge_scores(scores_data)
 
 attributes_catchments_file <- "data_input/attributes/Cuencas_Fondef-DGA_v1.csv"
+attributes_catchments_file <- "data_input/attributes/catchment_attributes_full_camels.csv"
 attributes_catchments <- fread(attributes_catchments_file)
 
 
@@ -155,13 +135,14 @@ p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
 
-print(p)
+
 ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
 
-p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>% subset(resampling == "Leave 1 out"))+
+p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>%
+              subset(resampling == "Leave 1 out"))+
   geom_boxplot(aes(x = month_initialisation,
                    y = metric_value,
                    col = version))+
@@ -248,24 +229,27 @@ p_pmean = plot_metric(attributes_catchments,
 p_runoffratio = plot_metric(attributes_catchments,
                        metric = "runoff_ratio_cr2met_1979_2010",
                        metric_name = "")
+p_baseflow = plot_metric(attributes_catchments,
+                              metric = "baseflow_index_1979_2010",
+                              metric_name = "")
 
-# p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
-#   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
-#                    y = value,
-#                    col = month_initialisation))+
-#   facet_wrap(~month_initialisation) +
-#   labs(x = "Indice aridez (P/PET) [mm/mm]",
-#        y = "CRPSS c/r volumen promedio",
-#        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
-#        col = "mes emisión")+
-#   theme(legend.position = "bottom") +
-#   guides(col = guide_legend(nrow = 2))
-# p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
-# 
-# print(p1)
+p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+  geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
+                   y = value,
+                   col = month_initialisation))+
+  facet_wrap(~month_initialisation) +
+  labs(x = "Indice aridez (P/PET) [mm/mm]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
+p1 = grid.arrange(p1,p_aridez,ncol =2,widths = c(3,1))
+
+print(p1)
 
 df = subset(df_crpss_avg, month_initialisation %in% c("1˚jul","1˚sep") &
-         version_sampling == "Mejor combinación Leave 1 out" & value<0.3)
+         version_sampling == "Mejor combinación Leave 1 out" & value<0.4)
 
 p_low = plot_metric(df,
                        metric = "value",
@@ -292,7 +276,7 @@ crpss_map = plot_metric2(df,
                     metric_name = "CRPSS",
                     all_x = F)+
   scale_fill_viridis_b(breaks = seq(0, 1, 0.25), limits = c(0, 1))+
-  guides(fill = FALSE)+
+  guides(fill = 'none' )+
   theme(plot.title = element_text(hjust = 0.5))
 
 r2_map = plot_metric2(df2,
@@ -306,28 +290,29 @@ r2_map = plot_metric2(df2,
 p_maps = grid.arrange(crpss_map,r2_map,ncol =2,widths = c(1,2))
 ggsave(filename = "data_output/figuras/scores/crpss_r2_mapa_jul.png",
        width = 5, height = 7, plot = p_maps)
-# ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
-#                      version_sampling == "Mejor combinación Leave 1 out")) +
-#   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
-#                    y = value,
-#                    col = month_initialisation))+
-#   geom_text(
-#     data =subset(df_crpss_avg,value<0.3 & month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
-#                    version_sampling == "Mejor combinación Leave 1 out"),
-#     aes(label = gauge_name,
-#         x =  aridity_cr2met_1979_2010 ,
-#         y = value))+
-#   facet_wrap(~month_initialisation) +
-#   labs(x = "Indice aridez (P/PET) [mm/mm]",
-#        y = "CRPSS c/r volumen promedio",
-#        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
-#        col = "mes emisión")+
-#   theme(legend.position = "bottom") +
-#   guides(col = guide_legend(nrow = 2))
+
+ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
+                     version_sampling == "Mejor combinación Leave 1 out")) +
+  geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
+                   y = value,
+                   col = month_initialisation))+
+  # geom_text(
+  #   data =subset(df_crpss_avg,value<0.3 & month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
+  #                  version_sampling == "Mejor combinación Leave 1 out"),
+  #   aes(label = gauge_name,
+  #       x =  aridity_cr2met_1979_2010 ,
+  #       y = value))+
+  facet_wrap(~month_initialisation) +
+  labs(x = "Indice aridez (P/PET) [mm/mm]",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
 
 
-# ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
-#        width = 10, height = 7, plot = p1)
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
+        width = 10, height = 7, plot = p1)
 
 
 p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
@@ -347,6 +332,24 @@ p2 = grid.arrange(p2,p_hfd,ncol =2,widths = c(3,1))
 ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_hfd.png",
        width = 10, height = 7, plot = p2)
 
+########
+p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
+  geom_point(aes(  x =  baseflow_index_1979_2010 ,
+                   y = value,
+                   col = month_initialisation))+
+  facet_wrap(~month_initialisation)+
+  labs(x = "Base flow []",
+       y = "CRPSS c/r volumen promedio",
+       title = "CRPSS vs indice de flujo base del modelo 'mejor combinación (AIC)' ",
+       col = "mes emisión")+
+  theme(legend.position = "bottom") +
+  guides(col = guide_legend(nrow = 2))
+
+p2 = grid.arrange(p2,p_baseflow,ncol =2,widths = c(3,1))
+
+ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_baseflow.png",
+       width = 10, height = 7, plot = p2)
+###3
 
 
 
@@ -461,4 +464,57 @@ p8 = grid.arrange(p8,p_runoffratio,ncol =2,widths = c(3,1))
 ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_rr.png",
        width = 10, height = 7, plot = p8)
 
+#############################################
+levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
+
+p = ggplot(data = subset(df_avgens,metric_name == "accuracy_ens")%>%
+              subset(resampling == "Leave 1 out"))+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = metric_value,
+                   col = version))+
+  labs(
+    x = "fecha de emisión",
+    y = "Accuracy [-]",
+    col = "",
+    subtitle = "Método considerando todos los ensembles",
+    title = "Exactitud (accuracy) del volumen obs vs promedio del pronóstico",
+    caption = "Cada boxplot agrupa 45 cuencas"
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 1)) +
+  scale_color_brewer(palette = "Set1",direction = -1)+
+  ylim(NA,1)
+
+plot(p)
+
+ggsave(filename = "data_output/figuras/scores/accuracy_ensemble_ref_best_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p)
+
+
+levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
+
+p = ggplot(data = subset(df_avgens,metric_name == "accuracy_uni")%>%
+             subset(resampling == "Leave 1 out"))+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = metric_value,
+                   col = version))+
+  labs(
+    x = "fecha de emisión",
+    y = "Accuracy [-]",
+    col = "",
+    title = "Exactitud (accuracy) del volumen obs vs promedio del pronóstico",
+    subtitle = "Método considerando la moda de los ensembles",
+    caption = "Cada boxplot agrupa 45 cuencas"
+  ) + theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 1)) +
+  scale_color_brewer(palette = "Set1",direction = -1)+
+  ylim(NA,1)
+
+plot(p)
+
+ggsave(filename = "data_output/figuras/scores/accuracy_uni_ref_best_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p)
 

@@ -149,7 +149,7 @@ export_data <- function(data_input,
      scores_year_classification_uni =  
       score_type_year(data_input,data_fore, univariable = TRUE)
     # metrics
-    scores_volume <- y_scores(data_fore = data_fore) %>% 
+    scores_volume <- y_scores(data_fore,data_input) %>% 
       cbind(data.frame(accuracy_ens = scores_year_classification_ens$Accuracy[[1]])) %>% 
       cbind(data.frame(accuracy_uni = scores_year_classification_uni$Accuracy[[1]]))
     
