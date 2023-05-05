@@ -114,7 +114,8 @@ df_avgens <- df_comb %>%
 library(ggplot2)
 library(gridExtra)
 
-levels(df_crpss_avg$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
+levels(df_crpss_avg$version) = c("SWE+almacenamientos & índices climáticos",
+                                 "SWE+almacenamientos")
 
 #plot of CRPSS respect to the storage (initial condition)
 p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
@@ -232,6 +233,8 @@ p_runoffratio = plot_metric(attributes_catchments,
 p_baseflow = plot_metric(attributes_catchments,
                               metric = "baseflow_index_1979_2010",
                               metric_name = "")
+
+
 
 p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
   geom_point(aes(  x =  aridity_cr2met_1979_2010 ,
@@ -517,4 +520,90 @@ plot(p)
 
 ggsave(filename = "data_output/figuras/scores/accuracy_uni_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
+
+
+
+#####################################################
+selected_attributes = c(
+#Aridity index (AI) 
+"aridity_cr2met_1979_2010",
+#Fraction of precipitation falling as snow
+"frac_snow_cr2met_1979_2010",
+#p-seasonality
+"p_seasonality_cr2met_1979_2010",
+#Baseflow index
+"baseflow_index_1979_2010",
+#Mean elevation 
+"mean_elev",
+#Fraction of the basin covered by forest
+"lc_forest",
+#Fraction of the basin covered by barren land
+"lc_barren"
+)
+
+df_crpss_selected_attr1 = attributes_catchments %>% 
+  subset(gauge_id %in% unique(df_crpss_avg$catchment_code)) %>% 
+  select(gauge_id,all_of("baseflow_index_1979_2010"))
+
+df_crpss_selected_attr = df_crpss_avg %>%
+  subset(resampling == "Leave 1 out") %>%
+  subset(variable == "metric_value_best") %>% 
+  dplyr::rename(CRPSS = value) %>% 
+  select(
+         month_initialisation,
+         CRPSS,
+         all_of(selected_attributes)
+         ) %>% 
+  data.table() %>%
+  melt.data.table(id.vars = c("month_initialisation", "CRPSS"))
+
+  cor_crpss = 
+  df_crpss_selected_attr %>% 
+  group_by(month_initialisation,variable) %>% 
+  summarise(correlation  = cor(x = CRPSS ,
+                               y = value,
+                               method = "spearman",
+                               use="complete.obs"))
+
+# Create a named vector with the new names
+short_variable_names <- c(
+  "aridity_cr2met_1979_2010" = "Indice de aridez",
+  "frac_snow_cr2met_1979_2010" = "Frac. nieve",
+  "p_seasonality_cr2met_1979_2010" = "Temporalidad de la P.",
+  "baseflow_index_1979_2010" = "Indice de flujo base",
+  "mean_elev" = "Elev. promedio",
+  "lc_forest" = "Cobertura Bosque",
+  "lc_barren" = "Cobertura Suelo desnudo"
+)
+
+# Modify the variable names in cor_crpss
+cor_crpss <- cor_crpss %>%
+  mutate(variable = recode(variable, !!!short_variable_names))
+
+library(ggplot2)
+
+# Reorder the levels of month_initialisation
+cor_crpss$month_initialisation <- factor(cor_crpss$month_initialisation, levels = rev(levels(cor_crpss$month_initialisation)))
+
+cor_crpss_tile_plot <- 
+  ggplot(cor_crpss, aes(x = variable, y = month_initialisation, fill = correlation)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(correlation, 2)), color = "black", size = 3) +
+    
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) +
+  labs(title = "Correlación de Spearman entre CRPSS y atributos hidrológicos",
+       x = "Variable",
+       y = "Mes emisión",
+       fill = "correlación"
+       ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Display the plot
+plot(cor_crpss_tile_plot)
+ggsave(filename = "data_output/figuras/scores/cor_best_attributes.png",
+       width = 7,height = 4,dpi = 400, plot = cor_crpss_tile_plot)
+
+
 
