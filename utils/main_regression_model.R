@@ -10,7 +10,7 @@ source("base/Pexc.R")
 
 forecast_mode = "both"
 
-for (catchment_code in c(5410002,7321002 )) {
+for (catchment_code in c(5410002,7321002)) {
   # Define months for initialization
   
   for (month_initialisation in c(9,8,7,6,5)) {
