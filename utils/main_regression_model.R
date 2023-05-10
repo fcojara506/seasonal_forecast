@@ -40,12 +40,13 @@ for (catchment_code in c(5410002,7321002)) {
 
     #scores_year_classification =  score_type_year(data_input,data_fore,univariable = FALSE)
     # Calculate and return scores
+    stop()
     scores_vol =   
       export_data(data_input = data_input,
                   data_fore = data_fore,
                   export = 'scores')
     print(scores_vol$scores_volume)
-    stop()
+    
     # ensemble flow forecast
     q_ens_forecast =
       run_q_forecast(

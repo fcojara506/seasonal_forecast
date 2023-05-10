@@ -148,10 +148,18 @@ export_data <- function(data_input,
    # univariable type of year
      scores_year_classification_uni =  
       score_type_year(data_input,data_fore, univariable = TRUE)
+     
     # metrics
     scores_volume <- y_scores(data_fore,data_input) %>% 
       cbind(data.frame(accuracy_ens = scores_year_classification_ens$Accuracy[[1]])) %>% 
-      cbind(data.frame(accuracy_uni = scores_year_classification_uni$Accuracy[[1]]))
+      cbind(data.frame(accuracy_uni = scores_year_classification_uni$Accuracy[[1]])) %>% 
+      cbind(data.frame(precision_humedo =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: húmedo", "Precision" ])) %>% 
+      cbind(data.frame(precision_normal =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: normal", "Precision"])) %>% 
+      cbind(data.frame(precision_seco =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: seco", "Precision" ])) %>% 
+      cbind(data.frame(recall_humedo =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: húmedo", "Recall" ])) %>% 
+      cbind(data.frame(recall_normal =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: normal", "Recall"])) %>% 
+      cbind(data.frame(recall_seco =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: seco", "Recall" ]))
+    
     
     results <- list.append(results,
                            scores_volume = scores_volume,
