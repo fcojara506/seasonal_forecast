@@ -536,7 +536,7 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("precision_humedo",
     y = "Accuracy [-]",
     col = "",
     title = "Precisión del volumen obs vs promedio del pronóstico",
-    subtitle = "Precisión. Método considerando todos los ensembles",
+    subtitle = "Precisión = VerdaderosPositivos / (VerdaderosPositivos + FalsoPositivo). Método considerando todos los ensembles",
     caption = "Cada boxplot agrupa 45 cuencas"
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
@@ -544,8 +544,11 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("precision_humedo",
   guides(col = guide_legend(ncol = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
- 
-stop()
+plot(p)
+
+ggsave(filename = "data_output/figuras/scores/precision_ens_typeyear_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p)
+
 p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
                                                       "recall_normal",
                                                       "recall_seco"))%>%
@@ -560,7 +563,7 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
     y = "Recall [-]",
     col = "",
     title = "Recall del volumen obs vs promedio del pronóstico",
-    subtitle = "Recall: P(pred: x | obs: x). Método considerando todos los ensembles",
+    subtitle = "Recall: VerdaderosPositivos / (VerdaderosPositivos + FalsosNegativos). Método considerando todos los ensembles",
     caption = "Cada boxplot agrupa 45 cuencas"
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
@@ -570,7 +573,8 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
   ylim(NA,1)
 
 plot(p)
-
+ggsave(filename = "data_output/figuras/scores/recall_ens_typeyear_L1OCV.png",
+       width = 7,height = 4,dpi = 400, plot = p)
 
  #####################################################
 selected_attributes = c(
