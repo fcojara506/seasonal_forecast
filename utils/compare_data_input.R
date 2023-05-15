@@ -3,11 +3,13 @@ rm(list = ls())
 source("base/Preprocess_data.R")
 library("foreach")
 library("ggplot2")
+library("caret")
 
-
-join_x_info <- function(x,normalised = F) {
+join_x_info <- function(x) {
   x_train = rownames_to_column(x[["X_train"]],var = "wy") 
   info = x[["info"]]
+  x_train <- predict(caret::preProcess(x = x_train,method = c("center","scale")), newdata = x_train)
+  
   df = x_train %>% 
     data.table() %>% 
     melt.data.table(id.vars = c("wy"),
@@ -22,6 +24,23 @@ join_x_info <- function(x,normalised = F) {
 }
 
 
+join_y_info <- function(x) {
+  
+  y_train = rownames_to_column(x[["y_train"]],var = "wy")
+  info = x[["info"]]
+  
+  #normalise
+  y_train <- predict(caret::preProcess(x = y_train,method = c("center","scale")), newdata = y_train)
+  
+  df = y_train %>% 
+    data.table() %>% 
+    mutate(catchment_code = info$catchment_code,
+           datetime_initialisation = info$datetime_initialisation)
+  
+  return(df)
+}
+
+
 
 
 # Set catchment code and months of initialization
@@ -33,9 +52,9 @@ catchments_attributes_filename = "data_input/attributes/attributes_49catchments_
 attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
 cod_cuencas = attributes_catchments$cod_cuenca
 
-months_initialisation = 1:12
+months_initialisation = c(2,4,6)
 
-#dataset_data_input <- function(dataset_hydro,normalised = T) {
+
 
   model_data <-
     foreach(catchment_code=cod_cuencas, .combine = "c") %do% {
@@ -54,19 +73,26 @@ months_initialisation = 1:12
   
 
 months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
-  
+#volume
+data_y = lapply(model_data,join_y_info) %>% 
+  rbindlist()
+#predictores
 data_input = 
-  lapply(model_data, 
-         function(x) join_x_info(x,normalised = F)) %>% 
-rbindlist() %>% 
+  lapply(model_data, join_x_info) %>% rbindlist() %>% 
   merge(attributes_catchments,
         by.x = "catchment_code",
         by.y = "cod_cuenca"
   ) %>%
-  #mutate(wy = as.numeric(wy)) %>% 
   mutate(var = tstrsplit(predictor_name, "_", fixed = TRUE)[[1]]) %>% 
   mutate(month_wy = as.factor(wateryearmonth(month = month(datetime_initialisation))))
+
+data_input = merge(data_y,data_input)  
+#merge data
+
+
+# month emision as factor
 levels(data_input$month_wy) = paste0("1˚", months_wy[as.numeric(levels(data_input$month_wy) )])
+
 
 
 data_input_stat = 
@@ -79,7 +105,7 @@ data_input_stat =
 
 all_data = merge(data_input,data_input_stat,by = c("catchment_code","var","month_wy"))
 
-write.csv(x = all_data,file = "data_output/predictores/all_predictor_1981_2019_45cuencas.csv",row.names = F)
+write.csv(x = all_data,file = "data_output/predictores/all_predictor_1981_2019_45cuencas_normalised.csv",row.names = F)
 
 # ##chart
 # DGA_code = sample(cod_cuencas,1)
