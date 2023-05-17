@@ -1,16 +1,27 @@
 rm(list = ls())
 source("base/Preprocess_data.R")
 source("base/Regression_model.R")
-
+library(forcats)
 #all available catchments, no data 6008005, 7317005, 7355002, 8106001
 catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
 attributes_catchments = read.csv(catchments_attributes_filename)[-c(32,40,45,49),]
 cod_cuencas = attributes_catchments$cod_cuenca
 
+# Divide catchments into blocks
+cod_cuencas = data.frame(cod_cuencas) %>% 
+  mutate(rank = min_rank(cod_cuencas),  # rank the catchment codes
+         block = as_factor(ntile(rank, 3))) # divide the ranks into 3 equal-sized groups
 
-forecast_mode = "cv"
-plots = list()
 
+data_hindcast <- function(cod_cuencas) {
+  months_es <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
+  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
+  
+
+  forecast_mode = "cv"
+  plots = list()
+  df_train_list = list()
+  y_ens_list = list()
 for (catchment_code in cod_cuencas) {
 
 data_best_models = readRDS(file = paste0(
@@ -21,7 +32,7 @@ data_best_models = readRDS(file = paste0(
 best_combination = data_best_models$best_combination
 
 
-a = lapply(5:9, function(month_initialisation) {
+a = lapply(c(5,7,9), function(month_initialisation) {
 best_combination = best_combination[best_combination$month_initialisation == month_initialisation, ]
 
 
@@ -46,6 +57,7 @@ data_fore_best = forecast_vol_ensemble(data_input = data_input_best,
 
 y_ens = data_fore_best$y_ens_cv
 y_ens = y_ens[ , order(colnames(y_ens))] %>% data.table()
+
 y_ens = melt.data.table(y_ens,
                         variable.name = "wy_simple",
                         value.name = "volume",
@@ -61,57 +73,105 @@ list(y_ens = y_ens,df_train = df_train, data_input = data_input_best)
 ) %>% purrr::transpose()
 
 
-months_es <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
-months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
 
 y_ens = a$y_ens %>% rbindlist()
 y_ens$date_label = factor(paste0("1˚",months_es[y_ens$month_initialisation]),levels = paste0("1˚",months_wy))
 
 df_train = a$df_train %>% rbindlist() %>% distinct()
-data_input = a$data_input[[1]]
+df_train$catchment_code = as.integer(catchment_code)
 
-p1 = ggplot() +
+df_train_list[[catchment_code]] = df_train
+y_ens_list[[catchment_code]] = y_ens
+}
+  
+
+y_ens = rbindlist(y_ens_list)
+df_train = rbindlist(df_train_list)
+return(list(y_ens = y_ens, df_train = df_train))
+}
+
+
+plot_hindsight <- function(df,attributes_catchments = attributes_catchments) {
+ 
+
+p=
+ggplot() +
   geom_boxplot(
-    data = y_ens,
+    data = df$y_ens,
     aes(x = wy_simple,
         y = volume,
         fill = date_label),
-        lwd = 0.1,
-        outlier.size = 0.01
-      )+
-  geom_hline(aes(yintercept = mean(df_train$volume_original)))+
+    lwd = 0.1,
+    outlier.size = 0.01
+  )+
   geom_point(
-    data = df_train,
+    data = df$df_train,
     aes(x = wy_simple,
         y = volume_original,
         col = " "),
     shape = "_",
-    size  = 10
+    size  = 5
   )+
-    theme(axis.text.x = element_text(
-      angle = 90,
-      vjust = 0.5,
-      hjust = 1
-    )) +
+  #geom_hline(aes(yintercept = mean(df$df_train$volume_original)))+
+  facet_wrap(~gauge_name,ncol = 1,scales = "free_y")+
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) +
+  
   scale_color_manual(values = c(" " = "red"),
                      name = "Caudal estación Fluviométrica")+
   theme(legend.position = "bottom",
         legend.spacing.x = unit(0, 'cm')) +
   scale_y_continuous(expand = c(0, 0))+
-  scale_fill_brewer() 
-  #   # # change labels
-  # labs(y =  glue("Volumen ({data_input$info$water_units$y})"),
-  #      x = "Año hidrológico (orden cronológico)",
-  #      fill = "Fecha de emisión",
-  #      title =  glue("Pronóstico retrospectivo de volumen {data_input$time_horizon$volume_span_text} 1981-2019 para emisiones desde el 1 de mayo al 1 de septiembre"),
-  #      subtitle = glue("{data_input$raw_data$attributes_catchment$gauge_name} ({catchment_code})")
-  # )
+  scale_fill_brewer()+
+labs(y =  glue("Volumen (GL = mill. m3)"),
+     x = "Año hidrológico (orden cronológico)",
+     fill = "Fecha de emisión",
+     title =  glue("Pronóstico retrospectivo de volumen sep-mar 1981-2019 para emisiones desde el 1 de mayo al 1 de septiembre"),
+)   +guides(
+  fill = guide_legend(
+    label.position = "bottom",
+    nrow = 1,
+    title = "Emisión",
+    title.vjust = 0.8
+  ),
+  color=guide_legend(
+    title = "Medido ",
+    title.vjust = 0.9,
+    nrow=2
+  )
+)
 
-plots[[catchment_code]] = p1
+return(p)
+}
+plots = list()
+# Process each block
+for (block_i in as.integer(unique(cod_cuencas$block))) {
+  df = data_hindcast( filter(cod_cuencas,block == block_i)$cod_cuenca)
+  
+  df$y_ens  = merge.data.frame(df$y_ens ,
+                               attributes_catchments,
+                               by.x = "catchment_code",
+                               by.y = "cod_cuenca")
+  
+  df$y_ens$gauge_name = factor(df$y_ens$gauge_name, levels = unique(df$y_ens$gauge_name))
+  
+  df$df_train  = merge.data.frame(df$df_train ,
+                                  attributes_catchments,
+                                  by.x = "catchment_code",
+                                  by.y = "cod_cuenca")
+  
+  df$df_train$gauge_name = factor(df$df_train$gauge_name, levels = unique(df$df_train$gauge_name))
+  
+  
+  
+  p = plot_hindsight(df)
+  ggsave(plot = p,
+         filename = glue("data_output/figuras/hindcast_volumen/per_catchment/vol_hindcast_1may_1sep_block{block_i}.png"),
+         width = 10, height = 15)
 }
 
 
-combined_plot = gridExtra::grid.arrange(grobs = plots, ncol = 1)
-ggsave(plot = combined_plot,
-       filename = paste0("data_output/figuras/hindcast_volumen/per_catchment/vol_hindcast_1may_1sep.png"),
-       width = 14, height = 50)
+

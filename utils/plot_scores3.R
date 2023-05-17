@@ -166,6 +166,36 @@ ggsave(filename = "data_output/figuras/scores/r2_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p2)
 
 
+
+
+p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")%>%
+               subset(resampling == "Leave 1 out")) +
+  geom_boxplot(aes(x = month_initialisation,
+                   y = metric_value,
+                   col = version)) +
+  labs(
+    x = "fecha de emisión",
+    y = "RMSE [mill m3]",
+    col = "Versión",
+    title = "Error cuadrático medio "
+  ) +
+  theme(legend.position = "bottom")+
+  guides(col=guide_legend(ncol=2))
+
+stop()
+plot(p1)
+
+ggsave(filename = "data_output/figuras/scores/RMSE_best_ref.png",
+       width = 7, height = 4, plot = p1)
+
+
+
+
+
+
+
+
+
 plot_metric <- function(dataframe,
                         metric,
                         metric_name = metric,
@@ -533,15 +563,15 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("precision_humedo",
                    col = metric_name))+
   labs(
     x = "fecha de emisión",
-    y = "Accuracy [-]",
+    y = "Precisión [-]",
     col = "",
-    title = "Precisión del volumen obs vs promedio del pronóstico",
-    subtitle = "Precisión = VerdaderosPositivos / (VerdaderosPositivos + FalsoPositivo). Método considerando todos los ensembles",
-    caption = "Cada boxplot agrupa 45 cuencas"
+    title = "Precisión del volumen obs vs pronóstico de ensembles",
+    caption = "Precisión = VerdaderosPositivos / (VerdaderosPositivos + FalsosPositivos). Modelo híbrido",
+    subtitle = "Del total pronosticados del tipo x ¿cuántos fueron correctamente pronosticados?"
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 1)) +
+  guides(col = guide_legend(nrow = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
 plot(p)
@@ -562,13 +592,13 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
     x = "fecha de emisión",
     y = "Recall [-]",
     col = "",
-    title = "Recall del volumen obs vs promedio del pronóstico",
-    subtitle = "Recall: VerdaderosPositivos / (VerdaderosPositivos + FalsosNegativos). Método considerando todos los ensembles",
-    caption = "Cada boxplot agrupa 45 cuencas"
+    title = "Recall del volumen obs vs pronóstico de ensembles",
+    caption = "Recall= VerdaderosPositivos / (VerdaderosPositivos + FalsosNegativos). Modelo híbrido",
+    subtitle = "Del total observado del tipo x ¿cuántos fueron correctamente pronosticados? "
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 1)) +
+  guides(col = guide_legend(nrow = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
 
@@ -657,6 +687,35 @@ cor_crpss_tile_plot <-
 plot(cor_crpss_tile_plot)
 ggsave(filename = "data_output/figuras/scores/cor_best_attributes.png",
        width = 7,height = 4,dpi = 400, plot = cor_crpss_tile_plot)
+
+####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
