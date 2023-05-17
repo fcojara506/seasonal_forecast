@@ -176,19 +176,40 @@ p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")%>%
   labs(
     x = "fecha de emisión",
     y = "RMSE [mill m3]",
-    col = "Versión",
-    title = "Error cuadrático medio "
+    col = "",
+    title = "RMSE del volumen obs vs promedio del pronóstico "
   ) +
+  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
-  guides(col=guide_legend(ncol=2))
+  guides(col = guide_legend(ncol = 1)) +
+  scale_color_brewer(palette = "Set1",direction = -1)
 
-stop()
+
 plot(p1)
 
 ggsave(filename = "data_output/figuras/scores/RMSE_best_ref.png",
        width = 7, height = 4, plot = p1)
 
+p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>% 
+              subset(resampling == "Leave 1 out"))+
+  geom_boxplot(aes(x = month_initialisation,
+                   y = metric_value,
+                   col = version))+
+  labs(
+    x = "fecha de emisión",
+    y = "MAE [mill m3]",
+    col = "",
+    title = "Error absoluto medio (MAE) del volumen obs vs promedio del pronóstico"
+  ) +
+  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
+  theme(legend.position = "bottom")+
+  guides(col = guide_legend(ncol = 1)) +
+  scale_color_brewer(palette = "Set1",direction = -1)
 
+print(p3)
+
+ggsave(filename = "data_output/figuras/scores/MAE_best_ref.png",
+       width = 7,height = 4, plot = p3)
 
 
 

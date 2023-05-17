@@ -51,30 +51,30 @@ merge_scores <- function(scores_data) {
   df1 <- scores_data$scores_loocv
   df_ref1 <- scores_data$scores_ref_loocv
   
-  df3 <- scores_data$scores_cv3
-  df_ref3 <- scores_data$scores_ref_cv3
-  
-  df5 <- scores_data$scores_cv5
-  df_ref5 <- scores_data$scores_ref_cv5
+  # df3 <- scores_data$scores_cv3
+  # df_ref3 <- scores_data$scores_ref_cv3
+  # 
+  # df5 <- scores_data$scores_cv5
+  # df_ref5 <- scores_data$scores_ref_cv5
   
   df_comb1 <- merge.data.table(df1, df_ref1,
                                by = c("catchment_code", "month_initialisation", "metric_name"),
                                suffixes = c("_best", "_ref")) %>% 
     mutate(resampling = "Leave 1 out")
   
-  df_comb3 <- merge.data.table(df3, df_ref3,
-                               by = c("catchment_code", "month_initialisation", "metric_name"),
-                               suffixes = c("_best", "_ref")) %>%
-    mutate(resampling = "Leave 3 out")
+  # df_comb3 <- merge.data.table(df3, df_ref3,
+  #                              by = c("catchment_code", "month_initialisation", "metric_name"),
+  #                              suffixes = c("_best", "_ref")) %>%
+  #   mutate(resampling = "Leave 3 out")
+  # 
+  # df_comb5 <- merge.data.table(df5, df_ref5,
+  #                              by = c("catchment_code", "month_initialisation", "metric_name"),
+  #                              suffixes = c("_best", "_ref")) %>%
+  #   mutate(resampling = "Leave 5 out")
+  # 
+  # df_comb <- rbind(df_comb1, df_comb3)
   
-  df_comb5 <- merge.data.table(df5, df_ref5,
-                               by = c("catchment_code", "month_initialisation", "metric_name"),
-                               suffixes = c("_best", "_ref")) %>%
-    mutate(resampling = "Leave 5 out")
-  
-  df_comb <- rbind(df_comb1, df_comb3)
-  
-  return(df_comb)
+  return(df_comb1)
 }
 
 read_attributes_catchments <- function(file_path) {
@@ -87,11 +87,11 @@ read_attributes_catchments <- function(file_path) {
 
 # Main script
 files <- c("data_output/scores/RDS/scores_20230331.RDS",
-           "data_output/scores/RDS/scores_reference_20230331.RDS",
-           "data_output/scores/RDS/scores_20230331_cv3k.RDS",
-           "data_output/scores/RDS/scores_reference_20230331_cv3k.RDS",
-           "data_output/scores/RDS/scores_20230331_cv5k.RDS",
-           "data_output/scores/RDS/scores_reference_20230331_cv5k.RDS"
+           "data_output/scores/RDS/scores_reference_20230331.RDS"
+           # "data_output/scores/RDS/scores_20230331_cv3k.RDS",
+           # "data_output/scores/RDS/scores_reference_20230331_cv3k.RDS",
+           # "data_output/scores/RDS/scores_20230331_cv5k.RDS",
+           # "data_output/scores/RDS/scores_reference_20230331_cv5k.RDS"
            )
 
 names(files) <- c("scores_loocv", "scores_ref_loocv",
