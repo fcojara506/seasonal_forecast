@@ -62,16 +62,17 @@ export_meteo <- function(filename_pr,
   return(meteo_input)
 }
 
+
 #### storage
 storage_variables_filename <- function(
-    hydrological_model = "TUW",
-    objective_function = "EVDSep",
+    hydrological_model = NULL,
+    objective_function = NULL,
     folder_storage_variables = "data_input/storage_variables") {
   
-  target_folder =
-    glue::glue("{folder_storage_variables}/",
-               "{hydrological_model}/",
-               "{objective_function}")
+  target_folder = glue::glue("{folder_storage_variables}",
+                             if (!is.null(hydrological_model)) {glue::glue("/{hydrological_model}")} else {""},
+                             if (!is.null(objective_function)) {glue::glue("/{objective_function}")} else {""})
+  
   
   files_list =
     list.files(path = target_folder,

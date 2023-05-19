@@ -2,46 +2,37 @@ rm(list = ls())
 
 library(data.table)
 library(dplyr)
+
 index_folder = "data_input/climate_index_variables/"
-setwd(index_folder)
 
 wym_simple        <- function(month){fifelse(month>3, month-3,month+9)}
 wy_simple         <- function(month,year){fifelse(month>3, year,year - 1)}
 
 
-read_indices_files <- function(download_index_files = T) {
+read_indices_files <- function(download_index_files = T, year_start= 1979) {
  
-  
-  
-  
   if (download_index_files) {
     
     urls =
       list(
         "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
-        "https://psl.noaa.gov/enso/mei/data/meiv2.data",
-        "https://psl.noaa.gov/pdo/data/pdo.timeseries.ersstv5.csv",
-        "https://psl.noaa.gov/data/correlation/soi.data",
-        "https://psl.noaa.gov/data/correlation/censo.data",
-        "https://psl.noaa.gov/data/correlation/oni.data",
-        "https://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/aao/monthly.aao.index.b79.current.ascii",
-        "http://eagle1.umd.edu/GPCP_ICDR/Data/ESPI.txt",
-        "https://www.cpc.ncep.noaa.gov/data/indices/olr"
+        #"https://psl.noaa.gov/enso/mei/data/meiv2.data",
+        #"https://psl.noaa.gov/pdo/data/pdo.timeseries.ersstv5.csv",
+        "https://psl.noaa.gov/data/correlation/soi.data"
+        #"https://psl.noaa.gov/data/correlation/censo.data",
+        #"https://psl.noaa.gov/data/correlation/oni.data",
+        #"https://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/aao/monthly.aao.index.b79.current.ascii",
+        #"http://eagle1.umd.edu/GPCP_ICDR/Data/ESPI.txt",
+        #"https://www.cpc.ncep.noaa.gov/data/indices/olr"
       )
     
     names = c("ssts",
-              "meiv2",
-              "pdo",
-              "soi",
-              "censo",
-              "oni",
-              "aao",
-              "espi",
-              "olr")
+              "soi"
+              )
     
     sapply(seq_along(urls), function(i) 
       download.file(url = urls[[i]],
-                    destfile =  names[i],
+                    destfile = paste0(index_folder,names[i]),
                     method = 'curl')
       
     )
@@ -50,25 +41,8 @@ read_indices_files <- function(download_index_files = T) {
   
   colnames = c("year", seq(1:12))
   
-  
-  a = read.table("aao",col.names = c("year","month","AAO")) %>%
-    data.table(key = c("year", "month"))
-  
-  b = read.csv("censo", skip = 1, sep = "",header = T) %>%
-    head(-2) %>% 
-    as.matrix.data.frame() %>%
-    `colnames<-`(colnames) %>%
-    data.table %>%
-    reshape2::melt(id.vars = "year",variable.name = "month",value.name = "BIENSO") %>% 
-    mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
-  
-  c = read.csv("espi", sep = "") %>% 
-    rename(year = YYYY, month = MM) %>%
-    mutate(EI = NULL, LI = NULL) %>%
-    data.table(key = c("year", "month"))
-  
-  d = read.csv("ssts", sep = "") %>%
+  ### temperatura NIÑOS
+  ssts = read.csv(paste0(index_folder,"ssts"), sep = "") %>%
     rename(month = MON, year = YR) %>%
     mutate(
       NINO1.2 = ANOM,
@@ -83,90 +57,45 @@ read_indices_files <- function(download_index_files = T) {
       ANOM.3 = NULL
     ) %>%
     mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
- 
-  
-  read.csv(file = "olr",skip = 111,header = T) %>%
-    apply(MARGIN = 1,
-           function(row) stringr::str_replace_all(row,pattern = "-999.9"," NA"))%>%
-    data.frame() %>% 
-    write.csv(file = "olr2",row.names = F,quote = F) 
-  
-  e = read.csv(file = "olr2",header = F,sep = "",na.strings = "NA",skip=6) %>% 
-    as.matrix.data.frame() %>% 
-    data.table %>% 
-    `colnames<-`(colnames) %>%
-    reshape2::melt(id.vars = "year") %>%
-    rename(month = variable, OLR = value) %>%
-    mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
-  
-  
-  f = read.csv("oni", skip = 1, sep = "") %>% head(-8) %>%
-    as.matrix.data.frame() %>%
-    `colnames<-`(colnames) %>%
-    data.table %>%
-    reshape2::melt(id.vars = "year") %>%
-    rename(month = variable, ONI = value) %>%
-    mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
-  
-  g = read.csv("soi", skip = 4, sep = "") %>% head(-3) %>%
+    data.table(key = c("year", "month")) %>% 
+    select(year,month,NINO1.2)
+
+  # Southern Oscillation index
+  soi = read.csv(paste0(index_folder,"soi"), skip = 4, sep = "") %>%
+    head(-3) %>%
     as.matrix.data.frame() %>%
     `colnames<-`(colnames) %>%
     data.table %>%
     reshape2::melt(id.vars = "year") %>%
     rename(month = variable, SOI = value) %>%
     mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
+    data.table(key = c("year", "month")) %>% 
+    select(year,month,SOI)
   
-  h = read.csv("pdo",header = T,skip = 1, sep = ',') %>%
-    `colnames<-`(c("date","PDO")) %>%
-    data.table %>% 
-    mutate(year = year(date)) %>% 
-    mutate(month = month(date)) %>% 
-    select(-date) %>% 
-    mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
-  
-  i = read.csv("meiv2", skip = 1, sep = "") %>% head(-5) %>%
-    as.matrix.data.frame() %>%
-    `colnames<-`(colnames) %>%
-    data.table %>%
-    reshape2::melt(id.vars = "year") %>%
-    rename(month = variable, MEIv2 = value) %>%
-    mutate_all(as.numeric) %>%
-    data.table(key = c("year", "month"))
-  
-  result = a[b] %>%
-    c[.] %>%
-    d[.] %>%
-    e[.] %>%
-    f[.] %>%
-    g[.] %>%
-    h[.] %>%
-    i[.] %>% 
-    subset(year>1979) %>% 
-    dplyr::na_if(-9.9)   %>%
-    dplyr::na_if(-99.99) %>%
-    dplyr::na_if(-99.9)  %>%
-    dplyr::na_if(-9.99)  %>%
-    dplyr::na_if(-999) %>%
-    dplyr::na_if(99.99) %>%
+  # merge data and clean na
+  result = merge.data.frame(ssts,soi) %>%
+    subset(year>year_start) %>% 
+    dplyr::mutate_all(~dplyr::na_if(., -99.99)) %>% 
+    dplyr::mutate_all(~dplyr::na_if(., -9.9)) %>% 
+    dplyr::mutate_all(~dplyr::na_if(., -99.9))  %>%
+    dplyr::mutate_all(~dplyr::na_if(., -9.99))  %>%
+    dplyr::mutate_all(~dplyr::na_if(., -999)) %>%
+    dplyr::mutate_all(~dplyr::na_if(., 99.99)) %>% 
     tidyr::drop_na() %>% 
-  mutate(
+    mutate(
       wy_simple = wy_simple(month = month, year = year),
-      wym = wym_simple(month = month),
-      year = NULL,
-      month = NULL
-    )
-    
+      wym = wym_simple(month = month)
+    ) %>% 
+    select(-month,-year)
+  result = select(result, c('wy_simple','wym',everything())) 
   return(result)
 }
 
-monthly_indices = read_indices_files(download_index_files = F)
-monthly_indices = select(monthly_indices, c('wy_simple','wym',everything())) 
-write.csv(x = monthly_indices,file ="indices_mensuales_1979_present.csv",  row.names = F)
+### run download
+monthly_indices = read_indices_files(download_index_files = T)
+
+write.csv(x = monthly_indices,
+          file = paste0(index_folder, "indices_mensuales_1979_present.csv"),  row.names = F)
 
 
 

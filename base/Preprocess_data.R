@@ -14,7 +14,7 @@ source("base/Pexc.R")
 get_default_datasets_path <- function(meteo=NULL, hydro=NULL) {
   
   # catchment attributes
-  catchments_attributes_filename <-"data_input/attributes/attributes_49catchments_ChileCentral.csv"
+  catchments_attributes_filename <-"data_input/attributes/attributes_45catchments_ChileCentral.csv"
   # flow in average monthly mm
   flows_filename <- "data_input/flows/flows_mm_monthly_49catchments_ChileCentral.csv"
   # variable from the hydrology model
@@ -115,7 +115,8 @@ read_catchment_data <- function(catchment_code,
   # data from the hydrological model
   monthly_hydro       <- read_and_subset_variable(
     filename = data_location_paths$hydro_filename,
-    catchment_code = catchment_code) 
+    catchment_code = catchment_code) %>% 
+    select("wy_simple", "wym", "STORAGE")
   # read and process the climate index data
   monthly_climateindex <- data_location_paths$climateindex_filename %>% 
     fread() %>%
@@ -613,17 +614,16 @@ waterunits <- function(q, y) {return(list(q=q,y=y))}
 
 
 preprocess_data <- function(
-    catchment_code , #"5410002",
-    datetime_initialisation , #lubridate::make_date(2016,6,1),
-    predictor_list, #= c("pr_sum_-1months","tem_mean_2months"),
+    catchment_code ,
+    datetime_initialisation , 
+    predictor_list, 
     horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3),
-    data_location_paths = get_default_datasets_path(meteo = "ens30avg",hydro = "ERA5Ens_SKGE+logSNSE"),
+    data_location_paths = get_default_datasets_path(meteo = NULL,hydro = "ERA5Ens_operacional"),
     water_units = waterunits(q = "m^3/s", y = "GL"),
-    forecast_mode = "both",
+    forecast_mode = "prediction",
     remove_wys = NULL,
     save_raw = F,
-    y_transform = list(log_transform = T,
-                       plot_transform_predictant = F)
+    y_transform = list(log_transform = T, plot_transform_predictant = F)
 ) {
   
   # save arguments
@@ -726,7 +726,7 @@ example_preprocess <- function(){
   remove_wys <- NULL#c(1990,1940,2013)
   water_units = waterunits(q = "m^3/s", y = "GL")
   forecast_mode <- "cv"
-  data_location_paths = get_default_datasets_path(meteo = "ens30avg", hydro = "ERA5Ens_SKGE+logSNSE")
+  data_location_paths = get_default_datasets_path(meteo = NULL, hydro = "ERA5Ens_operacional")
   save_raw = F
   y_transform = list(log_transform = T, plot_transform_predictant = F)
   

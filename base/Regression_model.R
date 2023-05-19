@@ -340,7 +340,6 @@ forecast_vol_ensemble <- function(data_input,
                                   method='lm',
                                   preProcess = c("center", "scale"),
                                   resampling_method = "LOOCV",
-                                  ensemble_method = "bootstrap_residuals",
                                   number_cv = length(data_input$y_train$volume),
                                   forecast_mode = data_input$info$forecast_mode
                                   ){
@@ -356,8 +355,6 @@ forecast_vol_ensemble <- function(data_input,
   X_test = data_input$X_test
   function_y = data_input$info$y_transform$function_y
   
-  
-  #if (ensemble_method == "bootstrap_residuals") {
     
   # Train and predict using regression model
     vol_deterministic =
@@ -375,24 +372,7 @@ forecast_vol_ensemble <- function(data_input,
   
     # Generate ensemble forecast
     y_forecast = ensemble_cv_and_test(vol_deterministic, data_input, n_members,forecast_mode)
-  # }else if(ensemble_method == "bagging"){
-  #   # Train and predict using regression model
-  #   vol_ensemble =
-  #     forecast_vol_bagging(
-  #       X_train = X_train,
-  #       y_train = y_train,
-  #       X_test = X_test,
-  #       function_y = function_y,
-  #       method = method,
-  #       preProcess = preProcess,
-  #       forecast_mode = forecast_mode,
-  #       resampling_method = resampling_method,
-  #       number_cv = number_cv
-  #     )
-  #   y_forecast = vol_ensemble
-  # }
-  
-  #https://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
+
   
     return(append(y_forecast,list(model_info = model_info)))
 }

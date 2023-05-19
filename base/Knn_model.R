@@ -206,7 +206,7 @@ run_q_forecast <- function(data_input,
     datetime_initialisation = data_input$info$datetime_initialisation,
     forecast_mode = forecast_mode,
     catchment_code = data_input$info$catchment_code,
-    predictor_list = unique(c("STORAGE_mean_1months","pr_sum_-1months",data_input$info$predictor_list)),
+    predictor_list = unique(c("STORAGE_mean_1months",data_input$info$predictor_list)),
     save_raw = T
   )
   
