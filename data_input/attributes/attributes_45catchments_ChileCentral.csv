@@ -11,6 +11,9 @@ cod_cuenca,gauge_name,gauge_lat,gauge_lon,area_km2
 4503001,Rio Hurtado En Angostura De Pangue,-30.4386,-71.0022,1837.302667
 4511002,Rio Grande En Las Ramadas,-31.0117,-70.5811,568.5300438
 4513001,Rio Grande En Cuyano,-30.9242,-70.7731,1286.608116
+4515002,Rio Mostazal En Caren,-30.8422,-70.7694,640.1544254
+4522002,Rio Rapel En Junta,-30.7081,-70.8728,820.5541155
+4531002,Rio Cogoti Entrada Embalse Cogoti,-31.0325,-71.0403,753.0743375
 4703002,Rio Choapa En Cuncumen,-31.9667,-70.5944,1131.625892
 5100001,Rio Sobrante En Piadero,-32.2253,-70.7119,241.0767085
 5101001,Rio Pedernal En Tejada,-32.0708,-70.7564,81.13202037
@@ -27,7 +30,6 @@ cod_cuenca,gauge_name,gauge_lat,gauge_lon,area_km2
 5730008,Quebrada Ramon En Recinto Emos,-33.4331,-70.5142,35.63141782
 5741001,Estero Puangue En Boqueron,-33.1669,-71.1306,144.2400739
 6003001,Rio Cachapoal 5 Km. Aguas Abajo Junta Cortaderal,-34.3464,-70.3764,964.6944876
-6008005,Rio Cachapoal En Pte Termas De Cauquenes,-34.25,-70.5667,2461.609525
 6013001,Rio Claro En Hacienda Las Nieves,-34.4922,-70.7028,244.9685199
 6027001,Rio Claro En El Valle,-34.6867,-70.8739,349.3820926
 6028001,Rio Tinguiririca Bajo Los Briones,-34.7186,-70.8267,1438.276364
@@ -35,12 +37,10 @@ cod_cuenca,gauge_name,gauge_lat,gauge_lon,area_km2
 7104002,Rio Teno Despues De Junta Con Claro,-34.9961,-70.8206,1205.264123
 7112001,Rio Colorado En Junta Con Palos,-35.2783,-71.0028,877.886642
 7115001,Rio Palos En Junta Con Colorado,-35.2744,-71.0156,489.9984007
-7317005,Rio Melado En El Salto,-35.8842,-71.0192,2127.551002
 7321002,Rio Maule En Armerillo,-35.7061,-71.1139,5468.959398
 7330001,Rio Perquilauquen En San Manuel,-36.3758,-71.6233,502.399321
 7350003,Rio Longavi En El Castillo,-36.2558,-71.3375,466.8534926
 7354002,Rio Achibueno En La Recova,-36.0028,-71.4419,894.3499569
-7355002,Rio Ancoa En El Morro,-35.9086,-71.2981,273.8244268
 7358001,Rio Putagan En Yerbas Buenas,-35.7719,-71.585,390.4871401
+7381001,Estero Los Puercos En Puente Los Puercos,-35.3736,-71.8292,558.8252992
 8104001,Rio Sauces Antes Junta Con „uble,-36.6653,-71.2739,606.7045803
-8106001,Rio „uble En San Fabian,-36.5703,-71.5547,1657.915662

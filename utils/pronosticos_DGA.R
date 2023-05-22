@@ -15,8 +15,9 @@ cuencas_pronosticos_merged = merge(cuencas_pronostico,cuencas_pronostico_DGA,by.
   select(cod_cuenca,gauge_name.y,area_km2) %>% 
   dplyr::rename(gauge_name = gauge_name.y) %>% 
   mutate(gauge_name =  stringr::str_trim(gauge_name))
+
 rm(cuencas_pronostico_DGA,cuencas_pronostico)
-# leer pronosticos
+
 pronosticos_caudales_DGA = read.csv(file = "data_input/flows/pronosticos_DGA_m3s.csv",check.names = F) %>% 
   select(-Mes) %>% 
   dplyr::rename(wy = año) %>% 
@@ -106,34 +107,35 @@ pronosticos_volumenes_DGA = lapply(catchment_codes,volumeGL_decaudal) %>%
   rbindlist()
  
 # leer volumen observado
-volumen_obs = read.csv(file = "data_input/flows/volume_sepmar_mm_GL_45catchments_ChileCentral.csv") %>%
+volumen_obs = read.csv(file = "data_input/flows/volume_mm_GL_45catchments_ChileCentral.csv") %>%
   select(-volume_mm) %>% 
   dplyr::rename(volume_obs_GL = volume_GL)
 
 volumen_obs_pronosticado = merge.data.table(pronosticos_volumenes_DGA,volumen_obs,by.x = c("wy","cod_cuenca"),by.y = c("wy_simple","cod_cuenca") )
 
+write.csv(volumen_obs_pronosticado,file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_DGA.csv",row.names = F)
 
-volumen_obs_pronosticado %>%
-  dplyr::rename(DGA = volume_GL) %>% 
-  dplyr::rename(OBS = volume_obs_GL) %>%
-  subset(wy<2020) %>%
-  ggplot(aes(y = OBS,x = DGA, col = wy))+
-  geom_point()+
-  scale_color_viridis_b()+
-  geom_abline(slope = 1,intercept = 0)+
-  labs(
-    y = "volumen observado (mill. m3)",
-    x = "volumen pronosticado DGA (mill. m3)",
-    col = "Década emisión",
-    title = "Volúmenes sep-mar pronosticados DGA vs obs",
-    subtitle = "Periodo 1990/91-2019/20. 10 cuencas incluidas"
-  )+
-  geom_label(mapping = aes(x = 10000,y =10000,label = "y=x"),col = "black")+
-  coord_equal(xlim = c(0,13000),ylim = c(0,13000))
-
-
-ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_DGA.png",
-       width = 7,height = 5)
+# volumen_obs_pronosticado %>%
+#   dplyr::rename(DGA = volume_GL) %>% 
+#   dplyr::rename(OBS = volume_obs_GL) %>%
+#   subset(wy<2020) %>%
+#   ggplot(aes(y = OBS,x = DGA, col = wy))+
+#   geom_point()+
+#   scale_color_viridis_b()+
+#   geom_abline(slope = 1,intercept = 0)+
+#   labs(
+#     y = "volumen observado (mill. m3)",
+#     x = "volumen pronosticado DGA (mill. m3)",
+#     col = "Década emisión",
+#     title = "Volúmenes sep-mar pronosticados DGA vs obs",
+#     subtitle = "Periodo 1990/91-2019/20. 10 cuencas incluidas"
+#   )+
+#   geom_label(mapping = aes(x = 10000,y =10000,label = "y=x"),col = "black")+
+#   coord_equal(xlim = c(0,13000),ylim = c(0,13000))
+# 
+# 
+# ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_DGA.png",
+#        width = 7,height = 5)
 # calcular metricas
 source("base/Scores.R")
 

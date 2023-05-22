@@ -60,13 +60,6 @@ merge_scores <- function(scores_data) {
   return(df_comb)
 }
 
-read_attributes_catchments <- function(file_path) {
-  attributes_catchments <- read_feather(file_path) %>% 
-    mutate(cod_cuenca = as.numeric(cod_cuenca)) %>% 
-    subset(!(cod_cuenca %in% c(7381001, 4531002, 4522002, 4515002)))
-  
-  return(attributes_catchments)
-}
 
 # Main script
 files <- c("data_output/scores/RDS/scores_best_20230425.RDS",
@@ -79,8 +72,8 @@ names(files) <- c("scores_loocv",
 scores_data <- process_files(files)
 df_comb <- merge_scores(scores_data)
 
-attributes_catchments_file <- "data_input/attributes/Cuencas_Fondef-DGA_v1.csv"
-attributes_catchments_file <- "data_input/attributes/catchment_attributes_full_camels.csv"
+#attributes_catchments_file <- "data_input/attributes/Cuencas_Fondef-DGA_v1.csv"
+attributes_catchments_file <- "data_input/attributes/attributes_catchment_full_camels.csv"
 attributes_catchments <- fread(attributes_catchments_file)
 
 

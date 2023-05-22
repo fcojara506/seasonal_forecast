@@ -92,73 +92,6 @@ select_best_models <- function(models, objective_metric = "aic") {
 
 
 
-plot_importance <- function(best_list,objective_metric) {
-  library('dplyr')
-  library("data.table")
-  library('ggplot2')
-  months_es <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
-  months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
-
-  # Create a new data frame for the plot
-  predictor_importance <- best_list$best_combination %>%
-    select(month_initialisation, catchment_code,matches(best_list$unique_predictors)) %>%
-    tidyr::pivot_longer(cols = -c(month_initialisation, catchment_code), names_to = "predictor", values_to = "importance") %>%
-    filter(!is.na(importance)) %>% 
-    group_by(month_initialisation, catchment_code) %>%
-    mutate(total_importance = sum(importance),
-           percentage = importance / total_importance * 100) %>%
-    ungroup() %>% 
-    mutate(var = tstrsplit(predictor, "_", fixed = TRUE)[[1]]) %>% 
-    mutate(date_label = paste0("1˚",months_es[month_initialisation]))
-  
-  predictor_importance$date_label = factor(predictor_importance$date_label, levels = paste0("1˚",months_wy) )
-  
-  
-  
-  xx = best_list$best_combination %>% 
-    mutate(date_label = paste0("1˚",months_es[month_initialisation])) %>% 
-    mutate(date_label = factor(date_label, levels = paste0("1˚",months_wy)))
-  
-  predictor_importance = merge(xx, predictor_importance)
-  #print(predictor_importance)
-  #catchment name
-  catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
-  cod_cuencas = fread(catchments_attributes_filename)
-  catchment_name = cod_cuencas[cod_cuencas$cod_cuenca == unique(best_list$best_combination$catchment_code),"gauge_name"]
-  
-  # Add the color for the "STORAGE" predictor and create the color_palette
-  color_palette <- c("NINO1.2" =  "#3B9AB2",
-                     "ONI" =  "#78B7C5",
-                     "PDO" =  "#EBCC2A",
-                     "SOI" =  "#E1AF00",
-                     "STORAGE" = "#ff6d5c")
-  
-  
-  # Create the ggplot with updated x-axis labels
-  p = ggplot(predictor_importance, aes(x = date_label, y = importance, fill = var)) +
-    geom_bar(stat = "identity", position = "stack") +
-    geom_text(aes(label = paste0(round(percentage, 1), "%")), position = position_stack(vjust = 0.5), size = 3) +
-    labs(x = "Mes de emisión",
-         y = "Importancia del predictor",
-         fill = "Variable",
-         title = paste0("Contribución de cada predictor para el mejor modelo (",toupper(objective_metric),")"),
-         subtitle = catchment_name) +
-    scale_fill_manual(values = color_palette) +
-    scale_x_discrete( expand = c(0, 0)) +
-    scale_y_continuous( expand = c(0, 0)) +
-    theme_minimal()+
-    theme(
-      legend.position = "bottom",
-      legend.key.width = unit(0.1,"in")
-    )
-  
-  ggsave(filename = paste0("data_output/figuras/importancia_predictores/importancia_predictores_",objective_metric,"_",unique(best_list$best_combination$catchment_code),'_v2.png'),
-         width = 6, height = 6,dpi = 400)
-  return(predictor_importance)
-}
-
-
-
 select_predictor <- function(
     catchment_code,
     months_initialisation,
@@ -256,10 +189,10 @@ select_predictor <- function(
   
   best_list = select_best_models(models, objective_metric)
   
-  if (chart) {
-    p = plot_importance(best_list,objective_metric)
-    best_list = append(list(importance = p),best_list)
-  }
+  # if (chart) {
+  #   p = plot_importance(best_list,objective_metric)
+  #   best_list = append(list(importance = p),best_list)
+  # }
   if (save) {
     saveRDS(best_list,file = paste0("data_output/mejores_modelos_cuenca_mes/",catchment_code,'_may-mar.RDS') )
   }
