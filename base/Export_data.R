@@ -14,7 +14,7 @@ library('rlist')
 
 export_volume_platform <- function(data_input,data_fore) {
   
-  wy_target =  data_input$info$wy_holdout
+  wy_target =  data_input$time_horizon$wy_holdout
 
   # observations
   v_normal = mean(data_input$y_train$volume)
@@ -137,10 +137,31 @@ export_data <- function(data_input,
                         export = "all"
 ) {
   
-  if (!is.character(export) || !export %in% c("scores", "platform","forecasts", "all")) {stop("Invalid mode. Should be either 'scores', 'platform', 'forecasts' or 'all'")}
+  if (!is.character(export) || !export %in% c("scores", "platform","forecasts",'pretty', "all")) {
+    stop("Invalid mode. Should be either 'scores', 'platform', 'forecasts', 'pretty' or 'all'")}
   
   results = list(info = data_input$info)
   
+  
+  if (export == "pretty") {
+    ##### volume data
+    y_train = data_input$y_train %>%
+      select(volume_original) %>%
+      rownames_to_column(var = "wy_simple")
+    
+    ##### ensemble monthly average
+    y_ens_cv_avg = data.frame(volume_prom_pronostico = apply(data_fore$y_ens_cv,MARGIN = 2,mean)) %>% 
+      rownames_to_column(var = "wy_simple")
+    
+    y_train_cv_avg = merge(y_train,y_ens_cv_avg) %>%
+      mutate(catchment_code = data_input$info$catchment_code)
+    
+    ### ensemble data
+    #y_ens = data_fore$y_ens_cv
+    
+    results = y_train_cv_avg
+    
+  }
   if (export == "scores" | export == "all") {
     # ensemble type of year 
     scores_year_classification_ens =  

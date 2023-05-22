@@ -1,8 +1,7 @@
-#rm(list = ls())
-#library(lubridate)
+
 library(hydromad)
 
-# script transformed from
+# script modified from
 # https://github.com/josephguillaume/hydromad/blob/master/R/convertFlow.R
 
 convert_flow <- function(q,

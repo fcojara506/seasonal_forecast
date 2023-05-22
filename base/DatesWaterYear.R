@@ -16,7 +16,7 @@ wateryear2year <- function(wy, wym) {
   wy <- as.integer(wy)
   wym <- as.integer(wym)
   
-  gregorian_year <- as.integer(ifelse(wym < 11, wy, wy + 1))
+  gregorian_year <- as.integer(ifelse(wym < 10, wy, wy + 1))
   return(gregorian_year)
 }
 

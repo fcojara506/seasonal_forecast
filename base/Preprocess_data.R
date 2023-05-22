@@ -156,7 +156,6 @@ get_forecast_horizon <- function(date_init,horizon) {
   months_wy <- c("abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic", "ene", "feb", "mar")
   
   
-  
   # indices within months_wy vector
   month_initialisation_index <- date_init$init_water_year_month
   init_target_index <-  wateryearmonth(horizon$month_start)
@@ -197,19 +196,17 @@ get_forecast_horizon <- function(date_init,horizon) {
   #format date: %Y-%m-%d
   datetime_initialisation <- date_init$datetime_initialisation
   ### forecast horizon dates
-  ###
+
   # (1) forecast horizon start date FHSD
-  
   #year of FHSD
   year_init <- wateryear2year(wy = date_init$init_water_year, wym = init_forecast_index)
   #month of FHSD
   month_init <- wateryearmonth2month(init_forecast_index)
   #date of FHSD %Y-%m-%d
   date_init_forecast <- make_date(year_init,month_init,1)
+  
+  
   # (2) forecast horizon end date FHED
-  
-  
-  
   #year of FHED
   year_end <-  wateryear2year(wy = date_init$init_water_year, wym = end_forecast_index)
   #month of FHED
@@ -437,7 +434,6 @@ predictant_generator <- function(
     q = q[-remove_wy,]
   }
 
-  
   names(q)[names(q) != "wy_simple"] <- forecast_horizon$months_forecast_period
   
   ## convert units
@@ -709,6 +705,9 @@ preprocess_data <- function(
   
   
 }
+
+
+
 
 
 
