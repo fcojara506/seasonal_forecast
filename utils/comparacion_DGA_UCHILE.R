@@ -1,15 +1,22 @@
 rm(list = ls())
 library(dplyr)
 
+# GENERAL
+atributos = read.csv("data_input/attributes/attributes_45catchments_ChileCentral.csv")
 
+# DGA
 scores_cuencas_DGA = read.csv(file = "data_output/figuras/pronostico_DGA/scores_DGA.csv")
 vol_DGA = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_DGA.csv")
 wys = vol_DGA$wy %>% unique()
 catchment_codes = unique(vol_DGA$cod_cuenca) %>% sort()
 
-# vol_forecast = lapply(scores_cuencas_DGA$cod_cuenca,
-#                     function(x) run_model(catchment_code = x)) %>%
-#   rbindlist()
+cuencas_comunes = 
+atributos %>%
+  select(cod_cuenca,gauge_name) %>% 
+  filter(cod_cuenca %in% catchment_codes)
+  
+
+#UCHILE
 vol_forecast = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_uchile.csv")%>%
   filter(wy_simple %in% wys)
 
