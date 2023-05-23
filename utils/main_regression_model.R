@@ -1,4 +1,4 @@
-rm(list = ls())
+
 #rename
 source("base/Preprocess_data.R")
 source("base/Regression_model.R")
@@ -8,10 +8,16 @@ source("base/Export_data.R")
 source("base/Pexc.R")
 
 # set parameters
+catchment_code = 5410002
+month_initialisation = 9
+forecast_mode = "both"
 
-run_model <- function(catchment_code = 5410002,
-                      month_initialisation = 9,
-                      forecast_mode = "both") {
+run_model <- function(
+    catchment_code = 5410002,
+    month_initialisation = 9,
+    forecast_mode = "cv",
+    export = "scores"
+                      ) {
   
 
 # load best combination of predictors
@@ -31,6 +37,7 @@ data_input <- preprocess_data(
   datetime_initialisation = lubridate::make_date(2022, month_initialisation),
   forecast_mode = forecast_mode,
   catchment_code = catchment_code,
+  remove_wys = c(2020,2021),
   predictor_list = unlist(best_combination$predictors),
   save_raw = T
 )
@@ -40,18 +47,21 @@ data_fore = forecast_vol_ensemble(data_input = data_input,
                                   forecast_mode = forecast_mode)
 
 # ensemble flow forecast
-q_ens_forecast =
+q_fore =
   run_q_forecast(data_input = data_input,
                  data_fore = data_fore,
                  forecast_mode = forecast_mode)
 
-# Calculate and return scores
+# export whatever you fancy: scores, all, forecasts, platform
  export = export_data(data_input = data_input,
                          data_fore = data_fore,
-                         q_fore = q_ens_forecast,
-                         export = 'pretty')
-
-}
+                         q_fore = q_fore,
+                         export = export)
+# q_ens = lapply(names(q_fore$q_cv),
+#                          function(x) rownames_to_column(data.frame(catchment_code = catchment_code,wy = x,t(q_fore$q_cv[[x]])),var = "month")) %>% 
+#   rbindlist()
+export = data.table(catchment_code = catchment_code, data_fore$y_ens_cv)
+return(export)
 
 # #### charts
 # #scores = export_data(data_input, data_fore, export = "scores")$scores_volume
@@ -135,3 +145,5 @@ q_ens_forecast =
 # # )
 #
 #
+ 
+}

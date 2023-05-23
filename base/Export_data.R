@@ -157,12 +157,13 @@ export_data <- function(data_input,
       mutate(catchment_code = data_input$info$catchment_code)
     
     ### ensemble data
-    #y_ens = data_fore$y_ens_cv
-    
     results = y_train_cv_avg
     
   }
-  if (export == "scores" | export == "all") {
+  
+
+  
+  if (export == "scores" | export == "all" | export == "scores_y") {
     # ensemble type of year 
     scores_year_classification_ens =  
       score_type_year(data_input,data_fore, univariable = FALSE)
@@ -185,6 +186,11 @@ export_data <- function(data_input,
     results <- list.append(results,
                            scores_volume = scores_volume,
                            model_info = data_fore$model_info)
+    
+    if ( !is.null(q_fore)) {
+      results = list.append(results,
+                            scores_flow = q_scores(q_fore,data_input))
+    }
   }
   
   if (export == "platform" | export == "all") {

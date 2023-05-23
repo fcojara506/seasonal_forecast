@@ -22,28 +22,28 @@ deterministic_scores <- function(y_true,y_pred,normalise = F) {
 }
 
 ensemble_scores <- function(y_train,y_ens) {
-  library(SpecsVerification)
+  library(verification)
   library(caret)
   #ensemble scores
   
   obs_climate               <- rep(mean(y_train), times = length(y_train) ) %>% 
     as.matrix()
+
   
-  crps_ensembles            <- mean(
-    SpecsVerification::EnsCrps(
-    ens=y_ens,
-    obs=y_train,
-    R.new=NA
-    )
-  ) 
+  CRPS_ens = verification::crpsDecomposition(obs = y_train,eps = y_ens)
+  
   
   crps_climate              <- caret::MAE(pred = obs_climate,obs = y_train)
-  crpss                     <- 1 - crps_ensembles/crps_climate
+  crpss                     <- 1 - CRPS_ens$CRPS/crps_climate
+  
   
   return(list(
     mae_obs = crps_climate,
     crps_ens = crps_ensembles,
-    crpss_climatology = crpss))
+    crpss_climatology = crpss,
+    crps_reliability = CRPS_ens$Reli,
+    crps_potential = CRPS_ens$CRPSpot
+    ))
   
 }
 
@@ -53,6 +53,7 @@ y_scores <- function(data_fore,data_input) {
   ##### ensemble monthly average
   y_ens_cv_avg = apply(data_fore$y_ens_cv,MARGIN = 2,mean) %>% as.numeric()
   y_ens = t(data_fore$y_ens_cv) %>% as.matrix()
+  
   ##### ensemble scores
   uni_scores = deterministic_scores(y_true = y_train,y_pred = y_ens_cv_avg, normalise = F)
   ens_scores = ensemble_scores(y_train = y_train, y_ens = y_ens)
@@ -65,14 +66,33 @@ y_scores <- function(data_fore,data_input) {
 }
 
 q_scores <- function(q_fore,data_input) {
-  #streamflow data
-  q_train=data_input$q_train
+  
+  #observed streamflow data
+  q_train=data_input$q_train %>% rownames_to_column(var = "wy")
   
   #ensemble monthly scores
-  q_ens = q_fore
- 
-  uni_scores = deterministic_scores(y_true = q_train,y_pred = q_ens_cv_avg)
-  ens_scores = ensemble_scores(y_train = q_train, y_ens = q_ens)
+  q_ens  = lapply(names(q_fore$q_cv),
+                     function(x) rownames_to_column(data.frame(wy = x,t(q_fore$q_cv[[x]])),var = "month")) %>% 
+    rbindlist()
+  
+  q = names(q_fore$q_cv)
+  ##### ensemble monthly average
+  q_ens_avg = lapply(names(q_fore$q_cv),
+                     function(x) data.frame(wy = x,t(apply(q_fore$q_cv[[x]],MARGIN = 2, mean)))) %>% 
+    rbindlist()
+  # long variables (vectors)
+  q_train_long = q_train %>% data.table() %>%  melt.data.table(id.vars = "wy",value.name = "q_train",variable.name = "month")
+  q_ens_avg_long  = q_ens_avg %>% data.table() %>%  melt.data.table(id.vars = "wy",value.name = "q_avg_ens",variable.name = "month")
+  
+  q_long = merge.data.table(q_train_long,q_ens_avg_long)
+  # ensemble
+  q_long_ens = merge.data.table(q_train_long,q_ens) %>%
+    select(-wy,-month) %>% 
+    as.matrix()
+  
+  # compute metrics
+  uni_scores = deterministic_scores(y_true = q_long$q_train,y_pred = q_long$q_avg_ens)
+  ens_scores = ensemble_scores(y_train = q_long_ens[,"q_train"], y_ens = q_long_ens[,!colnames(q_long_ens) %in% 'q_train'])
   
   scores = data.frame( c(uni_scores,ens_scores))
   return(scores)

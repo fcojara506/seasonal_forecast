@@ -111,7 +111,10 @@ volumen_obs = read.csv(file = "data_input/flows/volume_mm_GL_45catchments_ChileC
   select(-volume_mm) %>% 
   dplyr::rename(volume_obs_GL = volume_GL)
 
-volumen_obs_pronosticado = merge.data.table(pronosticos_volumenes_DGA,volumen_obs,by.x = c("wy","cod_cuenca"),by.y = c("wy_simple","cod_cuenca") )
+volumen_obs_pronosticado = merge.data.table(pronosticos_volumenes_DGA,volumen_obs,
+                                            by.x = c("wy","cod_cuenca"),
+                                            by.y = c("wy_simple","cod_cuenca") ) %>% 
+  subset(!(wy %in% c(2020,2021)))
 
 write.csv(volumen_obs_pronosticado,file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_DGA.csv",row.names = F)
 
@@ -138,6 +141,7 @@ write.csv(volumen_obs_pronosticado,file = "data_output/figuras/pronostico_DGA/vo
 #        width = 7,height = 5)
 # calcular metricas
 source("base/Scores.R")
+
 
 #metricas universales
 metricas_univariables = deterministic_scores(
