@@ -117,9 +117,9 @@ select_predictor <- function(
     
     data_input <- preprocess_data(
       datetime_initialisation = lubridate::make_date(2021, 12) %m+% months(month_initialisation),
-      forecast_mode = "cv",
       catchment_code = catchment_code,
       predictor_list = predictors,
+      forecast_mode = "cv",
       save_raw = T
     )
     month_initialisation = month(data_input$info$datetime_initialisation)

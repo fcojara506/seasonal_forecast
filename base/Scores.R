@@ -22,7 +22,7 @@ deterministic_scores <- function(y_true,y_pred,normalise = F) {
 }
 
 ensemble_scores <- function(y_train,y_ens) {
-  library(verification)
+  
   library(caret)
   #ensemble scores
   
@@ -39,7 +39,7 @@ ensemble_scores <- function(y_train,y_ens) {
   
   return(list(
     mae_obs = crps_climate,
-    crps_ens = crps_ensembles,
+    crps_ens = CRPS_ens$CRPS,
     crpss_climatology = crpss,
     crps_reliability = CRPS_ens$Reli,
     crps_potential = CRPS_ens$CRPSpot
@@ -75,14 +75,25 @@ q_scores <- function(q_fore,data_input) {
                      function(x) rownames_to_column(data.frame(wy = x,t(q_fore$q_cv[[x]])),var = "month")) %>% 
     rbindlist()
   
-  q = names(q_fore$q_cv)
+  
   ##### ensemble monthly average
   q_ens_avg = lapply(names(q_fore$q_cv),
-                     function(x) data.frame(wy = x,t(apply(q_fore$q_cv[[x]],MARGIN = 2, mean)))) %>% 
+                     function(x){
+                       q = q_fore$q_cv[[x]]
+                       avg_vector = t(apply(q,MARGIN = 2, mean))
+                       df = data.frame(wy = x,avg_vector)
+                       colnames(df)[-1] = colnames(q)
+                       return(df)
+                     }) %>% 
     rbindlist()
+  
   # long variables (vectors)
   q_train_long = q_train %>% data.table() %>%  melt.data.table(id.vars = "wy",value.name = "q_train",variable.name = "month")
-  q_ens_avg_long  = q_ens_avg %>% data.table() %>%  melt.data.table(id.vars = "wy",value.name = "q_avg_ens",variable.name = "month")
+  q_ens_avg_long  = q_ens_avg %>%
+    data.table() %>%
+    melt.data.table(id.vars = "wy",
+                    value.name = "q_avg_ens",
+                    variable.name = "month")
   
   q_long = merge.data.table(q_train_long,q_ens_avg_long)
   # ensemble

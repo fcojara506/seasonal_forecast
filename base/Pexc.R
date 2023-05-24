@@ -77,7 +77,7 @@ score_type_year <- function(data_input, data_fore, univariable = FALSE) {
   cm <- confusionMatrix(df$type_wy, df$type_wy_obs)
   
   # Calculate performance metrics
-  accuracy <- cm$overall["Accuracy"]
+  accuracy <- cm$overall[["Accuracy"]]
   precision <- data.frame(cm$byClass)["Precision"]
   recall <- data.frame(cm$byClass)["Recall"]
   f1_score <- data.frame(cm$byClass)["F1"]

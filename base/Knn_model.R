@@ -36,7 +36,7 @@ predict_new_f <- function(X_history,X_new,f_train,n_neighbours,weight_method ){
   # f_weighted
   f_weighted = weights %*% f_neighbours %>% as.data.frame()
   rownames(f_weighted) = rownames(X_new)
-  
+  colnames(f_weighted) = colnames(f_train)
   return(
     list(
       neighbours_wy = neighbours_wy,
@@ -61,10 +61,12 @@ ensemble_generator_q <- function(f,y_ens) {
       #ensemble>1 case
       y_i = as.matrix(y_ens[,wy])
       f_i = as.matrix(f[wy,])
-      
-      q_ens_i[[wy]] = y_i %*% f_i
+      q_i = y_i %*% f_i
+      colnames(q_i) = colnames(f)
+      q_ens_i[[wy]] = q_i
     }
   }
+  
   return(q_ens_i)
 }
 
@@ -147,10 +149,13 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
   if (!is.character(forecast_mode) || !forecast_mode %in% c("cv", "prediction", "both")) {stop("Invalid mode. Should be either 'cv', 'prediction' or 'both'")}
   
   # target variables is f_i = Q_i/V of the forecast period (month i)
+  colnames_q_train  = colnames(q_train)
+  
   f_train = rownames(q_train) %>% 
-    lapply(function(x){q_train[x,]/y_train[x,'volume_original']}) %>%
+    lapply(function(x){data.frame(q_train[x,, drop=FALSE] / y_train[x,'volume_original'])}) %>%
     rbindlist() %>%
     as.matrix()
+  
   rownames(f_train) = rownames(q_train)
   
   
@@ -183,6 +188,7 @@ q_forecast <- function(q_train, y_train, X_train, X_test, y_ens_fore, y_ens_cv, 
     # y_ens_cv = ensemble forecasts of volume for cross-validation
     f_cv = knn_cross_validation(X_train,f_train,n_neighbours,weight_method,y_ens_cv)
     q_cv = f_cv$q
+    
     wy_neighbours_cv = f_cv$wy_neighbours
   }
 
@@ -221,6 +227,7 @@ run_q_forecast <- function(data_input,
   # n_neighbours = number of nearest neighbours
   # weight_method = method to weight the neighbours
   # forecast_mode = "prediction", "cv", or "both"
+  
   q_train = data_input$q_train
   y_train = data_input$y_train
   X_train = data_input$X_train

@@ -163,13 +163,14 @@ volumen_obs = read.csv(file = "data_input/flows/volume_mm_GL_45catchments_ChileC
   select(-volume_mm) %>% 
   dplyr::rename(volume_obs_GL = volume_GL) 
 
+# volumen pronosticado uchile
 vol_ens = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticadoENS_uchile.csv",check.names = F) %>% 
   data.table() %>% 
   melt.data.table(id.vars = c("catchment_code"),
                   variable.name = "wy_simple",
                   value.name = "volume_GL") %>% 
   mutate(wy_simple = as.numeric(as.character(wy_simple)))
-
+#unir
 vol_ens_obs = merge.data.table(vol_ens,volumen_obs,
                  by.x = c("wy_simple","catchment_code"),
                  by.y = c("wy_simple","cod_cuenca") )
@@ -180,6 +181,7 @@ vol_ens_obs =  vol_ens_obs %>%
 
 rm(vol_ens)
 
+# formato para ocupar en crpss
 y_train = vol_ens_obs$volume_obs_GL %>% as.matrix()
 y_ens = vol_ens_obs %>%
   select(-wy_simple,-catchment_code,-volume_obs_GL) %>% 
@@ -219,15 +221,6 @@ library(forcats)
 crps_DGA_uchile = merge(crps_uchile, mae_DGA) %>%
   mutate(crpss = 1 - crps_ens / mae_avg) %>%
   merge(cuencas_comunes)
-
-crps_DGA_uchile$cod_cuenca = as.factor(crps_DGA_uchile$cod_cuenca)
-
-# Reorder gauge_name based on cod_cuenca
-crps_DGA_uchile$gauge_name = fct_reorder(crps_DGA_uchile$gauge_name, 
-                                         as.numeric(levels(crps_DGA_uchile$cod_cuenca))[crps_DGA_uchile$cod_cuenca])
-
-ggplot(crps_DGA_uchile, aes(y = gauge_name, x = crpss)) +
-  geom_point()
 
 library(forcats)
 

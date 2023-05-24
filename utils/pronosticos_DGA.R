@@ -16,7 +16,7 @@ cuencas_pronosticos_merged = merge(cuencas_pronostico,cuencas_pronostico_DGA,by.
   dplyr::rename(gauge_name = gauge_name.y) %>% 
   mutate(gauge_name =  stringr::str_trim(gauge_name))
 
-rm(cuencas_pronostico_DGA,cuencas_pronostico)
+#rm(cuencas_pronostico_DGA,cuencas_pronostico)
 
 pronosticos_caudales_DGA = read.csv(file = "data_input/flows/pronosticos_DGA_m3s.csv",check.names = F) %>% 
   select(-Mes) %>% 
@@ -53,12 +53,14 @@ cuencas_mas_datos = datos_pronosticos_DGA %>%
   summarise(cuenta  = sum(hay_data == "Data")) %>% 
   filter(cuenta>200)%>% 
   merge(cuencas_pronosticos_merged)
+#write.csv(cuencas_mas_datos, file = "data_input/flows/cuencas_pronosticos_DGA_largoregistro.csv",row.names = F)
 
 # caudales medios mensuales de cuencas con mas datos
 pronosticos_caudales_DGA_masdatos = pronosticos_caudales_DGA %>% 
   filter(gauge_name %in% cuencas_mas_datos$gauge_name) %>% 
   merge(cuencas_pronosticos_merged)
 
+write.csv(x = pronosticos_caudales_DGA_masdatos,file = "data_output/figuras/pronostico_DGA/caudal_pronosticado_DGA.csv",row.names = F)
 # calcular volumen sep-mar
 
 volumeGL_decaudal <- function(catchment_code) {

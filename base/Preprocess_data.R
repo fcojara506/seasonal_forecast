@@ -609,6 +609,24 @@ horizon_mode <- function(window_method,month_start,month_end) {
 waterunits <- function(q, y) {return(list(q=q,y=y))}
 
 
+### 
+get_best_predictors <- function(catchment_code,month_initialisation) {
+  
+  #load best combination of predictors  
+  data_best_models = readRDS(file = paste0(
+    "data_output/mejores_modelos_cuenca_mes/",
+    catchment_code,
+    "_may-mar.RDS"
+  ))
+  # get the list of predictors from file
+  best_combination = data_best_models$best_combination
+  best_combination = best_combination[best_combination$month_initialisation == month_initialisation,]
+  
+  return(unlist(best_combination$predictors))
+}
+
+
+
 preprocess_data <- function(
     catchment_code ,
     datetime_initialisation , 
@@ -618,7 +636,7 @@ preprocess_data <- function(
     water_units = waterunits(q = "m^3/s", y = "GL"),
     forecast_mode = "prediction",
     remove_wys = NULL,
-    save_raw = F,
+    save_raw = T,
     y_transform = list(log_transform = T, plot_transform_predictant = F)
 ) {
   
@@ -679,11 +697,13 @@ preprocess_data <- function(
     select(- "wy_simple") %>%
     colnames
   
+  info_list$catchment_name = catchment_data$attributes_catchment$gauge_name
+  
   # save results in structure
   results <- c(
     train_set,
     time_horizon = list(convert_items_to_lists(forecast_horizon)),
-    info = list((info_list))
+    info = list(info_list)
   )
   
   if (save_raw) {
@@ -713,7 +733,6 @@ preprocess_data <- function(
 
 
 
-
 ######################### Testing
 
 example_preprocess <- function(){
@@ -726,7 +745,7 @@ example_preprocess <- function(){
   water_units = waterunits(q = "m^3/s", y = "GL")
   forecast_mode <- "cv"
   data_location_paths = get_default_datasets_path(meteo = NULL, hydro = "ERA5Ens_operacional")
-  save_raw = F
+  save_raw = T
   y_transform = list(log_transform = T, plot_transform_predictant = F)
   
   data1 <- preprocess_data(
@@ -737,7 +756,7 @@ example_preprocess <- function(){
     remove_wys = remove_wys,
     water_units = water_units,
     forecast_mode = forecast_mode,
-    save_raw = F,
+    save_raw = save_raw,
     y_transform = y_transform
   )
   

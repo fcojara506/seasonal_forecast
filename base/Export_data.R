@@ -2,23 +2,17 @@ library(icesTAF)
 library(glue)
 
 source("base/Scores.R")
-# replace_negative <- function(value,replace_for = 0) {
-#   if (value<0) {
-#     value = replace_for
-#   }
-#   return(value)
-# }
 
 # export volume data to platform
 library('rlist')
 
-export_volume_platform <- function(data_input,data_fore) {
+export_volume_platform <- function(data_input,data_fore, comentarios = NULL) {
   
   wy_target =  data_input$time_horizon$wy_holdout
 
   # observations
   v_normal = mean(data_input$y_train$volume)
-  v_pasado = data_input$y_train[as.character(wy_target-1),]
+  v_pasado = data_input$y_train[as.character(wy_target-1),"volume_original"]
   
   #forecast min, max, median
   v_promax = quantile(data_fore$y_ens_fore, probs = c(0.95))[[1]] 
@@ -28,7 +22,7 @@ export_volume_platform <- function(data_input,data_fore) {
   
   export_data_frame = data.frame(
     cuenca = data_input$info$catchment_code,
-    cuenca_name = data_input$raw_data$attributes_catchment$gauge_name,
+    cuenca_name = data_input$info$catchment_name,
     vol_normal = v_normal %>% round(2),
     vol_pasado = v_pasado %>% round(2),
     vol_promax = v_promax %>% round(2),#%>% replace_negative(),
@@ -36,7 +30,7 @@ export_volume_platform <- function(data_input,data_fore) {
     vol_pron   = v_pron %>% round(2),#%>% replace_negative(),
     year = wy_target,
     fecha_emision = data_input$time_horizon$datetime_initialisation,
-    comentarios = "version de prueba"
+    comentarios = comentarios
   )
   
   return(export_data_frame)
@@ -58,7 +52,7 @@ na_df <- function(df_original) {
   return(df_original)
 }
 
-export_flow_platform <- function(data_input,q_fore,remove_q_after_emission=T) {
+export_flow_platform <- function(data_input,q_fore,remove_q_after_emission=T, comentarios = NULL) {
   
   # observations previous months
   q_flows = data_input$raw_data$monthly_flows %>%
@@ -85,12 +79,13 @@ export_flow_platform <- function(data_input,q_fore,remove_q_after_emission=T) {
   #filter until date of emission 
   q_flows_obs = subset(q_flows_obs,
                       select = which(as.numeric(names(q_flows_obs)) < data_input$time_horizon$month_initialisation_index))
+  
   names(q_flows_obs) = data_input$time_horizon$months_before_initialisation
   }
   
-  names(q_flows_obs) = data_input$time_horizon$months_wy
-  names(q_flows_normal) = data_input$time_horizon$months_wy
-  names(q_flows_prior) = data_input$time_horizon$months_wy
+  names(q_flows_obs) = data_input$time_horizon$months_wy[[1]]
+  names(q_flows_normal) = data_input$time_horizon$months_wy[[1]]
+  names(q_flows_prior) = data_input$time_horizon$months_wy[[1]]
   
   
   q_flows_list = rbindlist(
@@ -115,14 +110,14 @@ export_flow_platform <- function(data_input,q_fore,remove_q_after_emission=T) {
     as.matrix()%>% 
     t() %>%
     data.frame(check.names = F) %>% 
-    `rownames<-` (data_input$time_horizon$wy_holdout_months) %>% #(data_input$plot_text$forecast_horizon_months)
+    `rownames<-` (data_input$time_horizon$months_target_water_year[[1]]) %>% #(data_input$plot_text$forecast_horizon_months)
     `colnames<-`(c("q_normal","q_last_year","q_obs","q_pron_min","q_pron","q_pron_max")) %>% 
     rownames_to_column(var = "fecha") %>%
     mutate(cuenca = data_input$info$catchment_code) %>%
     mutate(cuenca_name = data_input$raw_data$attributes_catchment$gauge_name) %>%
     mutate(fecha_emision = data_input$time_horizon$datetime_initialisation) %>%
     select(all_of(columns)) %>% 
-    mutate(comentarios = "version de prueba")
+    mutate(comentarios = comentarios)
     
   flow_fore[is.na(flow_fore)] <- -1
     
@@ -163,7 +158,10 @@ export_data <- function(data_input,
   
 
   
-  if (export == "scores" | export == "all" | export == "scores_y") {
+  if (export == "scores" | export == "all" ) {
+    # all volume scores
+    scores_volume <- y_scores(data_fore,data_input)
+    
     # ensemble type of year 
     scores_year_classification_ens =  
       score_type_year(data_input,data_fore, univariable = FALSE)
@@ -172,7 +170,7 @@ export_data <- function(data_input,
       score_type_year(data_input,data_fore, univariable = TRUE)
      
     # metrics
-    scores_volume <- y_scores(data_fore,data_input) %>% 
+     scores_volume = scores_volume %>% 
       cbind(data.frame(accuracy_ens = scores_year_classification_ens$Accuracy[[1]])) %>% 
       cbind(data.frame(accuracy_uni = scores_year_classification_uni$Accuracy[[1]])) %>% 
       cbind(data.frame(precision_humedo =  scores_year_classification_ens[rownames(scores_year_classification_ens) %in% "Class: húmedo", "Precision" ])) %>% 
@@ -193,18 +191,20 @@ export_data <- function(data_input,
     }
   }
   
-  if (export == "platform" | export == "all") {
-    #platform data
-    df_platform_vol <- export_volume_platform(data_input=data_input,data_fore=data_fore)
-    df_platform_q   <- export_flow_platform(data_input=data_input,q_fore = q_fore,remove_q_after_emission = F)
-    results <- list.append(results,df_platform_vol = df_platform_vol,df_platform_q = df_platform_q)
-  }
   
   if (export == 'forecasts' | export == "all" ) {
     #export the predictors, volume ensemble forecast and flow ensemble forecast
     results <- list.append(results, q_fore = q_fore,data_fore = data_fore,data_input = data_input)
   }
   
+  return(results)
+}
+
+export_platform <- function(data_input,data_fore,q_fore, comentarios = NULL) {
+    #platform data
+    df_platform_vol <- export_volume_platform(data_input,data_fore, comentarios)
+    df_platform_q   <- export_flow_platform(data_input,q_fore,remove_q_after_emission = F, comentarios)
+    results <- list(df_platform_vol = df_platform_vol,df_platform_q = df_platform_q)
   return(results)
 }
 
