@@ -14,11 +14,14 @@ source(file = "utils/convert_daily_to_monthly_storage.R")
 # preproceso (descarga y limpieza) indices climáticos
 source(file = "base/Climate_index.R")
 
+#carga los codigos y propiedades recomendadas (codigos_cuencas)
+source(file = "default_input_data.R")
+codigos_cuencas = codigos_cuencas
+fecha_emision = "2022-09-01"
 
-
-#cargar atributos de las 45 cuencas
-
-catchment_code = 7321002
-datetime_initialisation = "2022-09-01"
-
-
+source("utils/run_model_operativo.R")
+resultados = 
+pronostico_operativo(
+  codigos_cuencas = codigos_cuencas,
+  fecha_emision_Y_M_D = fecha_emision
+)

@@ -42,6 +42,7 @@ df_platform_q = rbindlist(df_platform_q)
 write.csv(df_platform_vol,
           row.names=FALSE,
           file = "utils/data_output/pronostico_volumen/plataforma/volumen_pronosticado_test_13dic2022.csv")
+
 write.csv(df_platform_q,
           row.names=FALSE,
           file = "utils/data_output/pronostico_caudal/plataforma/caudales_pronosticados_test_13dic2022.csv")

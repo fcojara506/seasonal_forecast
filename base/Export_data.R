@@ -194,7 +194,10 @@ export_data <- function(data_input,
   
   if (export == 'forecasts' | export == "all" ) {
     #export the predictors, volume ensemble forecast and flow ensemble forecast
-    results <- list.append(results, q_fore = q_fore,data_fore = data_fore,data_input = data_input)
+    results <- list.append(results,
+                           q_forecast = q_fore,
+                           vol_forecast = data_fore,
+                           data_input = data_input)
   }
   
   return(results)
