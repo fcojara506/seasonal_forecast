@@ -1,5 +1,3 @@
-
-
 library(ecmwfr)
 library(lubridate)
 library(dplyr)
@@ -7,47 +5,58 @@ library(magrittr)
 
 
 
-####
+
+set_key_CDS  <- function(user = NULL, key = NULL) {
+  
+  if ((is.null(user) | is.null(key))) {
+    stop("Se necesita un 'user' & 'key' de Copernicus Data Store para descargar datos ERA5")
+  }
+
+  if (!is.null(user) & !is.null(key)) {
+    ## ingresa credenciales
+    wf_set_key(user = user , key = key, service = "cds")
+  }
+
+}
+
+
+
+
+
+
 
 ## chequear fechas de termino de descarga porque el server ya no acepta fechas inexistentes (si no, error)
 ## ERA5 llega a -5 dias del presente (por desfase horario llega a -6 dias, si hay retrasos podria llegar a -7)
-
+descargar_era5 <- function(CDS_user = NULL,dias_previos_con_datos = 6) {
+  
+  if (is.null(CDS_user)) {
+    stop("Se necesita un 'user' & 'key' de Copernicus Data Store para descargar datos ERA5")
+  }
+# t_near dia mas probable con datos  
 t_near <- Sys.time() %>% format(tz = "GMT", usetz = T) %>% as.POSIXct(tz = "GMT") %>%
-  `-`(5 * 24 * 3600) %>% trunc(units = "hour") %>% as.POSIXct(tz = "GMT")
-
-t_i    <- as.Date("2023-02-01")  # primer dia provisorio, el consolidado (ERA5 final, validado) llega a 2023-01-31 inclusive
-t_f    <- as.Date(trunc(t_near - 13 * 3600 - 24 * 3600, units = "day"))  # ultimo dia provisorio completo
+  `-`(dias_previos_con_datos * 24 * 3600) %>% trunc(units = "hour") %>% as.POSIXct(tz = "GMT")
+# t_i primer dia provisorio, el consolidado (ERA5 final, validado) llega a 2023-01-31 inclusive
+t_i    <- as.Date("2023-02-01") 
+# t_f ultimo dia provisorio completo
+t_f    <- as.Date(trunc(t_near - 13 * 3600 - 24 * 3600, units = "day"))  
 
 df_t   <- data.frame(date = seq(t_i, t_f, by = "day")) %>% mutate(mes = format(date, "%m"), agno = format(date, "%Y")) %>%
   group_by(mes) %>% mutate(days_month = days_in_month(date), n = n())
-
+# meses completos
 Meses_Agnos <- df_t %>% group_by(mes) %>% filter(days_month == n) %>%
-  summarise(mes = unique(mes), agno = unique(agno))  # meses completos
-Meses       <- Meses_Agnos$mes  # meses completos
-Mes_Inc     <- df_t %>% filter(days_month != n) %$% mes %>% unique  # mes incompleto
-Agno_Inc    <- df_t %>% filter(days_month != n) %$% agno %>% unique  # agno incompleto
+  summarise(mes = unique(mes), agno = unique(agno))  
+# meses completos
+Meses       <- Meses_Agnos$mes
+# mes incompleto
+Mes_Inc     <- df_t %>% filter(days_month != n) %$% mes %>% unique  
+# agno incompleto
+Agno_Inc    <- df_t %>% filter(days_month != n) %$% agno %>% unique  
 
 save(t_i, t_f, Meses, file = "data_input/preproceso_meteo/output_preproceso_meteo/ti-tf.RData")
 
-## ¿parche por actualizacion?
-## ahora hay que fijar una keyring... revisar para cada computador...
-## *** keyring: ukringu ***
-
-# options(keyring_backend = "file")  # no funciona ¿? para remover keyring...
-
-## lee user y key de servidor CDS (Copernicus Data Store) desde archivo txt
-
-CDS_key <- as.data.frame(t(read.table("data_input/preproceso_meteo/input_preproceso_meteo/CDS_user_key", sep = "=", row.names = 1)))
-
-## ingresa credenciales
-
-wf_set_key(user = CDS_key$user, key = CDS_key$key, service = "cds")
 
 ## limpia carpeta de descargas (si no, error en codigos posteriores)
-
 system("rm data_input/preproceso_meteo/download_meteo/*")
-
-####
 
 ## descarga precipitacion y temperatura, por mes
 ## descarga distinta para meses completos y meses incompletos, y dias incompletos no se descargan
@@ -72,7 +81,7 @@ for (Var in c("total_precipitation", "2m_temperature")){
         dataset_short_name = "reanalysis-era5-single-levels",
         target = paste0("data_input/preproceso_meteo/download_meteo/era5_", Var, "_", Agno, "-", Mes, ".nc")
       )
-      file <- wf_request(user = CDS_key$user, request = request, transfer = TRUE, path = ".") 
+      file <- wf_request(user = CDS_user, request = request, transfer = TRUE, path = ".") 
     }
   }
 }
@@ -92,18 +101,40 @@ for (Var in c("total_precipitation", "2m_temperature")){
     dataset_short_name = "reanalysis-era5-single-levels",
     target = paste0("data_input/preproceso_meteo/download_meteo/era5_", Var, "_", Agno_Inc, "-", Mes_Inc, ".nc")
   )
-  file <- wf_request(user = CDS_key$user, request = request, transfer = TRUE, path = ".")
+  file <- wf_request(user = CDS_user, request = request, transfer = TRUE, path = ".")
 }
+
+
+return(message("Descarga de ERA5 exitosa"))
+}
+
 
 ####
 
-## comandos en CDO (instalar en Linux/UNIX)
+verificar_CDO <- function() {
+   
+  if(suppressWarnings(system("cdo -V")) != 0) {
+    stop("CDO (Climate Data Operators) no está instalado en este computador. 
+         Visita https://code.mpimet.mpg.de/projects/cdo/")
+  }
+}
 
+
+
+
+
+
+## comandos en CDO (instalar en Linux/UNIX)
+ejecutar_CDO <- function(){
+  
+  verificar_CDO()
 ## elimina dimension provisoria y concatena archivos
-system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(printf $f | cut --complement -c -25); done")
-system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_total_precipitation_* 'ERA5_precip_2023-presente.nc'")
-system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(printf $f | cut --complement -c -20); done")
-system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_2m_temperature_* 'ERA5_temp_2023-presente.nc'")
+  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(echo $f | sed 's/^\\.\\{25\\}//'); done")
+  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(printf $f | cut --complement -c -25); done")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_total_precipitation_* 'ERA5_precip_2023-presente.nc'")
+  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(echo $f | sed 's/^\\.\\{20\\}//'); done")
+  #system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(printf $f | cut --complement -c -20); done")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_2m_temperature_* 'ERA5_temp_2023-presente.nc'")
 
 ## cambio de hora y nivel diario, ademas cambia unidades
 system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 setattribute,tp@units=mm -mulc,1000 -daysum -shifttime,-13hour 'ERA5_precip_2023-presente.nc' 'ERA5_precip_2023-presente_daily.nc'")
@@ -120,5 +151,11 @@ system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_precip_2023-prese
 system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_2m_temperature_*")
 system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente.nc")
 system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente_daily.nc")
+}
 
-
+### main
+user = "28041"
+key = "2c19eea2-8760-4e86-9461-3c12789c30d3"
+set_key_CDS(user = user, key = key)
+descargar_era5(CDS_user = user)
+ejecutar_CDO()

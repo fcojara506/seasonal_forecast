@@ -1,3 +1,4 @@
+rm(list = ls())
 ####
 
 library(data.table)
@@ -46,15 +47,23 @@ DiaSim <- function(sim.cal, sim.proy, N){
   Vars        <- unique(proy.var)
   Locs        <- unique(proy.loc)
   Anas        <- unique(cal.date)
-  Sim         <- lapply(Dias, function(Dia) sapply(Anas, function(Ana)
-    lapply(Vars, function(Var) lapply(Locs, function(Loc)
-      (proy.val[proy.loc %in% Loc & proy.date %in% Dia & proy.var %in% Var] -
-         cal.val[cal.loc %in% Loc & cal.date %in% Ana & cal.var %in% Var]) ^ 2)) %>%
-      unlist(recursive = T) %>% mean %>% sqrt, USE.NAMES = F) %>%
-      data.table(date = Anas, simil = .) %>%
-      arrange(simil) %>% .[1:N, ]) %>% setNames(Dias)
+  Sim         <-
+    lapply(Dias, function(Dia)
+      sapply(Anas, function(Ana)
+        lapply(Vars, function(Var)
+          lapply(Locs, function(Loc)
+            (proy.val[proy.loc %in% Loc &
+                        proy.date %in% Dia & proy.var %in% Var] -
+               cal.val[cal.loc %in% Loc &
+                         cal.date %in% Ana & cal.var %in% Var]) ^ 2)) %>%
+          unlist(recursive = T) %>% mean %>% sqrt, USE.NAMES = F) %>%
+        data.table(date = Anas, simil = .) %>%
+        arrange(simil) %>% .[1:N,]) %>% setNames(Dias)
   return(Sim)
 }
+
+
+
 
 ####
 
@@ -87,6 +96,7 @@ for (Cuenca in Cuencas){
   Locs <- Cuenca
   for (Mes in Meses){
     for(AgnoLO in AgnosLO[1]){  # L3O (ahora es redundante)
+      print(paste("buscando dias similares para", Cuenca, "del", Mes,"-", AgnoLO ))
       prcal.sc <- vector("list", length(Locs)) %>% setNames(Locs)
       prval.sc <- vector("list", length(Locs)) %>% setNames(Locs)
       tmcal.sc <- vector("list", length(Locs)) %>% setNames(Locs)
@@ -121,20 +131,22 @@ for (Cuenca in Cuencas){
       t.val <- era5pr_val[[Mes]] %>% dplyr::select(date) %$% date
       ## BUSQUEDA DE DIAS ANALOGOS
       df_cal <- rbind(lapply(Locs, function(Loc)
-        data.table(loc = Loc, variable = "pr", date = t.cal, value = prcal.sc[[Loc]])) %>% do.call(rbind, .),
+        data.table(loc = Loc, variable = "pr", date = t.cal, value = prcal.sc[[Loc]] )) %>% do.call(rbind, .),
         lapply(Locs, function(Loc)
-          data.table(loc = Loc, variable = "tm", date = t.cal, value = tmcal.sc[[Loc]])) %>% do.call(rbind, .))
+          data.table(loc = Loc, variable = "tm", date = t.cal, value = tmcal.sc[[Loc]] )) %>% do.call(rbind, .))
       df_val <- rbind(lapply(Locs, function(Loc)
-        data.table(loc = Loc, variable = "pr", date = t.val, value = prval.sc[[Loc]])) %>% do.call(rbind, .),
+        data.table(loc = Loc, variable = "pr", date = t.val, value = prval.sc[[Loc]] )) %>% do.call(rbind, .),
         lapply(Locs, function(Loc)
-          data.table(loc = Loc, variable = "tm", date = t.val, value = tmval.sc[[Loc]])) %>% do.call(rbind, .))
-      DiaSim(df_cal, df_val, N = 30) %>%  # N=30 por analisis exploratorios (*)
-        saveRDS(paste0("data_input/preproceso_meteo/output_preproceso_meteo/dias-similares/m", Mes, "_2023-presente_", Cuenca, ".RData"))
+          data.table(loc = Loc, variable = "tm", date = t.val, value = tmval.sc[[Loc]] )) %>% do.call(rbind, .))
+      dias_similares = DiaSim(df_cal, df_val, N = 30) #%>%  # N=30 por analisis exploratorios (*)
+      stop()
+        saveRDS(dias_similares, paste0("data_input/preproceso_meteo/output_preproceso_meteo/dias-similares/m", Mes, "_2023-presente_", Cuenca, ".RData"))
       rm(df_cal, df_val, t.cal, t.val)
     }
   }
 }
 rm(Cuenca, Mes, AgnoLO, Locs, Loc)
+
 
 # (*) Segun analisis exploratorios de ajuste de precipitacion:
 # N mayor (40-50) es mejor en estacion humeda y cuencas humedas,

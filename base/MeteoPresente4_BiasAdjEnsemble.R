@@ -20,7 +20,7 @@ umbr <- 0.1  # umbral ceros precipitacion (mm)
 # se escoge N=30 como consenso para todo el dominio (explorar para cuencas especificas!)
 
 ####
-"data_input/preproceso_meteo/input_preproceso_meteo/"
+
 ## Cuencas
 
 cuencas_att <- read.table("data_input/preproceso_meteo/input_preproceso_meteo/Atributos_Cuencas_Fondef.csv", sep = ",", header = T)
@@ -37,7 +37,6 @@ Agnos   <- 1979:2020
 ## Periodo historico coincidente 1979-01-01/2020-04-30 y periodo a corregir 2023-02-01/presente 
 
 load("data_input/preproceso_meteo/input_preproceso_meteo/series-escala-cuenca_fondef_1979-2020.RData")
-
 load("data_input/preproceso_meteo/output_preproceso_meteo/ti-tf.RData")
 load("data_input/preproceso_meteo/output_preproceso_meteo/series-escala-cuenca_fondef_2023-presente.RData")
 
