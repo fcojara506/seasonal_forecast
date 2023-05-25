@@ -47,7 +47,7 @@ fill_data_daily_pca_to_monthly <-
   Data_Q_mes   <- Data_Q.m %>%
     group_by(WY, MES, codes_catchments) %>%
     summarise(QM = mean(Q, na.rm = T), N = length(Q), Q = QM * N) %>%
-    `[`( , c("WY", "MES", "codes_catchments", "Q"))
+    select(c("WY", "MES", "codes_catchments", "Q"))
   
   Data_Q_mes$Q[Data_cob_mes$COB < umbral_dias] <- NA
   

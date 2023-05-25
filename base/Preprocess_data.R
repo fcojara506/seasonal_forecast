@@ -634,7 +634,7 @@ preprocess_data <- function(
     horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3),
     data_location_paths = get_default_datasets_path(meteo = NULL,hydro = "ERA5Ens_operacional"),
     water_units = waterunits(q = "m^3/s", y = "GL"),
-    forecast_mode = "prediction",
+    forecast_mode = "both",
     remove_wys = NULL,
     save_raw = T,
     y_transform = list(log_transform = T, plot_transform_predictant = F)
@@ -733,21 +733,21 @@ preprocess_data <- function(
 
 
 
-######################### Testing
+######################### ejemplo
 
 example_preprocess <- function(){
-  
+  # seleccionar parametros
   catchment_code <- "7321002"
-  datetime_initialisation = lubridate::make_date(2022,5)
+  datetime_initialisation = lubridate::make_date(2022, 5)
   horizon = horizon_mode(window_method = "dynamic", month_start = 9, month_end = 3)
   predictor_list <- c("STORAGE_last_1months")
-  remove_wys <- NULL#c(1990,1940,2013)
+  remove_wys <- NULL
   water_units = waterunits(q = "m^3/s", y = "GL")
   forecast_mode <- "cv"
-  data_location_paths = get_default_datasets_path(meteo = NULL, hydro = "ERA5Ens_operacional")
-  save_raw = T
-  y_transform = list(log_transform = T, plot_transform_predictant = F)
-  
+  data_location_paths = get_default_datasets_path(hydro = "ERA5Ens_operacional")
+  save_raw = TRUE
+  y_transform = list(log_transform = TRUE, plot_transform_predictant = FALSE)
+  # cargar datos
   data1 <- preprocess_data(
     catchment_code = catchment_code,
     datetime_initialisation = datetime_initialisation,
@@ -759,9 +759,5 @@ example_preprocess <- function(){
     save_raw = save_raw,
     y_transform = y_transform
   )
-  
-  
   return(data1)
-  
-  
 }

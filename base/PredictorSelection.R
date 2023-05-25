@@ -1,4 +1,4 @@
-setwd("~/Documents/GitHub/seasonal_forecast")
+
 library(data.table)
 grid_pred  <- function(  variable,
                          agg_months,
