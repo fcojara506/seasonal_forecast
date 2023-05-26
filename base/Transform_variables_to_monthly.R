@@ -8,6 +8,7 @@ library(data.table)
 get_var_name<- function(filename) {
   toupper(tools::file_path_sans_ext(basename(filename)))
 }
+
 aggregate_variable <- function(filename,
                                var_name = "pr",
                                fx = sum) {
@@ -22,12 +23,16 @@ aggregate_variable <- function(filename,
     )
   colnames(df)[1] = "date"
   
+  # Ensure all columns except 'date' are of type double
+  cols_to_convert <- setdiff(names(df), "date")
+  df[ , (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_convert]
+  
   #if (!"i_ens" %in% colnames(df)) df$i_ens = 1
   
   df =
     df %>%
     melt.data.table(
-      id.vars = c("date"),
+      id.vars = "date",
       variable.name = "cod_cuenca",
       value.name = "var"
     ) %>% 

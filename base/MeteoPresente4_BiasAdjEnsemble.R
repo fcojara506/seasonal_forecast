@@ -21,30 +21,6 @@ umbr <- 0.1  # umbral ceros precipitacion (mm)
 
 ####
 
-## Cuencas
-
-cuencas_att <- read.table("data_input/preproceso_meteo/input_preproceso_meteo/Atributos_Cuencas_Fondef.csv", sep = ",", header = T)
-Cuencas     <- cuencas_att$gauge_id %>% as.character
-
-## Bloques Leave-3-Out
-
-AgnosLO <- list(1979:1981, 1982:1984, 1985:1987, 1988:1990, 1991:1993, 1994:1996, 1997:1999,
-                2000:2002, 2003:2005, 2006:2008, 2009:2011, 2012:2014, 2015:2017, 2018:2020)
-Agnos   <- 1979:2020
-
-## Carga series escala-cuenca
-## CR2MET es la referencia, ERA5 son las series a corregir
-## Periodo historico coincidente 1979-01-01/2020-04-30 y periodo a corregir 2023-02-01/presente 
-
-load("data_input/preproceso_meteo/input_preproceso_meteo/series-escala-cuenca_fondef_1979-2020.RData")
-load("data_input/preproceso_meteo/output_preproceso_meteo/ti-tf.RData")
-load("data_input/preproceso_meteo/output_preproceso_meteo/series-escala-cuenca_fondef_2023-presente.RData")
-
-era5pr_val <- lapply(era5pr_val, function(df) filter(df, date >= t_i & date <= t_f)) %>% setNames(names(era5pr_val))
-era5tm_val <- lapply(era5tm_val, function(df) filter(df, date >= t_i & date <= t_f)) %>% setNames(names(era5tm_val))
-rm(t_i, t_f)
-
-####
 
 ## Crea funcion truncar a cero (util para precip)
 tr_0 <- function(x, min){
@@ -73,6 +49,31 @@ pr_BC <- function(obscal, modcal, modval, umbral){
   }
 }
 
+correccion_sesgo_meteorologico <- function(N = 30,umbr = 0.1) {
+  
+## Cuencas
+
+cuencas_att <- read.table("data_input/preproceso_meteo/input_preproceso_meteo/Atributos_Cuencas_Fondef.csv", sep = ",", header = T)
+Cuencas     <- cuencas_att$gauge_id %>% as.character
+
+## Bloques Leave-3-Out
+
+AgnosLO <- list(1979:1981, 1982:1984, 1985:1987, 1988:1990, 1991:1993, 1994:1996, 1997:1999,
+                2000:2002, 2003:2005, 2006:2008, 2009:2011, 2012:2014, 2015:2017, 2018:2020)
+Agnos   <- 1979:2020
+
+## Carga series escala-cuenca
+## CR2MET es la referencia, ERA5 son las series a corregir
+## Periodo historico coincidente 1979-01-01/2020-04-30 y periodo a corregir 2023-02-01/presente 
+
+load("data_input/preproceso_meteo/input_preproceso_meteo/series-escala-cuenca_fondef_1979-2020.RData")
+load("data_input/preproceso_meteo/output_preproceso_meteo/ti-tf.RData")
+load("data_input/preproceso_meteo/output_preproceso_meteo/series-escala-cuenca_fondef_2023-presente.RData")
+
+era5pr_val <- lapply(era5pr_val, function(df) filter(df, date >= t_i & date <= t_f)) %>% setNames(names(era5pr_val))
+era5tm_val <- lapply(era5tm_val, function(df) filter(df, date >= t_i & date <= t_f)) %>% setNames(names(era5tm_val))
+rm(t_i, t_f)
+
 ## Metodo "SimSchaake" (by Roman Schefzik) modificado
 
 ## Correccion/ajuste de sesgo
@@ -93,25 +94,36 @@ pr_BC <- function(obscal, modcal, modval, umbral){
 for (Cuenca in Cuencas){
   Locs <- Cuenca
     for (Mes in Meses){
+      print(paste("corrigiendo sesgo meteorologico para", Cuenca, "del mes", Mes))
+      
       for(AgnoLO in AgnosLO[1]){  # L3O (ahora es redundante)
         # DIAS A CORREGIR
-        DiasVal <- paste0("data_input/preproceso_meteo/output_preproceso_meteo/dias-similares/m", Mes, "_2023-presente_", Cuenca, ".RData") %>% readRDS %>% names
-        DiasSim <- lapply(1:N, function(i_ens) sapply(DiasVal, function(DiaVal)  # dias similares
-          readRDS(paste0("data_input/preproceso_meteo/output_preproceso_meteo/dias-similares/m", Mes, "_2023-presente_", Cuenca, ".RData"))[[DiaVal]]$date[i_ens]) %>%
-            as.Date %>% setNames(DiasVal)) %>% setNames(1:N)
+        dias_similares = paste0("data_input/preproceso_meteo/output_preproceso_meteo/dias-similares/m", Mes, "_2023-presente_", Cuenca, ".RData") %>% readRDS
+        DiasVal <- dias_similares %>% names
+        
+        DiasSim <- lapply(1:N, function(i_ens) 
+          sapply(DiasVal, function(DiaVal){ # dias similares
+         dias_similares[[DiaVal]]$date[i_ens]}) %>%
+            as.Date(origin = "1970-01-01") %>% 
+            setNames(DiasVal)) %>%
+          setNames(1:N)
+        
         DiasVal <- as.Date(DiasVal)
         ## QDM PRECIP
         pr_mod_cal <- lapply(1:N, function(i_ens) lapply(Locs, function(Loc)
           era5pr[[Mes]] %>% melt(id = "date") %>% filter(variable %in% Loc) %>% dplyr::select(! variable) %>%
             setNames(c("time", "value")) %>% right_join(data.table(time = DiasSim[[i_ens]]), by = "time") %>%
             arrange(order(DiasSim[[i_ens]])) %$% value) %>% setNames(Locs)) %>% setNames(1:N)
+        
         pr_obs_cal <- lapply(1:N, function(i_ens) lapply(Locs, function(Loc)
           cr2pr[[Mes]] %>% melt(id = "date") %>% filter(variable %in% Loc) %>% dplyr::select(! variable) %>%
             setNames(c("time", "value")) %>% right_join(data.table(time = DiasSim[[i_ens]]), by = "time") %>%
             arrange(order(DiasSim[[i_ens]])) %$% value) %>% setNames(Locs)) %>% setNames(1:N)
+        
         pr_mod_val <- lapply(Locs, function(Loc)
           era5pr_val[[Mes]] %>% melt(id = "date") %>% filter(variable %in% Loc) %>% dplyr::select(! variable) %>%
             setNames(c("time", "value")) %>% filter(time %in% DiasVal) %$% value) %>% setNames(Locs)
+        
         pr_QDM     <- lapply(1:N, function(i_ens) lapply(Locs, function(Loc)
           pr_BC(pr_obs_cal[[i_ens]][[Loc]], pr_mod_cal[[i_ens]][[Loc]], pr_mod_val[[Loc]], umbr)) %>%
             setNames(Locs)) %>% setNames(1:N)
@@ -168,3 +180,8 @@ tm_prom  <- lapply(Meses, function(Mes)
   group_by(variable, date) %>% summarise(value = mean(value)) %>% dcast(date ~ variable) %>% mutate(date = as.Date(date)) %>%
   group_by(date) %>% arrange(.by_group = T) %>% mutate(date = as.character(date)) %>% ungroup
 paste0("data_input/preproceso_meteo/output_preproceso_meteo/temp_ERA5-BC-ensemble-prom_N", N, "_2023-presente.csv") %>% write.table(tm_prom, file = ., row.names = F, sep = ",")
+
+return(message("Sesgo meteorologico completado"))
+}
+
+correccion_sesgo_meteorologico(N = N, umbr = umbr)

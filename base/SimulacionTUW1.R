@@ -5,6 +5,7 @@ library(TUWmodel)
 library(airGR)
 
 ####
+correr_modelo_hidrologico <- function() {
 
 ## Lee meteo al presente y obtiene evaporacion potencial (EP) con formula de Oudin
 
@@ -76,3 +77,6 @@ write.table(SSM, file = "data_input/storage_variables/ERA5Ens/operacional/SSM.cs
 write.table(SWE, file = "data_input/storage_variables/ERA5Ens/operacional/SWE.csv", sep = ",", row.names = F)
 write.table(SUZ, file = "data_input/storage_variables/ERA5Ens/operacional/SUZ.csv", sep = ",", row.names = F)
 write.table(SLZ, file = "data_input/storage_variables/ERA5Ens/operacional/SLZ.csv", sep = ",", row.names = F)
+return(message("simulacion del modelo hidrologico completada"))
+}
+correr_modelo_hidrologico()
