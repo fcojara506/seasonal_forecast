@@ -1,6 +1,6 @@
 install_from_zip <- function(package_name, path_to_zip) {
   packagecheck <- match(package_name, utils::installed.packages()[, 1])
-  packagestoinstall <- packages[is.na(packagecheck)]
+  packagestoinstall <- package_name[is.na(packagecheck)]
   
   if (length(packagestoinstall) > 0L) {
     

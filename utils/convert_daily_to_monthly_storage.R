@@ -27,10 +27,12 @@ source("base/Transform_variables_to_monthly.R")
 #   write.csv(x = df,file = filename_export,row.names = F)
 #
 #
+convertir_almacenamientos_diarios_a_mensuales <- function(model = "ERA5Ens",
+                                                          fo = "operacional") {
+  
 
 #storage
-model = "ERA5Ens"
-fo = "operacional"
+
 # PERIODO NUEVO
 
 #filenames list
@@ -54,3 +56,5 @@ df = select(df, c('wy_simple', 'wym', everything()))
 
 # export operational
 write.csv(x = df,file = filename_export,row.names = F)
+}
+convertir_almacenamientos_diarios_a_mensuales()

@@ -1,7 +1,7 @@
 # instalar paquetes escenciales
 source(file = "base/Load_libraries.R")
 
-descargar_nuevos_datos = FALSE
+descargar_nuevos_datos = TRUE
 if (descargar_nuevos_datos) {
   # preproceso (descarga,limpieza,correccion sesgo) meteorológico
   source(file = "base/MeteoPresente1_Request-CDO.R")

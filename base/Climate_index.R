@@ -88,14 +88,16 @@ read_indices_files <- function(download_index_files = T, year_start= 1979) {
     ) %>% 
     select(-month,-year)
   result = select(result, c('wy_simple','wym',everything())) 
-  return(result)
+  
+  write.csv(x = result, file = paste0(index_folder, "indices_mensuales_1979_present.csv"),  row.names = F)
+  
+  return(message("Indices climaticos descargados con exito"))
 }
 
 ### run download
-monthly_indices = read_indices_files(download_index_files = T)
+read_indices_files(download_index_files = T)
 
-write.csv(x = monthly_indices,
-          file = paste0(index_folder, "indices_mensuales_1979_present.csv"),  row.names = F)
+
 
 
 
