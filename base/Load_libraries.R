@@ -30,7 +30,7 @@ cargar_librerias <- function(packages = "default",repo = "https://cran.dcc.uchil
       "TUWmodel","airGR",
       "reshape2","bestNormalize","MBC",
       "hydromad","rlist","icesTAF","caret","verification",
-      "stringr","gridExtra","zoo", "latticeExtra", "polynom", "car", "Hmisc","reshape"
+      "stringr","gridExtra"#,"zoo", "latticeExtra", "polynom", "car", "Hmisc","reshape"
      )
   }
 
@@ -54,5 +54,5 @@ install_from_zip(package_name = "ECBC",
                  path_to_zip = "data_input/preproceso_meteo/input_preproceso_meteo/ECBC.zip")
 
 
-cargar_librerias(package_name = "hydromad",repo = "http://hydromad.catchment.org")
+#cargar_librerias(package_name = "hydromad",repo = "http://hydromad.catchment.org")
 
