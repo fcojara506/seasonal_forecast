@@ -417,7 +417,7 @@ predictant_generator <- function(
   
   #volume in mm
   y <- stats::aggregate(
-    x = Q_mm ~ wy_simple ,
+    Q_mm ~ wy_simple ,
     FUN = "sum",
     data = q_period_wy
   ) %>% dplyr::rename(volume = Q_mm)
