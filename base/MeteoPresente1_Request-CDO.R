@@ -1,3 +1,4 @@
+## creado 30-mayo-2023 ##
 library(ecmwfr)
 library(lubridate)
 library(dplyr)
@@ -13,7 +14,6 @@ set_key_CDS <- function(user = NULL, key = NULL) {
     wf_set_key(user = user, key = key, service = "cds")
   }
 }
-
 
 ## chequear fechas de termino de descarga porque el server ya no acepta fechas inexistentes (si no, error)
 ## ERA5 llega a -5 dias del presente (por desfase horario llega a -6 dias, si hay retrasos podria llegar a -7)
