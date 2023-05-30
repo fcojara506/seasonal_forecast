@@ -1,3 +1,10 @@
+# ----------------------------------------------------------------------------
+# Nombre del Proyecto: Pronóstico híbridos del volumen estacional en Chile Central 
+# Autor(es): Diego Hernandez
+# Fecha de Finalización: 2023/04/31
+# Contacto: pronostico.caudales@gmail.com
+# GitHub: https://github.com/hndiego
+# ----------------------------------------------------------------------------
 
 library(data.table)
 library(dplyr)
@@ -184,4 +191,3 @@ paste0("data_input/preproceso_meteo/output_preproceso_meteo/temp_ERA5-BC-ensembl
 return(message("Sesgo meteorologico completado"))
 }
 
-correccion_sesgo_meteorologico(N = N, umbr = umbr)

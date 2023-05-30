@@ -1,4 +1,11 @@
-## creado 30-mayo-2023 ##
+# ----------------------------------------------------------------------------
+# Nombre del Proyecto: Pronóstico híbridos del volumen estacional en Chile Central 
+# Autor(es): Diego Hernandez
+# Fecha de Finalización: 2023/04/31
+# Contacto: pronostico.caudales@gmail.com
+# GitHub: https://github.com/hndiego
+# ----------------------------------------------------------------------------
+
 library(ecmwfr)
 library(lubridate)
 library(dplyr)
@@ -15,12 +22,50 @@ set_key_CDS <- function(user = NULL, key = NULL) {
   }
 }
 
+verificar_CDO <- function() {
+  if (suppressWarnings(system("cdo -V")) != 0) {
+    stop("CDO (Climate Data Operators) no está instalado en este computador.
+         Visita https://code.mpimet.mpg.de/projects/cdo/")
+  }
+}
+
+## comandos en CDO (instalar en Linux/UNIX)
+ejecutar_CDO <- function() {
+  verificar_CDO()
+  ## elimina dimension provisoria y concatena archivos
+  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(echo $f | sed 's/^\\.\\{25\\}//'); done")
+  # system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(printf $f | cut --complement -c -25); done")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_total_precipitation_* 'ERA5_precip_2023-presente.nc'")
+  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(echo $f | sed 's/^\\.\\{20\\}//'); done")
+  # system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(printf $f | cut --complement -c -20); done")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_2m_temperature_* 'ERA5_temp_2023-presente.nc'")
+  
+  ## cambio de hora y nivel diario, ademas cambia unidades
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 setattribute,tp@units=mm -mulc,1000 -daysum -shifttime,-13hour 'ERA5_precip_2023-presente.nc' 'ERA5_precip_2023-presente_daily.nc'")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 setattribute,t2m@units=Celsius -addc,-273.15 -daymean -shifttime,-12hour 'ERA5_temp_2023-presente.nc' 'ERA5_temp_2023-presente_daily.nc'")
+  
+  ## split por mes
+  system("cd data_input/preproceso_meteo/download_meteo; cdo splitmon 'ERA5_precip_2023-presente_daily.nc' 'ERA5_precip_2023-presente_daily_m'")
+  system("cd data_input/preproceso_meteo/download_meteo; cdo splitmon 'ERA5_temp_2023-presente_daily.nc' 'ERA5_temp_2023-presente_daily_m'")
+  
+  ## remueve
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_total_precipitation_*")
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_precip_2023-presente.nc")
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_precip_2023-presente_daily.nc")
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_2m_temperature_*")
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente.nc")
+  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente_daily.nc")
+}
+
+
 ## chequear fechas de termino de descarga porque el server ya no acepta fechas inexistentes (si no, error)
 ## ERA5 llega a -5 dias del presente (por desfase horario llega a -6 dias, si hay retrasos podria llegar a -7)
-descargar_era5 <- function(CDS_user = NULL, dias_previos_con_datos = 6) {
-  if (is.null(CDS_user)) {
-    stop("Se necesita un 'user' & 'key' de Copernicus Data Store para descargar datos ERA5")
-  }
+descargar_era5 <- function(CDS_user = NULL,CDS_key = NULL , dias_previos_con_datos = 6) {
+  
+  # configurar usario y clave de Copernicus
+  set_key_CDS(user = CDS_user, key = CDS_key)
+  
+
   # t_near dia mas probable con datos
   t_near <- Sys.time() %>%
     format(tz = "GMT", usetz = T) %>%
@@ -110,52 +155,15 @@ descargar_era5 <- function(CDS_user = NULL, dias_previos_con_datos = 6) {
     )
     file <- wf_request(user = CDS_user, request = request, transfer = TRUE, path = ".")
   }
-
+  
+  ejecutar_CDO()
 
   return(message("Descarga de ERA5 exitosa"))
 }
 
 
-####
-
-verificar_CDO <- function() {
-  if (suppressWarnings(system("cdo -V")) != 0) {
-    stop("CDO (Climate Data Operators) no está instalado en este computador.
-         Visita https://code.mpimet.mpg.de/projects/cdo/")
-  }
-}
-
-## comandos en CDO (instalar en Linux/UNIX)
-ejecutar_CDO <- function() {
-  verificar_CDO()
-  ## elimina dimension provisoria y concatena archivos
-  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(echo $f | sed 's/^\\.\\{25\\}//'); done")
-  # system("cd data_input/preproceso_meteo/download_meteo; for f in era5_total_precipitation_*; do cdo -b F64 vertsum $f ERA5_total_precipitation_$(printf $f | cut --complement -c -25); done")
-  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_total_precipitation_* 'ERA5_precip_2023-presente.nc'")
-  system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(echo $f | sed 's/^\\.\\{20\\}//'); done")
-  # system("cd data_input/preproceso_meteo/download_meteo; for f in era5_2m_temperature_*; do cdo -b F64 vertsum $f ERA5_2m_temperature_$(printf $f | cut --complement -c -20); done")
-  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 mergetime ERA5_2m_temperature_* 'ERA5_temp_2023-presente.nc'")
-
-  ## cambio de hora y nivel diario, ademas cambia unidades
-  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 setattribute,tp@units=mm -mulc,1000 -daysum -shifttime,-13hour 'ERA5_precip_2023-presente.nc' 'ERA5_precip_2023-presente_daily.nc'")
-  system("cd data_input/preproceso_meteo/download_meteo; cdo -b F64 setattribute,t2m@units=Celsius -addc,-273.15 -daymean -shifttime,-12hour 'ERA5_temp_2023-presente.nc' 'ERA5_temp_2023-presente_daily.nc'")
-
-  ## split por mes
-  system("cd data_input/preproceso_meteo/download_meteo; cdo splitmon 'ERA5_precip_2023-presente_daily.nc' 'ERA5_precip_2023-presente_daily_m'")
-  system("cd data_input/preproceso_meteo/download_meteo; cdo splitmon 'ERA5_temp_2023-presente_daily.nc' 'ERA5_temp_2023-presente_daily_m'")
-
-  ## remueve
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_total_precipitation_*")
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_precip_2023-presente.nc")
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_precip_2023-presente_daily.nc")
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_2m_temperature_*")
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente.nc")
-  system("cd data_input/preproceso_meteo/download_meteo; rm ERA5_temp_2023-presente_daily.nc")
-}
-
 ### main
 user <- "28041"
 key <- "2c19eea2-8760-4e86-9461-3c12789c30d3"
-set_key_CDS(user = user, key = key)
-descargar_era5(CDS_user = user)
-ejecutar_CDO()
+
+

@@ -1,3 +1,10 @@
+# ----------------------------------------------------------------------------
+# Nombre del Proyecto: Pronóstico híbridos del volumen estacional en Chile Central 
+# Autor(es): Francisco Jara
+# Fecha de Finalización: 2023/04/31
+# Contacto: pronostico.caudales@gmail.com
+# GitHub: https://github.com/fcojara506
+# ----------------------------------------------------------------------------
 
 #weight function given a distance vector and menthod
 calculate_weights <- function(neigh_dist,weight_method) {

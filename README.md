@@ -2,6 +2,8 @@
 
 Este proyecto se centra en la generación de pronósticos estacionales de volúmenes y caudales en la región central de Chile.
 
+![Mapa de las cuencas](https://github.com/fcojara506/seasonal_forecast/blob/main/data_input/SIG/mapa_cuencas.png)
+
 ## Requisitos
 
 Para utilizar este software, asegúrate de tener instalado lo siguiente:
@@ -62,3 +64,15 @@ Se requieren los siguientes paquetes de R (descarga disponible en "base/Load_lib
 - **rlist:** Un conjunto de herramientas para trabajar con objetos de lista.
 - **icesTAF:** Proporciona herramientas para el Marco de Evaluación Transparente de ICES.
 - **reshape2:** Reestructura y agrega datos de manera flexible.
+
+## Correr con valores por defecto
+
+Para ejecutar el código "main_run.R" correctamente, debe usar Rstudio con el proyecto "seasonal_forecast.Rproj" como ambiente principal. Esto asegura que las rutas de los archivos se mantengan relativas al proyecto.
+
+Alternativamente, puede utilizar un archivo bash para ejecutar el script.
+
+
+
+
+
+

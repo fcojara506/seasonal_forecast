@@ -68,8 +68,8 @@ pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D) {
     r_plataforma_q = r_plataforma_$df_platform_q %>% rbindlist()
     # guardar resultados en una lista
     final = 
-    list(plataforma_vol = r_plataforma_vol,
-         plataforma_q = r_plataforma_q,
+    list(plataforma_volumen = r_plataforma_vol,
+         plataforma_caudal = r_plataforma_q,
          resultados_tecnicos = r_tecnicos
          )
     
