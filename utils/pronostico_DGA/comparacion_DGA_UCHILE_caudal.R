@@ -18,7 +18,7 @@ wys_dga = unique(caudal_pronosticado_DGA$wy)
 
 #UCHILE
 
-source("utils/main_regression_model.R")
+source("utils/correr_modelo/main_regression_model.R")
 
 caudal_pronosticado_uchile = lapply(cuencas_comunes$cod_cuenca,
                                     function(x)

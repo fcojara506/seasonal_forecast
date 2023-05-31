@@ -1,5 +1,5 @@
 rm(list = ls())
-source('utils/main_regression_model.R')
+source('utils/correr_modelo/main_regression_model.R')
 
 library(data.table)
 library(dplyr)
@@ -21,10 +21,10 @@ for (codigo_cuenca in codigos_cuencas) {
                   )
     #guardar todo  
     saveRDS(a,
-            file = glue("data_output/modelos_periodo_historico/todos_procesos/todo_1980_2019_{codigo_cuenca}_mes{mes_emision}.RDS"))
+            file = glue("data_output/respaldo_resultados_periodo_historico/todos_procesos/todo_1981_2019_{codigo_cuenca}_mes{mes_emision}.RDS"))
     
     #guardar modelo de regresion
     saveRDS(a$data_fore$regression_model,
-            file = glue("data_output/modelos_periodo_historico/modelo_regresion/modelo_regresion_{codigo_cuenca}_mes{mes_emision}.RDS"))
+            file = glue("data_output/respaldo_resultados_periodo_historico//modelo_regresion/modelo_regresion_{codigo_cuenca}_mes{mes_emision}.RDS"))
     }
 }

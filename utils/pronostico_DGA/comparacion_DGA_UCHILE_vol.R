@@ -156,7 +156,7 @@ ggsave(filename = "data_output/pronostico_DGA/metricas_comparacion_univariables.
 ####### CRPSS
 
 
-source("utils/main_regression_model.R")
+#source("utils/correr_modelo/main_regression_model.R")
 
 # leer volumen observado
 volumen_obs = read.csv(file = "data_input/flows/volume_mm_GL_45catchments_ChileCentral.csv") %>%
