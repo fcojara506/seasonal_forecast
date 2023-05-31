@@ -162,8 +162,4 @@ descargar_era5 <- function(CDS_user = NULL,CDS_key = NULL , dias_previos_con_dat
 }
 
 
-### main
-user <- "28041"
-key <- "2c19eea2-8760-4e86-9461-3c12789c30d3"
-
 

@@ -1,5 +1,5 @@
 ### propiedades mas comunes para correr el modelo
-source("utils/run_model_operativo.R")
+source("utils/correr_modelo/run_model_operativo.R")
 # codigos de las cuencas
 attributes_catchments_file <-
   "data_input/attributes/attributes_45catchments_ChileCentral.csv"

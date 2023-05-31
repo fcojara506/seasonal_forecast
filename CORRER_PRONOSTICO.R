@@ -14,12 +14,12 @@
 # Instalar paquetes esenciales
 source(file = "base/Load_libraries.R")
 
-descargar_nuevos_datos = FALSE
+descargar_nuevos_datos = TRUE
 if (descargar_nuevos_datos) {
   # preproceso (descarga,limpieza,correccion sesgo) meteorológico
   #descarga
   source(file = "base/MeteoPresente1_Request-CDO.R")
-  descargar_era5(CDS_user = NULL,CDS_key = NULL)
+  descargar_era5(CDS_user = "28041",CDS_key = "2c19eea2-8760-4e86-9461-3c12789c30d3")
   
   #conversion a nivel de cuenca
   source(file = "base/MeteoPresente2_EscalaCuenca.R")
@@ -35,7 +35,7 @@ if (descargar_nuevos_datos) {
   source(file = "base/SimulacionTUW1.R")
   
   # preprocesar simulaciones del modelo hidrológico (diario a mensual)
-  source(file = "utils/convert_daily_to_monthly_storage.R")
+  source(file = "utils/correr_modelo/convert_daily_to_monthly_storage.R")
   
   # preproceso (descarga y limpieza) indices climáticos
   source(file = "base/Climate_index.R")
@@ -43,7 +43,7 @@ if (descargar_nuevos_datos) {
 }
 
 # cargar modelo operativo (modo restrospectivo y predicción)
-source("utils/run_model_operativo.R")
+source("utils/correr_modelo/run_model_operativo.R")
 
 #carga los codigos y propiedades mas recientes (codigos_cuencas)
 source(file = "default_input_data.R")
