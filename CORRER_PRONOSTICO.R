@@ -67,8 +67,3 @@ write.csv(resultados$plataforma_caudal,
 saveRDS(resultados$resultados_tecnicos, 
         file = glue("data_output/plataforma/resultados_en_detalles/resultadostecnicos_{fecha_emision}_version{Sys.Date()}.RDS"))
 
-# library(DependenciesGraphs)
-# deps = funDependencies(envir = environment(),
-#                        name.function = "pronostico_operativo")
-# plot(deps)
-
