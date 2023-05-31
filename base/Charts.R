@@ -32,10 +32,10 @@ plot_X_y_train <- function(data_input) {
       select(-variable)
     
     # Add historical predictors
-    p <- ggplot(data = train_data_df, mapping = aes(x = value, y = volume, col = wy_simple)) +
-      geom_point() +
-      facet_wrap(~var, scales = "free_x", nrow = 1) +
-      scale_color_viridis_b() +
+    p <- ggplot(data = train_data_df, mapping = aes(x = value, y = volume)) +
+      geom_point(aes(col = wy_simple)) +
+      facet_wrap(~var, scales = "free_x", nrow = 1)+
+      scale_color_viridis_b()+
       labs(
         title = "Volumen vs Predictores",
         subtitle = paste(data_input$raw_data$attributes_catchment$gauge_name),
@@ -45,7 +45,7 @@ plot_X_y_train <- function(data_input) {
         caption = glue("Emisión {data_input$time_horizon$datetime_initialisation}")
       ) +
       theme(legend.position = "bottom", legend.key.width = unit(0.5, "in")) +
-      geom_smooth(formula = y ~ x, method = "lm", se = F) +
+      geom_smooth(formula = y ~ x, method = "lm", se = F)+
       stat_regline_equation(
         aes(label = ..rr.label..),
         size = 3,
@@ -53,7 +53,7 @@ plot_X_y_train <- function(data_input) {
         label.y.npc = 0.2
       )
     
-    # print(p)
+
     # # Add test/current predictors
     # if (!is.null(data_input$X_test)) {
     #   test_data_df <- rownames_to_column(data_input$X_test, var = "wy_simple") %>% 
@@ -147,16 +147,15 @@ plot_vol_sim_obs <- function(
     dplyr::rename(y_true = volume_original)
       
   
-  v_line = t(as.data.frame(data_fore$y_fore)) %>%
-    data.frame(y_fore=.)
+  v_line = (data_fore$y_fore)[[1]]
   
   
   
 p = 
-    ggplot(data = y_df, aes(x=y_sim,y=y_true,col=wy_simple))+
-    geom_point()+
+    ggplot(data = y_df, aes(x=y_sim,y=y_true))+
+    geom_point(aes(col=wy_simple))+
   geom_abline(slope = 1)+
-  geom_vline(xintercept =  mean(v_line$y_fore))+
+  geom_vline(xintercept =  v_line)+
   scale_color_viridis_b()+
     labs(
       x = glue("Volumen simulado ({data_input$info$water_units$y})"),
@@ -170,25 +169,20 @@ p =
       legend.key.width = unit(0.5,"in")
     )+
     expand_limits(y=0,x=0)+
-    stat_poly_eq(aes(label = paste(..rr.label..)),
-                 label.x.npc = 0.95,
-                 label.y.npc = 0.1,
-                 formula = y ~ x,
-                 parse = TRUE,
-                 size = 3)+
     geom_label(
              label= paste("wy",data_input$time_horizon$wy_holdout),
-             x=mean(v_line$y_fore),
+             x=v_line,
              y=max(y_df$y_true),
              col='black'
              )+
   # add identity function text
     geom_label(
       label= " y = x",
-      x=max(y_df$y_sim)*1.05,
-      y=max(y_df$y_sim)*1.05,
+      x=0.2*min(y_df$y_sim),
+      y=0.2*min(y_df$y_sim),
       col='black'
     )+ tune::coord_obs_pred()
+
 
  
 
@@ -504,25 +498,25 @@ plot_knn_flow <- function(
                     measure.vars = all_of(colnames(q_ens_fore$q_predict[[1]])) ,
                     variable.name = "wym_str",value.name = "median_flow")
   
+  q_plot_data$q_ens = q_plot_data$q_ens  %>% na.omit()
     # observation stats
   p=ggplot()+ 
     geom_area(
       data = q_plot_data$q_obs_stats,
       aes(x=wym_str,y = value,fill = Pexc_factor,group = Pexc),
-      #alpha=0.4,
       position = position_identity()
     )+
-  scale_fill_viridis_d(direction = -1)+
+  scale_fill_viridis_d(direction = -1,alpha = 0.8)+
    # scale_fill_brewer(palette = "RdBu",direction = -1)
   # add forecast
     geom_violinhalf(
-      data = q_plot_data$q_ens,
+      data = q_plot_data$q_ens ,
       mapping =  aes(x=wym_str,y=value),
       scale = "width",
       flip = T,
       lwd = 0.1,
       width=0.5,
-      alpha=0.4
+      alpha=0.2
     )+
   geom_boxplot(
       data = q_plot_data$q_ens,
@@ -556,7 +550,6 @@ plot_knn_flow <- function(
     ),
     values=c("black","red")
   )+
-    #scale_x_discrete(expand = c(0,0))+
     theme(legend.position="bottom",
           legend.spacing.x = unit(0.2, 'cm'))+
     guides(
@@ -572,52 +565,49 @@ plot_knn_flow <- function(
         nrow=2
         )
       )+
-    scale_x_discrete(expand = c(0,0))+
+    #scale_x_discrete(expand = c(0,0))+
     labs(
      x= "",
-     #y = expression(paste("Caudal (",data_input$info$water_units$q,")"))
     y = parse(text = glue("Caudal~~({data_input$info$water_units$q})"))
     )+
     ylim(0,NA)
-  
 
- 
-   #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
-  ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
-  
-  max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
-  #max_y =  max_y_info$value %>% ceiling10
-  
-  max_perce = merge(
-    x=q_plot_data$q_obs_stats,
-    y=max_y_info,
-    by = c("wym","wym_str")
-  ) %>% 
-    mutate(x_Larger_y = value.x>value.y) %>% 
-    mutate(cumsum = cumsum(x_Larger_y))
-  
-  position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
-  max_y_percentile = q_plot_data$q_obs_stats %>% 
-    subset(Pexc == max_perce[position_max_perce]$Pexc) %$% value %>% 
-    max(na.rm = T)
-  
-  #print(max_y_info$value,"_",max_y_percentile)
-  max_y = max(max_y_info$value,max_y_percentile) %>% ceiling_num
-
-  p1 = p +
-    geom_text(
-      data = median_q_ens,
-      mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
-      size=3
-    )+
-    scale_x_discrete(
-      limits=unlist(data_input$time_horizon$months_forecast_period),
-      expand = c(0.05 ,0)
-      )+
-    scale_y_continuous(
-      limits = c(NA,max_y*1.05)
-    )
-    
+  #  #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+  # ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
+  # 
+  # max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
+  # #max_y =  max_y_info$value %>% ceiling10
+  # 
+  # max_perce = merge(
+  #   x=q_plot_data$q_obs_stats,
+  #   y=max_y_info,
+  #   by = c("wym","wym_str")
+  # ) %>% 
+  #   mutate(x_Larger_y = value.x>value.y) %>% 
+  #   mutate(cumsum = cumsum(x_Larger_y))
+  # 
+  # position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
+  # max_y_percentile = q_plot_data$q_obs_stats %>% 
+  #   subset(Pexc == max_perce[position_max_perce]$Pexc) %$% value %>% 
+  #   max(na.rm = T)
+  # 
+  # #print(max_y_info$value,"_",max_y_percentile)
+  # max_y = max(max_y_info$value,max_y_percentile) %>% ceiling_num
+  # 
+  # p1 = p +
+  #   geom_text(
+  #     data = median_q_ens,
+  #     mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
+  #     size=3
+  #   )+
+  #   scale_x_discrete(
+  #     limits=unlist(data_input$time_horizon$months_forecast_period),
+  #     expand = c(0.05 ,0)
+  #     )+
+  #   scale_y_continuous(
+  #     limits = c(NA,max_y*1.05)
+  #   )
+  #   
 
   
   # add an inset plot with forecast period
@@ -633,7 +623,7 @@ plot_knn_flow <- function(
     plot_layout(guides='collect') &
     theme(legend.position='bottom')
   
-  
+
   return(p2)
   
   
@@ -735,8 +725,7 @@ plot_flow_spaghetti <- function(
       x= "",
       #y = expression(paste("Caudal (",data_input$info$water_units$q,")"))
       y = parse(text = glue("Caudal~~({data_input$info$water_units$q})"))
-    )+
-    ylim(0,NA)
+    )
   
 
   #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
@@ -790,7 +779,6 @@ plot_flow_spaghetti <- function(
     plot_layout(guides='collect') &
     theme(legend.position='bottom')
   
-  p2
   return(p2)
   
   

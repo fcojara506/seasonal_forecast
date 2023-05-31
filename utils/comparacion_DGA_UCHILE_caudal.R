@@ -1,4 +1,5 @@
 rm(list = ls())
+
 library(dplyr)
 
 # GENERAL
@@ -6,10 +7,10 @@ library(dplyr)
 months_year <- c("ene", "feb", "mar","abr", "may", "jun", "jul", "ago", "sep","oct", "nov", "dic")
 
 # DGA
-cuencas_comunes = read.csv("data_input/flows/cuencas_pronosticos_DGA_largoregistro.csv") %>%
+cuencas_comunes = read.csv("data_output/pronostico_DGA/cuencas_pronosticos_DGA_largoregistro.csv") %>%
   select(gauge_name,cod_cuenca,area_km2)
   
-caudal_pronosticado_DGA = read.csv("data_output/figuras/pronostico_DGA/caudal_pronosticado_DGA.csv") %>% 
+caudal_pronosticado_DGA = read.csv("data_output/pronostico_DGA/caudal_pronosticado_DGA.csv") %>% 
   select(-c(year,ym,wym,gauge_name,area_km2)) %>% 
   dplyr::rename(q_dga = Q_m3s)
 
@@ -18,7 +19,11 @@ wys_dga = unique(caudal_pronosticado_DGA$wy)
 #UCHILE
 
 source("utils/main_regression_model.R")
-caudal_pronosticado_uchile = lapply(cuencas_comunes$cod_cuenca,run_model) %>% 
+
+caudal_pronosticado_uchile = lapply(cuencas_comunes$cod_cuenca,
+                                    function(x)
+                                    run_model(x,month_initialisation = 9,
+                                              export = "pronostico_caudal")) %>% 
   rbindlist %>%
   subset(wy %in% wys_dga) %>% 
   dplyr::rename(month_name = month) %>% 
@@ -44,13 +49,13 @@ plot_scatters <- function() {
 
 ### scatter simulado vs obs
 p1 = caudal_dga_uchile_promedio %>%
-  ggplot(aes(y = q_obs,x = q_dga, col = wy))+
+  ggplot(aes(x = q_obs,y = q_dga, col = wy))+
   geom_point()+
   scale_color_viridis_b()+
   geom_abline(slope = 1,intercept = 0)+
   labs(
-    y = "caudal observado (m3/s)",
-    x = "caudal pronosticado DGA (m3/s)",
+    x = "caudal observado (m3/s)",
+    y = "caudal pronosticado DGA (m3/s)",
     col = "Década emisión",
     title = "Caudales medios mensuales sep-mar pronosticados DGA vs obs",
     subtitle = "Periodo 1990/91-2019/20. 9 cuencas incluidas"
@@ -63,22 +68,22 @@ p1_ = p1 +
 p1__ = p1 + facet_wrap(~cod_cuenca,scales = "free")
 #plot(p1_)
 
-ggsave("data_output/figuras/pronostico_DGA/scatter_caudales_obs_pronosticado_DGA.png",
+ggsave("data_output/pronostico_DGA/scatter_caudales_obs_pronosticado_DGA.png",
        width = 7, height = 5, plot = p1_)
 
-ggsave("data_output/figuras/pronostico_DGA/scatter_caudales_obs_pronosticado_DGA_cuencas.png",
+ggsave("data_output/pronostico_DGA/scatter_caudales_obs_pronosticado_DGA_cuencas.png",
        width = 7, height = 5, plot = p1__)
 
 #### uchile
 ### scatter simulado vs obs
 p2 = caudal_dga_uchile_promedio %>%
-  ggplot(aes(y = q_obs,x = ens_avg, col = wy))+
+  ggplot(aes(x = q_obs,y = ens_avg, col = wy))+
   geom_point()+
   scale_color_viridis_b()+
   geom_abline(slope = 1,intercept = 0)+
   labs(
-    y = "caudal observado (m3/s)",
-    x = "caudal pronosticado uchile (m3/s)",
+    x = "caudal observado (m3/s)",
+    y = "caudal pronosticado uchile (m3/s)",
     col = "Década emisión",
     title = "Caudales medios mensuales sep-mar pronosticados uchile vs obs",
     subtitle = "Periodo 1990/91-2019/20. 9 cuencas incluidas"
@@ -91,10 +96,10 @@ p2_ = p2 +
 p2__ = p2 + facet_wrap(~cod_cuenca,scales = "free")
 #plot(p1_)
 
-ggsave("data_output/figuras/pronostico_DGA/scatter_caudales_obs_pronosticado_uchile.png",
+ggsave("data_output/pronostico_DGA/scatter_caudales_obs_pronosticado_uchile.png",
        width = 7, height = 5, plot = p2_)
 
-ggsave("data_output/figuras/pronostico_DGA/scatter_caudales_obs_pronosticado_uchile_cuencas.png",
+ggsave("data_output/pronostico_DGA/scatter_caudales_obs_pronosticado_uchile_cuencas.png",
        width = 7, height = 5, plot = p2__)
 }
 
@@ -173,7 +178,7 @@ p3 = ggplot(data = metricas_univariables_long,aes(x = origen,y = value))+
     x = "",
     y = ""
   )
-ggsave(filename = "data_output/figuras/pronostico_DGA/metricas_comparacion_univariables_caudal.png",
+ggsave(filename = "data_output/pronostico_DGA/metricas_comparacion_univariables_caudal.png",
        width = 7,height = 5,plot = p3)
 ##########
 ##### CRPSS
@@ -212,8 +217,10 @@ mae_DGA = metricas_univariables %>%
 #CRPSS
 crps_DGA_uchile = merge(crps_uchile, mae_DGA) %>%
   mutate(crpss = 1 - crps_ens / mae_avg) %>%
-  merge(cuencas_comunes) %>%
-  mutate(gauge_name = factor(gauge_name, levels = crps_DGA_uchile$gauge_name[order(crps_DGA_uchile$cod_cuenca)]))
+  merge(cuencas_comunes)
+
+crps_DGA_uchile$gauge_name = factor(crps_DGA_uchile$gauge_name, levels = crps_DGA_uchile$gauge_name[order(crps_DGA_uchile$cod_cuenca)])
+
 
 ggplot(crps_DGA_uchile, aes(y = gauge_name, x = crpss))+
   geom_point()+
@@ -221,7 +228,7 @@ ggplot(crps_DGA_uchile, aes(y = gauge_name, x = crpss))+
   labs( x = "CRPSS c/r pronóstico DGA",
         y = "")
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/crpss_comparacion_caudal.png",
+ggsave(filename = "data_output/pronostico_DGA/crpss_comparacion_caudal.png",
        width = 7, height = 5)
 
 
@@ -280,6 +287,6 @@ ggplot(crps_DGA_uchile, aes(x = month, y = crpss))+
         x = "mes pronosticado")+
   ylim(0,0.3)
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/crpss_mes_comparacion_caudal.png",
+ggsave(filename = "data_output/pronostico_DGA/crpss_mes_comparacion_caudal.png",
        width = 7, height = 5)
 

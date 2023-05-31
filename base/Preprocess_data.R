@@ -645,7 +645,7 @@ get_best_predictors <- function(catchment_code,month_initialisation) {
   
   #load best combination of predictors  
   data_best_models = readRDS(file = paste0(
-    "data_output/mejores_modelos_cuenca_mes/",
+    "data_input/mejores_predictores_cuenca_mes/",
     catchment_code,
     "_may-mar.RDS"
   ))
@@ -729,7 +729,7 @@ preprocess_data <- function(
     colnames
   
   info_list$catchment_name = catchment_data$attributes_catchment$gauge_name
-  
+  info_list$month_initialisation = month(datetime_initialisation)
   # save results in structure
   results <- c(
     train_set,

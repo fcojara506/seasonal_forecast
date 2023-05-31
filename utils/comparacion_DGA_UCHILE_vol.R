@@ -5,8 +5,8 @@ library(dplyr)
 atributos = read.csv("data_input/attributes/attributes_45catchments_ChileCentral.csv")
 
 # DGA
-scores_cuencas_DGA = read.csv(file = "data_output/figuras/pronostico_DGA/scores_DGA.csv")
-vol_DGA = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_DGA.csv")
+scores_cuencas_DGA = read.csv(file = "data_output/pronostico_DGA/scores_DGA.csv")
+vol_DGA = read.csv(file = "data_output/pronostico_DGA/volumen_obs_pronosticado_DGA.csv")
 wys = vol_DGA$wy %>% unique()
 catchment_codes = unique(vol_DGA$cod_cuenca) %>% sort()
 
@@ -17,20 +17,20 @@ atributos %>%
   
 
 #UCHILE
-vol_forecast = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_uchile.csv")%>%
+vol_forecast = read.csv(file = "data_output/pronostico_DGA/volumen_obs_pronosticado_uchile.csv")%>%
   filter(wy_simple %in% wys)
 
 p1 = vol_DGA %>%
   dplyr::rename(DGA = volume_GL) %>% 
   dplyr::rename(OBS = volume_obs_GL) %>%
   subset(wy<2020) %>%
-  ggplot(aes(y = OBS,x = DGA, col = wy))+
+  ggplot(aes(x = OBS,y = DGA, col = wy))+
   geom_point()+
   scale_color_viridis_b()+
   geom_abline(slope = 1,intercept = 0)+
   labs(
-    y = "volumen observado (mill. m3)",
-    x = "volumen pronosticado DGA (mill. m3)",
+    x = "volumen observado (mill. m3)",
+    y = "volumen pronosticado DGA (mill. m3)",
     col = "Década emisión",
     title = "Volúmenes sep-mar pronosticados DGA vs obs",
     subtitle = "Periodo 1990/91-2019/20. 9 cuencas incluidas"
@@ -43,10 +43,10 @@ p1_ = p1 +
 p1__ = p1 + facet_wrap(~cod_cuenca,scales = "free")
 plot(p1__)
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_DGA.png",
+ggsave(filename = "data_output/pronostico_DGA/scatter_obs_pronosticado_DGA.png",
        width = 7,height = 5, plot = p1_)
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_DGA_cuencas.png",
+ggsave(filename = "data_output/pronostico_DGA/scatter_obs_pronosticado_DGA_cuencas.png",
        width = 7,height = 5, plot = p1__)
 
 p2 = vol_forecast %>%
@@ -54,13 +54,13 @@ p2 = vol_forecast %>%
   dplyr::rename(OBS = volume_original) %>%
   dplyr::rename(wy = wy_simple) %>% 
   subset(wy<2020) %>%
-  ggplot(aes(y = OBS,x = PRO, col = wy))+
+  ggplot(aes(x = OBS,y = PRO, col = wy))+
   geom_point()+
   scale_color_viridis_b()+
   geom_abline(slope = 1,intercept = 0)+
   labs(
-    y = "volumen observado (mill. m3)",
-    x = "volumen pronosticado uchile (mill. m3)",
+    x = "volumen observado (mill. m3)",
+    y = "volumen pronosticado uchile (mill. m3)",
     col = "Década emisión",
     title = "Volúmenes sep-mar pronosticados uchile vs obs",
     subtitle = "Periodo 1990/91-2019/20. 9 cuencas incluidas"
@@ -73,10 +73,10 @@ p2_=p2+
 p2__ = p2 + facet_wrap(~catchment_code,scales = "free")
 plot(p2__)
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_uchile.png",
+ggsave(filename = "data_output/pronostico_DGA/scatter_obs_pronosticado_uchile.png",
        width = 7,height = 5,plot = p2_)
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/scatter_obs_pronosticado_uchile_cuencas.png",
+ggsave(filename = "data_output/pronostico_DGA/scatter_obs_pronosticado_uchile_cuencas.png",
        width = 7,height = 5,plot = p2__)
 ######
 
@@ -150,7 +150,7 @@ p3 = ggplot(data = metricas_univariables_long,aes(x = origen,y = value))+
   )
   
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/metricas_comparacion_univariables.png",
+ggsave(filename = "data_output/pronostico_DGA/metricas_comparacion_univariables.png",
        width = 7,height = 5,plot = p3)
 
 ####### CRPSS
@@ -164,7 +164,7 @@ volumen_obs = read.csv(file = "data_input/flows/volume_mm_GL_45catchments_ChileC
   dplyr::rename(volume_obs_GL = volume_GL) 
 
 # volumen pronosticado uchile
-vol_ens = read.csv(file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticadoENS_uchile.csv",check.names = F) %>% 
+vol_ens = read.csv(file = "data_output/pronostico_DGA/volumen_obs_pronosticadoENS_uchile.csv",check.names = F) %>% 
   data.table() %>% 
   melt.data.table(id.vars = c("catchment_code"),
                   variable.name = "wy_simple",
@@ -235,5 +235,5 @@ ggplot(crps_DGA_uchile, aes(y = gauge_name, x = crpss))+
   labs( x = "CRPSS c/r pronóstico DGA",
         y = "")
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/crpss_comparacion.png",
+ggsave(filename = "data_output/pronostico_DGA/crpss_comparacion.png",
        width = 7, height = 5)

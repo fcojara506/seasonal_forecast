@@ -8,7 +8,7 @@ library(lubridate)
 source("base/Convert_units.R")
 source("base/DatesWaterYear.R")
 
-cuencas_pronostico_DGA = read.csv(file = "data_input/flows/cuencas_pronosticos_DGA.csv")
+cuencas_pronostico_DGA = read.csv(file = "data_output/pronostico_DGA/cuencas_pronosticos_DGA.csv")
 cuencas_pronostico = read.csv(file = "data_input/attributes/attributes_45catchments_ChileCentral.csv")
 
 cuencas_pronosticos_merged = merge(cuencas_pronostico,cuencas_pronostico_DGA,by.x = "cod_cuenca",by.y = "gauge_id") %>% 
@@ -18,7 +18,8 @@ cuencas_pronosticos_merged = merge(cuencas_pronostico,cuencas_pronostico_DGA,by.
 
 #rm(cuencas_pronostico_DGA,cuencas_pronostico)
 
-pronosticos_caudales_DGA = read.csv(file = "data_input/flows/pronosticos_DGA_m3s.csv",check.names = F) %>% 
+
+pronosticos_caudales_DGA = read.csv(file = "data_output/pronostico_DGA/pronosticos_DGA_m3s.csv",check.names = F) %>% 
   select(-Mes) %>% 
   dplyr::rename(wy = año) %>% 
   dplyr::rename(month = mes) %>%
@@ -44,7 +45,7 @@ ggplot(data = datos_pronosticos_DGA,aes(x = ym, y = gauge_name,fill=hay_data))+
     title = "Fechas con caudales medios mensuales pronosticados"
   )
 
-ggsave(filename = "data_output/figuras/pronostico_DGA/pronosticos_disponibles_DGA.png",
+ggsave(filename = "data_output/pronostico_DGA/pronosticos_disponibles_DGA.png",
        width = 7,height = 5)
 
 # filtrar cuencas con mayor cantidad de datos
@@ -53,16 +54,16 @@ cuencas_mas_datos = datos_pronosticos_DGA %>%
   summarise(cuenta  = sum(hay_data == "Data")) %>% 
   filter(cuenta>200)%>% 
   merge(cuencas_pronosticos_merged)
-#write.csv(cuencas_mas_datos, file = "data_input/flows/cuencas_pronosticos_DGA_largoregistro.csv",row.names = F)
+#write.csv(cuencas_mas_datos, file = "data_output/pronostico_DGA/cuencas_pronosticos_DGA_largoregistro.csv",row.names = F)
 
 # caudales medios mensuales de cuencas con mas datos
 pronosticos_caudales_DGA_masdatos = pronosticos_caudales_DGA %>% 
   filter(gauge_name %in% cuencas_mas_datos$gauge_name) %>% 
   merge(cuencas_pronosticos_merged)
 
-write.csv(x = pronosticos_caudales_DGA_masdatos,file = "data_output/figuras/pronostico_DGA/caudal_pronosticado_DGA.csv",row.names = F)
-# calcular volumen sep-mar
+write.csv(x = pronosticos_caudales_DGA_masdatos,file ="data_output/pronostico_DGA/caudal_pronosticado_DGA.csv",row.names = F)
 
+# calcular volumen sep-mar
 volumeGL_decaudal <- function(catchment_code) {
 
 Q_DGA = pronosticos_caudales_DGA_masdatos %>% 
@@ -118,7 +119,7 @@ volumen_obs_pronosticado = merge.data.table(pronosticos_volumenes_DGA,volumen_ob
                                             by.y = c("wy_simple","cod_cuenca") ) %>% 
   subset(!(wy %in% c(2020,2021)))
 
-write.csv(volumen_obs_pronosticado,file = "data_output/figuras/pronostico_DGA/volumen_obs_pronosticado_DGA.csv",row.names = F)
+write.csv(volumen_obs_pronosticado,file = "data_output/pronostico_DGA/volumen_obs_pronosticado_DGA.csv",row.names = F)
 
 # volumen_obs_pronosticado %>%
 #   dplyr::rename(DGA = volume_GL) %>% 
@@ -169,4 +170,4 @@ metricas_cuenca <- function(catchment_code) {
 scores_cuencas_DGA = lapply(catchment_codes, metricas_cuenca) %>% 
   rbindlist()
 
-write.csv(scores_cuencas_DGA,file = "data_output/figuras/pronostico_DGA/scores_DGA.csv",row.names = F)
+write.csv(scores_cuencas_DGA,file = "data_output/pronostico_DGA/scores_DGA.csv",row.names = F)

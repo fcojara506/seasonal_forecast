@@ -2,7 +2,7 @@
 # correr el modelo estadistico para una o varias cuencas
 
 pronostico_operativo_unacuenca <-
-  function(catchment_code, fecha_emision_Y_M_D) {
+  function(catchment_code, fecha_emision_Y_M_D, exportar_figuras = F) {
     # cargar funciones de entrada para modelo estadistico
     source(file = "base/Preprocess_data.R")
     data_input <- preprocess_data(
@@ -40,13 +40,17 @@ pronostico_operativo_unacuenca <-
         comentarios = "version 0.1"
       )
     
+    if (exportar_figuras) {
+      plotear_todas_figuras_pronosticos(data_input,data_fore, q_fore)
+    }
+    
     return(list(
       resultados_plataforma = plataforma,
       resultados_tecnicos = resultados
     ))
   }
 
-pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D) {
+pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D,exportar_figuras = F) {
     # inicializar lista para guardar datos
     r_tecnicos = list()
     r_plataforma = list()
@@ -55,7 +59,7 @@ pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D) {
     for (catchment_code in as.character(codigos_cuencas)) {
         print(paste("calculando ","cuenca",catchment_code," emision:", fecha_emision_Y_M_D))
         # ocupar funcion para una cuenca
-        resultados = pronostico_operativo_unacuenca(catchment_code, fecha_emision_Y_M_D)
+        resultados = pronostico_operativo_unacuenca(catchment_code, fecha_emision_Y_M_D,exportar_figuras)
         #guardar resultados en listas
         r_tecnicos[[catchment_code]] = resultados$resultados_tecnicos 
         r_plataforma[[catchment_code]] = resultados$resultados_plataforma
@@ -75,4 +79,106 @@ pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D) {
     
     return(final)
     
-  }
+}
+
+
+
+plotear_todas_figuras_pronosticos <- function(data_input,data_fore,q_fore) {
+  
+  source("base/Charts.R")
+  
+  catchment_code = data_input$info$catchment_code
+  month_initialisation = data_input$info$datetime_initialisation
+  #### charts
+  p1 = plot_X_y_train(data_input)
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/1_scatter_predictoresVSvolumen/scatter_X_y_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p1,
+    width = 5,
+    height = 5,
+    dpi = 400,
+  )
+  
+  #scatter volume of simulated vs observed in cross-validation
+  p2 =
+    plot_vol_sim_obs(data_input = data_input,
+                     data_fore = data_fore)
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/2_scatter_simulacionVSobservacion/scatter_y-sim-obs_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p2,
+    width = 5,
+    height = 5,
+    dpi = 400
+  )
+  #probability of exceedance vs volume, type of year traffic light
+  p3 = plot_pexc_forecast(data_input, data_fore)
+  
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/3_probabilidad_excedencia_tipo/pexc_y-sim_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p3,
+    width = 5,
+    height = 5,
+    dpi = 400
+  )
+  
+  # #ensemble volume in hindcast (cross-validation)
+  p4 = plot_backtest_volume(data_input =  data_input,
+                            data_fore = data_fore)
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/4_pronostico_volumen_hindcast/hindcast_volumen_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p4,
+    width = 8,
+    height = 5,
+    dpi = 400
+  )
+  
+  
+  #hydrogram of forecasted mean monthly flows
+  p5 = plot_knn_flow(data_input =  data_input,
+                     q_ens_fore = q_fore)
+  
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/5_pronostico_caudales/pronostico_caudales_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p5,
+    width = 8,
+    height = 5,
+    dpi = 400
+  )
+  #flow forecast ensemble as spaghetti
+  p6 = plot_flow_spaghetti(data_input =  data_input,
+                           q_ens_fore = q_fore)
+  
+  ggsave(
+    glue(
+      "data_output/figuras/por_cuenca/5_pronostico_caudales/spaghetti/forecast_flow_spagheti_{catchment_code}_{month_initialisation}.png"
+    ),
+    plot = p6,
+    width = 8,
+    height = 5,
+    dpi = 400
+  )
+  # return(list(p1 = p1,
+  #             p2 = p2,
+  #             p3 = p3,
+  #             p4 = p4,
+  #             p5 = p5,
+  #             p6 = p6,
+  # ))
+  return(NA)
+}
+
