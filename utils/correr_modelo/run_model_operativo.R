@@ -188,11 +188,9 @@ plotear_todas_figuras_pronosticos <- function(data_input,data_fore,q_fore) {
 
 # funcion para encontrar la fecha de emision mas reciente posible
 encontrar_fecha_emision <- function(current_date = Sys.Date(),dias_retraso_entradas = 6) {
+  library(lubridate)
   
-  
-  if(day(current_date) >= 25 || day(current_date) <= 6) {
-    warning("Se recomienda esperar hasta el 6 de mes entrante para actualizar datos de entrada")
-  }
+
   
   current_month <- month(current_date)
   current_year <- year(current_date)
@@ -207,6 +205,11 @@ encontrar_fecha_emision <- function(current_date = Sys.Date(),dias_retraso_entra
     }
     closest_first_day <- ymd(paste(current_year, previous_month, "01", sep = "-"))
   }
+  
+  if(day(current_date) >= 25 || day(current_date) <= 6) {
+    warning(paste("Se recomienda esperar hasta el 6 de mes entrante para actualizar datos de entrada \nFecha de emision mas cercana con datos completos: ", closest_first_day))
+    }
+
   return(closest_first_day)
 }
 

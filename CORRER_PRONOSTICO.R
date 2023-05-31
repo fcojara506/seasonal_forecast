@@ -15,6 +15,7 @@
 source(file = "base/Load_libraries.R")
 
 descargar_nuevos_datos = TRUE
+
 if (descargar_nuevos_datos) {
   # preproceso (descarga,limpieza,correccion sesgo) meteorológico
   #descarga
@@ -47,27 +48,30 @@ source("utils/correr_modelo/run_model_operativo.R")
 
 #carga los codigos y propiedades mas recientes (codigos_cuencas)
 source(file = "utils/correr_modelo/parametros_defecto.R")
-codigos_cuencas = codigos_cuencas_subconjunto
-fecha_emision = fecha_emision_test
+codigos_cuencas = codigos_45cuencas#codigos_3cuencas
+fecha_emision = fecha_emision_mas_reciente#fecha_emision_test
 
 # ejecutar pronostico para todas las cuencas seleccionadas
 resultados = 
 pronostico_operativo(
   codigos_cuencas = codigos_cuencas,
   fecha_emision_Y_M_D = fecha_emision,
-  exportar_figuras = TRUE
+  exportar_figuras = FALSE
 )
 
 
 # guardar en archivos
+#volumen plataform
 write.csv(resultados$plataforma_volumen,
           file = glue("data_output/plataforma/volumen/volumen_estacional_{fecha_emision}_version{Sys.Date()}.csv"),
           row.names = FALSE)
 
+#caudal plaforma
 write.csv(resultados$plataforma_caudal,
           file = glue("data_output/plataforma/caudales/caudalesmediosmensuales_{fecha_emision}_version{Sys.Date()}.csv"),
           row.names = FALSE)
 
+#todos los resultados de pronosticos
 saveRDS(resultados$resultados_tecnicos, 
         file = glue("data_output/plataforma/resultados_en_detalles/resultadostecnicos_{fecha_emision}_version{Sys.Date()}.RDS"))
 
