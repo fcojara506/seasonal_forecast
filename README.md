@@ -67,7 +67,7 @@ Se requieren los siguientes paquetes de R (descarga disponible en "base/Load_lib
 
 ## Correr con valores por defecto
 
-Para ejecutar el código "main_run.R" correctamente, debe usar Rstudio con el proyecto "seasonal_forecast.Rproj" como ambiente principal. Esto asegura que las rutas de los archivos se mantengan relativas al proyecto.
+Para ejecutar el código "CORRER_PRONOSTICO.R" correctamente, puede usar Rstudio con el proyecto "seasonal_forecast.Rproj" como ambiente principal. Esto asegura que las rutas de los archivos se mantengan relativas al proyecto.
 
 Alternativamente, puede utilizar un archivo bash para ejecutar el script.
 

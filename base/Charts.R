@@ -187,7 +187,7 @@ p =
  
 
   if (!(is.null(data_input$y_test$volume))) {
-    p =p+geom_point(aes(x=data_fore$y_fore[[1]],y=data_input$y_test$volume), col="red")
+    p =p+geom_point(aes(x=data_fore$y_fore[[1]],y=data_input$y_test$volume_original), col="red")
   }
   
 
@@ -572,44 +572,6 @@ plot_knn_flow <- function(
     )+
     ylim(0,NA)
 
-  #  #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
-  # ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
-  # 
-  # max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
-  # #max_y =  max_y_info$value %>% ceiling10
-  # 
-  # max_perce = merge(
-  #   x=q_plot_data$q_obs_stats,
-  #   y=max_y_info,
-  #   by = c("wym","wym_str")
-  # ) %>% 
-  #   mutate(x_Larger_y = value.x>value.y) %>% 
-  #   mutate(cumsum = cumsum(x_Larger_y))
-  # 
-  # position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
-  # max_y_percentile = q_plot_data$q_obs_stats %>% 
-  #   subset(Pexc == max_perce[position_max_perce]$Pexc) %$% value %>% 
-  #   max(na.rm = T)
-  # 
-  # #print(max_y_info$value,"_",max_y_percentile)
-  # max_y = max(max_y_info$value,max_y_percentile) %>% ceiling_num
-  # 
-  # p1 = p +
-  #   geom_text(
-  #     data = median_q_ens,
-  #     mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
-  #     size=3
-  #   )+
-  #   scale_x_discrete(
-  #     limits=unlist(data_input$time_horizon$months_forecast_period),
-  #     expand = c(0.05 ,0)
-  #     )+
-  #   scale_y_continuous(
-  #     limits = c(NA,max_y*1.05)
-  #   )
-  #   
-
-  
   # add an inset plot with forecast period
   library(patchwork)
   
@@ -727,42 +689,42 @@ plot_flow_spaghetti <- function(
       y = parse(text = glue("Caudal~~({data_input$info$water_units$q})"))
     )
   
-
-  #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
-  ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
-  
-  max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
-  #max_y =  max_y_info$value %>% ceiling10
-  
-  max_perce = merge(
-    x=q_plot_data$q_obs_stats,
-    y=max_y_info,
-    by = c("wym","wym_str")
-  ) %>% 
-    mutate(x_Larger_y = value.x>value.y) %>% 
-    mutate(cumsum = cumsum(x_Larger_y))
-  
-  position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
-  max_y_percentile = q_plot_data$q_obs_stats %>% 
-    subset(Pexc == max_perce[position_max_perce]$Pexc) %$% value %>% 
-    max(na.rm = T)
-  
-  #print(max_y_info$value,"_",max_y_percentile)
-  max_y = max(max_y_info$value,max_y_percentile) %>% ceiling_num
-  
-  p1 = p +
-    geom_text(
-      data = median_q_ens,
-      mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
-      size=3
-    )+
-    scale_x_discrete(
-      limits=unlist(data_input$time_horizon$months_forecast_period),
-      expand = c(0.05 ,0)
-    )+
-    scale_y_continuous(
-      limits = c(NA,max_y*1.05)
-    )
+# 
+#   #max_y = ceiling(max(q_plot_data$q_ens$value,na.rm=T)/10)*10
+#   ceiling_num <- function(x,num=1) {x = ceiling(x/num)*num}
+#   
+#   max_y_info = q_plot_data$q_ens[which.max(q_plot_data$q_ens$value)]
+#   #max_y =  max_y_info$value %>% ceiling10
+#   
+#   max_perce = merge(
+#     x=q_plot_data$q_obs_stats,
+#     y=max_y_info,
+#     by = c("wym","wym_str")
+#   ) %>% 
+#     mutate(x_Larger_y = value.x>value.y) %>% 
+#     mutate(cumsum = cumsum(x_Larger_y))
+#   
+#   position_max_perce = max(which(max_perce$cumsum>0),length(max_perce$cumsum))
+#   max_y_percentile = q_plot_data$q_obs_stats %>% 
+#     subset(Pexc == max_perce[position_max_perce]$Pexc) %$% value %>% 
+#     max(na.rm = T)
+#   
+#   #print(max_y_info$value,"_",max_y_percentile)
+#   max_y = max(max_y_info$value,max_y_percentile) %>% ceiling_num
+#   
+#   p1 = p +
+#     geom_text(
+#       data = median_q_ens,
+#       mapping = aes(x = wym_str,y = max_y*1.05,label= sprintf("%.1f",median_flow) ),
+#       size=3
+#     )+
+#     scale_x_discrete(
+#       limits=unlist(data_input$time_horizon$months_forecast_period),
+#       expand = c(0.05 ,0)
+#     )+
+#     scale_y_continuous(
+#       limits = c(NA,max_y*1.05)
+#     )
   
   
   

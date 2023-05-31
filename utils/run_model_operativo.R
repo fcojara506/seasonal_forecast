@@ -1,6 +1,8 @@
 # secuencia de pasos para
 # correr el modelo estadistico para una o varias cuencas
 
+
+
 pronostico_operativo_unacuenca <-
   function(catchment_code, fecha_emision_Y_M_D, exportar_figuras = F) {
     # cargar funciones de entrada para modelo estadistico
@@ -41,7 +43,7 @@ pronostico_operativo_unacuenca <-
       )
     
     if (exportar_figuras) {
-      plotear_todas_figuras_pronosticos(data_input,data_fore, q_fore)
+      a = plotear_todas_figuras_pronosticos(data_input,data_fore, q_fore)
     }
     
     return(list(
@@ -57,7 +59,7 @@ pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D,exportar_fi
     
     # hacer loop para cada cuenca
     for (catchment_code in as.character(codigos_cuencas)) {
-        print(paste("calculando ","cuenca",catchment_code," emision:", fecha_emision_Y_M_D))
+        print(paste("calculando pronóstico","cuenca",catchment_code," emision:", fecha_emision_Y_M_D))
         # ocupar funcion para una cuenca
         resultados = pronostico_operativo_unacuenca(catchment_code, fecha_emision_Y_M_D,exportar_figuras)
         #guardar resultados en listas
@@ -84,6 +86,8 @@ pronostico_operativo <- function(codigos_cuencas,fecha_emision_Y_M_D,exportar_fi
 
 
 plotear_todas_figuras_pronosticos <- function(data_input,data_fore,q_fore) {
+  message("Exportar figuras puede tomar tiempo")
+  message("Algunos mensajes de 'warnings' pueden aparecer con los gráficos")
   
   source("base/Charts.R")
   
@@ -180,5 +184,29 @@ plotear_todas_figuras_pronosticos <- function(data_input,data_fore,q_fore) {
   #             p6 = p6,
   # ))
   return(NA)
+}
+
+# funcion para encontrar la fecha de emision mas reciente posible
+encontrar_fecha_emision <- function(current_date = Sys.Date(),dias_retraso_entradas = 6) {
+  
+  
+  if(day(current_date) >= 25 || day(current_date) <= 6) {
+    warning("Se recomienda esperar hasta el 6 de mes entrante para actualizar datos de entrada")
+  }
+  
+  current_month <- month(current_date)
+  current_year <- year(current_date)
+  
+  if(day(current_date) >= dias_retraso_entradas) {
+    closest_first_day <- ymd(paste(current_year, current_month, "01", sep = "-"))
+  } else {
+    previous_month <- current_month - 1
+    if (previous_month == 0) {
+      previous_month <- 12
+      current_year <- current_year - 1
+    }
+    closest_first_day <- ymd(paste(current_year, previous_month, "01", sep = "-"))
+  }
+  return(closest_first_day)
 }
 

@@ -18,29 +18,6 @@ source("base/DatesWaterYear.R")
 source("base/CheckNormality.R")
 source("base/Pexc.R")
 
-# Function to find the closest first day of the month that has already passed
-get_closest_first_day <- function(current_date = Sys.Date()) {
-  # Function to print warning between the 25th and 6th of each month
-
-    if(day(current_date) >= 25 || day(current_date) <= 6) {
-      warning("Warning: Se recomienda esperar hasta el 6 de mes entrante para obtener nueva")
-    }
-
-  current_month <- month(current_date)
-  current_year <- year(current_date)
-  if(day(current_date) >= 1) {
-    closest_first_day <- ymd(paste(current_year, current_month, "01", sep = "-"))
-  } else {
-    previous_month <- current_month - 1
-    if (previous_month == 0) {
-      previous_month <- 12
-      current_year <- current_year - 1
-    }
-    closest_first_day <- ymd(paste(current_year, previous_month, "01", sep = "-"))
-  }
-  return(closest_first_day)
-}
-
 
 get_default_datasets_path <- function(meteo=NULL, hydro=NULL) {
   
