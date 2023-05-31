@@ -7,14 +7,13 @@ library(data.table)
 library(feather)
 library(sf)
 
-##### files to read
-files <- c("data_output/metricas/RDS/scores_best_20230531_mm.RDS",
-           "data_output/metricas/RDS/scores_reference_20230531_mm.RDS"
+##### files to read (agregar sufijo "_mm.RDS" para pronosticos es mm)
+files <- c("data_output/metricas/RDS/scores_best_20230531.RDS",
+           "data_output/metricas/RDS/scores_reference_20230531.RDS"
 )
 
 names(files) <- c("scores_loocv",
                   "scores_ref_loocv")
-
 
 
 # Define functions
