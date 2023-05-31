@@ -93,10 +93,10 @@ summary_scores_data <- function(scores_data) {
 
 lista_path_metricas =
   list(
-    "data_output/metricas/RDS/scores_best_20230431_mm.RDS",
-    "data_output/metricas/RDS/scores_reference_20230431_mm.RDS",
-    "data_output/metricas/RDS/scores_best_20230431.RDS",
-    "data_output/metricas/RDS/scores_reference_20230431.RDS"
+    "data_output/metricas/RDS/scores_best_20230531_mm.RDS",
+    "data_output/metricas/RDS/scores_reference_20230531_mm.RDS",
+    "data_output/metricas/RDS/scores_best_20230531.RDS",
+    "data_output/metricas/RDS/scores_reference_20230531.RDS"
   )
 
 for (file in lista_path_metricas) {
@@ -104,7 +104,7 @@ for (file in lista_path_metricas) {
   filename_csv <- sub("\\.RDS$", ".csv", filename)
   filename_csv <- sub("scores", "", filename_csv)
   filename_csv <- sub("reference", "referencia", filename_csv)
-  filename_csv <- sub("best", "final", filename_csv)
+  filename_csv <- sub("best", "hibrido", filename_csv)
   
   ## metricas de VOLUMEN
   scores_vol_cuencas = read_and_process_scores(file_path = file,

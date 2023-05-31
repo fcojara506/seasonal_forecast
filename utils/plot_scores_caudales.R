@@ -7,9 +7,17 @@ library(data.table)
 library(feather)
 library(sf)
 
+##### files to read
+files <- c("data_output/metricas/RDS/scores_best_20230531_mm.RDS",
+           "data_output/metricas/RDS/scores_reference_20230531_mm.RDS"
+)
+
+names(files) <- c("scores_loocv",
+                  "scores_ref_loocv")
+
 # Define functions
 join_x_info <- function(x) {
-  data <- x[["scores_volume"]]
+  data <- x[["scores_flow"]]
   info_x <- x[["info"]]
   predictor_list <- rbind(info_x[c("predictor_list")])
   
@@ -62,12 +70,7 @@ merge_scores <- function(scores_data) {
 
 
 # Main script
-files <- c("data_output/scores/RDS/scores_best_20230425.RDS",
-           "data_output/scores/RDS/scores_reference_20230425.RDS"
-)
 
-names(files) <- c("scores_loocv",
-                  "scores_ref_loocv")
 
 scores_data <- process_files(files)
 df_comb <- merge_scores(scores_data)
@@ -118,9 +121,9 @@ p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
   ))+
   geom_hline(yintercept =  0)+
   #scale_color_manual(values = c("red","blue"),labels = c("Mejor combinación", "Referencia"))+
-  labs(title = "CRPSS de los volúmenes para distintas fechas de inicialización",
+  labs(title = "CRPSS de los caudales para distintas fechas de inicialización",
        x = "fecha de emisión",
-       y = "CRPSS [-] c/r volumen promedio 1981-2019",
+       y = "CRPSS [-] c/r caudales prom men 1981-2019",
        color = "",
        caption = "Cada boxplot agrupa 45 cuencas"
   )+
@@ -128,9 +131,9 @@ p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
   guides(col = guide_legend(ncol = 1)) +
   scale_color_brewer(palette = "Set1",direction = -1)+
   ylim(NA,1)
+print(p)
 
-
-ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/crpss_climatologico_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
@@ -144,7 +147,7 @@ p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>%
     x = "fecha de emisión",
     y = "R2 [-]",
     col = "",
-    title = "R2 del volumen obs vs promedio del pronóstico",
+    title = "R2 del caudal medio mensual obs vs promedio del pronóstico",
     caption = "Cada boxplot agrupa 45 cuencas"
   ) + theme(legend.position = "bottom")+
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
@@ -155,7 +158,7 @@ p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>%
 
 plot(p2)
 
-ggsave(filename = "data_output/figuras/scores/r2_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/r2_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p2)
 
 
@@ -168,9 +171,9 @@ p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")%>%
                    col = version)) +
   labs(
     x = "fecha de emisión",
-    y = "RMSE [mill m3]",
+    y = "RMSE [m3/s]",
     col = "",
-    title = "RMSE del volumen obs vs promedio del pronóstico "
+    title = "RMSE del caudal medio mensual obs vs promedio del pronóstico "
   ) +
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
@@ -180,7 +183,7 @@ p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")%>%
 
 plot(p1)
 
-ggsave(filename = "data_output/figuras/scores/RMSE_best_ref.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/RMSE_best_ref.png",
        width = 7, height = 4, plot = p1)
 
 p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>% 
@@ -190,9 +193,9 @@ p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>%
                    col = version))+
   labs(
     x = "fecha de emisión",
-    y = "MAE [mill m3]",
+    y = "MAE [m3/s]",
     col = "",
-    title = "Error absoluto medio (MAE) del volumen obs vs promedio del pronóstico"
+    title = "Error absoluto medio (MAE) del caudal medio mensual obs vs promedio del pronóstico"
   ) +
   guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
   theme(legend.position = "bottom")+
@@ -201,7 +204,7 @@ p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>%
 
 print(p3)
 
-ggsave(filename = "data_output/figuras/scores/MAE_best_ref.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/MAE_best_ref.png",
        width = 7,height = 4, plot = p3)
 
 
@@ -286,7 +289,7 @@ p1 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
                    col = month_initialisation))+
   facet_wrap(~month_initialisation) +
   labs(x = "Indice aridez (P/PET) [mm/mm]",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual climatológico",
        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
@@ -303,7 +306,7 @@ p_low = plot_metric(df,
                         by_y = "catchment_code",
                        metric_name = "")
 print(p_low)
-ggsave(filename = "data_output/figuras/scores/cuencas_conbajo_crpss.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/cuencas_conbajo_crpss.png",
        width = 10, height = 7, plot = p_low)
 
 
@@ -335,7 +338,7 @@ r2_map = plot_metric2(df2,
   theme(plot.title = element_text(hjust = 0.5))
 
 p_maps = grid.arrange(crpss_map,r2_map,ncol =2,widths = c(1,2))
-ggsave(filename = "data_output/figuras/scores/crpss_r2_mapa_jul.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/crpss_r2_mapa_jul.png",
        width = 5, height = 7, plot = p_maps)
 
 ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
@@ -351,14 +354,14 @@ ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul"
   #       y = value))+
   facet_wrap(~month_initialisation) +
   labs(x = "Indice aridez (P/PET) [mm/mm]",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual promedio",
        title = "CRPSS vs índice de aridez del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
   guides(col = guide_legend(nrow = 2))
 
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-promedio_aridez.png",
         width = 10, height = 7, plot = p1)
 
 
@@ -368,7 +371,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
                    col = month_initialisation))+
   facet_wrap(~month_initialisation)+
   labs(x = "Centroide del hidrograma (dia max q/365) [d/d]",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual climatologico",
        title = "CRPSS vs centroide del hidrograma del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
@@ -376,7 +379,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p2 = grid.arrange(p2,p_hfd,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_hfd.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-promedio_hfd.png",
        width = 10, height = 7, plot = p2)
 
 ########
@@ -386,7 +389,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
                    col = month_initialisation))+
   facet_wrap(~month_initialisation)+
   labs(x = "Base flow []",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual climatologico",
        title = "CRPSS vs indice de flujo base del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
@@ -394,7 +397,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p2 = grid.arrange(p2,p_baseflow,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_baseflow.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-promedio_baseflow.png",
        width = 10, height = 7, plot = p2)
 ###3
 
@@ -408,7 +411,7 @@ p3 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
                    col = month_initialisation))+
   facet_wrap(~month_initialisation)+
   labs(x = "Precipitación anual promedio 1979-2010 (CR2MET) [mm]",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual climatologico",
        title = "CRPSS vs Precipitación media anual del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
@@ -416,7 +419,7 @@ p3 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p3 = grid.arrange(p3,p_pmean,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_pmean.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-promedio_pmean.png",
        width = 10, height = 7, plot = p3)
 
 p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
@@ -425,7 +428,7 @@ p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
                    col = month_initialisation))+
   facet_wrap(~month_initialisation)+
   labs(x = "Coeficiente de escorrentía 1979-2010 (q/P) [mm/mm]",
-       y = "CRPSS c/r volumen promedio",
+       y = "CRPSS c/r caudal medio mensual",
        title = "CRPSS vs coeficiente de escorrentía del modelo 'mejor combinación (AIC)' ",
        col = "mes emisión")+
   theme(legend.position = "bottom") +
@@ -433,7 +436,7 @@ p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p4 = grid.arrange(p4,p_runoffratio,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_rr.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-promedio_rr.png",
        width = 10, height = 7, plot = p4)
 
 
@@ -458,7 +461,7 @@ p5 <- ggplot(data = df_crpss) +
 
 
 p5 = grid.arrange(p5,p_aridez,ncol =2,widths = c(3,1))
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_aridez.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-referencia_aridez.png",
        width = 10, height = 7, plot = p5)
 
 p6 <- ggplot(data = df_crpss) +
@@ -475,7 +478,7 @@ p6 <- ggplot(data = df_crpss) +
 
 p6 = grid.arrange(p6,p_hfd,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_hfd.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-referencia_hfd.png",
        width = 10, height = 7, plot = p6)
 
 p7 <- ggplot(data = df_crpss) +
@@ -492,7 +495,7 @@ p7 <- ggplot(data = df_crpss) +
 
 p7 = grid.arrange(p7,p_pmean,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_pmean.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-referencia_pmean.png",
        width = 10, height = 7, plot = p7)
 
 p8 <- ggplot(data = df_crpss) +
@@ -508,117 +511,14 @@ p8 <- ggplot(data = df_crpss) +
   guides(col = guide_legend(nrow = 2))
 
 p8 = grid.arrange(p8,p_runoffratio,ncol =2,widths = c(3,1))
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_rr.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/scatter_crpss-referencia_rr.png",
        width = 10, height = 7, plot = p8)
 
 #############################################
 levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
 
-p = ggplot(data = subset(df_avgens,metric_name == "accuracy_ens")%>%
-              subset(resampling == "Leave 1 out"))+
-  geom_boxplot(aes(x = month_initialisation,
-                   y = metric_value,
-                   col = version))+
-  labs(
-    x = "fecha de emisión",
-    y = "Accuracy [-]",
-    col = "",
-    subtitle = "Método considerando todos los ensembles",
-    title = "Exactitud (accuracy) del volumen obs vs promedio del pronóstico",
-    caption = "Cada boxplot agrupa 45 cuencas"
-  ) + theme(legend.position = "bottom")+
-  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
-  theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 1)) +
-  scale_color_brewer(palette = "Set1",direction = -1)+
-  ylim(NA,1)
-
-plot(p)
-
-ggsave(filename = "data_output/figuras/scores/accuracy_ensemble_ref_best_L1OCV.png",
-       width = 7,height = 4,dpi = 400, plot = p)
 
 
-levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
-
-p = ggplot(data = subset(df_avgens,metric_name == "accuracy_uni")%>%
-             subset(resampling == "Leave 1 out"))+
-  geom_boxplot(aes(x = month_initialisation,
-                   y = metric_value,
-                   col = version))+
-  labs(
-    x = "fecha de emisión",
-    y = "Accuracy [-]",
-    col = "",
-    title = "Exactitud (accuracy) del volumen obs vs promedio del pronóstico",
-    subtitle = "Método considerando la moda de los ensembles",
-    caption = "Cada boxplot agrupa 45 cuencas"
-  ) + theme(legend.position = "bottom")+
-  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
-  theme(legend.position = "bottom")+
-  guides(col = guide_legend(ncol = 1)) +
-  scale_color_brewer(palette = "Set1",direction = -1)+
-  ylim(NA,1)
-
-plot(p)
-
-ggsave(filename = "data_output/figuras/scores/accuracy_uni_ref_best_L1OCV.png",
-       width = 7,height = 4,dpi = 400, plot = p)
-
-
-p = ggplot(data = subset(df_avgens,metric_name %in% c("precision_humedo",
-                                                      "precision_normal",
-                                                      "precision_seco"))%>%
-             subset(resampling == "Leave 1 out") %>% 
-             subset(version == "SWE+almacenamientos & índices climáticos")
-           )+
-  geom_boxplot(aes(x = month_initialisation,
-                   y = metric_value,
-                   col = metric_name))+
-  labs(
-    x = "fecha de emisión",
-    y = "Precisión [-]",
-    col = "",
-    title = "Precisión del volumen obs vs pronóstico de ensembles",
-    caption = "Precisión = VerdaderosPositivos / (VerdaderosPositivos + FalsosPositivos). Modelo híbrido",
-    subtitle = "Del total pronosticados del tipo x ¿cuántos fueron correctamente pronosticados?"
-  ) + theme(legend.position = "bottom")+
-  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
-  theme(legend.position = "bottom")+
-  guides(col = guide_legend(nrow = 1)) +
-  scale_color_brewer(palette = "Set1",direction = -1)+
-  ylim(NA,1)
-plot(p)
-
-ggsave(filename = "data_output/figuras/scores/precision_ens_typeyear_L1OCV.png",
-       width = 7,height = 4,dpi = 400, plot = p)
-
-p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
-                                                      "recall_normal",
-                                                      "recall_seco"))%>%
-             subset(resampling == "Leave 1 out") %>% 
-             subset(version == "SWE+almacenamientos & índices climáticos")
-)+
-  geom_boxplot(aes(x = month_initialisation,
-                   y = metric_value,
-                   col = metric_name))+
-  labs(
-    x = "fecha de emisión",
-    y = "Recall [-]",
-    col = "",
-    title = "Recall del volumen obs vs pronóstico de ensembles",
-    caption = "Recall= VerdaderosPositivos / (VerdaderosPositivos + FalsosNegativos). Modelo híbrido",
-    subtitle = "Del total observado del tipo x ¿cuántos fueron correctamente pronosticados? "
-  ) + theme(legend.position = "bottom")+
-  guides(col=guide_legend(ncol=2))+  geom_hline(yintercept =  0)+
-  theme(legend.position = "bottom")+
-  guides(col = guide_legend(nrow = 1)) +
-  scale_color_brewer(palette = "Set1",direction = -1)+
-  ylim(NA,1)
-
-plot(p)
-ggsave(filename = "data_output/figuras/scores/recall_ens_typeyear_L1OCV.png",
-       width = 7,height = 4,dpi = 400, plot = p)
 
  #####################################################
 selected_attributes = c(
@@ -699,7 +599,7 @@ cor_crpss_tile_plot <-
 
 # Display the plot
 plot(cor_crpss_tile_plot)
-ggsave(filename = "data_output/figuras/scores/cor_best_attributes.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_caudal/cor_best_attributes.png",
        width = 7,height = 4,dpi = 400, plot = cor_crpss_tile_plot)
 
 ####

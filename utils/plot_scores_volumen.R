@@ -8,8 +8,8 @@ library(feather)
 library(sf)
 
 ##### files to read
-files <- c("data_output/metricas/RDS/scores_best_20230431.RDS",
-           "data_output/metricas/RDS/scores_reference_20230431.RDS"
+files <- c("data_output/metricas/RDS/scores_best_20230531_mm.RDS",
+           "data_output/metricas/RDS/scores_reference_20230531_mm.RDS"
 )
 
 names(files) <- c("scores_loocv",
@@ -146,7 +146,7 @@ p = ggplot(data = df_crpss_avg %>% subset(resampling == "Leave 1 out"))+
   ylim(NA,1)
 
 
-ggsave(filename = "data_output/figuras/scores/crpss_climatologico_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/crpss_climatologico_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 levels(df_avgens$version) = c("SWE+almacenamientos & índices climáticos","SWE+almacenamientos")
@@ -171,7 +171,7 @@ p2 = ggplot(data = subset(df_avgens,metric_name == "r2_avg")%>%
 
 plot(p2)
 
-ggsave(filename = "data_output/figuras/scores/r2_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/r2_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p2)
 
 
@@ -196,7 +196,7 @@ p1 <- ggplot(data = subset(df_avgens, metric_name == "rmse_avg")%>%
 
 plot(p1)
 
-ggsave(filename = "data_output/figuras/scores/RMSE_best_ref.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/RMSE_best_ref.png",
        width = 7, height = 4, plot = p1)
 
 p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>% 
@@ -217,7 +217,7 @@ p3 = ggplot(data = subset(df_avgens,metric_name == "mae_avg") %>%
 
 print(p3)
 
-ggsave(filename = "data_output/figuras/scores/MAE_best_ref.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/MAE_best_ref.png",
        width = 7,height = 4, plot = p3)
 
 
@@ -319,7 +319,7 @@ p_low = plot_metric(df,
                         by_y = "catchment_code",
                        metric_name = "")
 print(p_low)
-ggsave(filename = "data_output/figuras/scores/cuencas_conbajo_crpss.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/cuencas_conbajo_crpss.png",
        width = 10, height = 7, plot = p_low)
 
 
@@ -351,7 +351,7 @@ r2_map = plot_metric2(df2,
   theme(plot.title = element_text(hjust = 0.5))
 
 p_maps = grid.arrange(crpss_map,r2_map,ncol =2,widths = c(1,2))
-ggsave(filename = "data_output/figuras/scores/crpss_r2_mapa_jul.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/crpss_r2_mapa_jul.png",
        width = 5, height = 7, plot = p_maps)
 
 ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul","1˚sep") &
@@ -374,7 +374,7 @@ ggplot(data = subset(df_crpss_avg, month_initialisation %in% c("1˚may","1˚jul"
   guides(col = guide_legend(nrow = 2))
 
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_aridez.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-promedio_aridez.png",
         width = 10, height = 7, plot = p1)
 
 
@@ -392,7 +392,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p2 = grid.arrange(p2,p_hfd,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_hfd.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-promedio_hfd.png",
        width = 10, height = 7, plot = p2)
 
 ########
@@ -410,7 +410,7 @@ p2 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p2 = grid.arrange(p2,p_baseflow,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_baseflow.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-promedio_baseflow.png",
        width = 10, height = 7, plot = p2)
 ###3
 
@@ -432,7 +432,7 @@ p3 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p3 = grid.arrange(p3,p_pmean,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_pmean.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-promedio_pmean.png",
        width = 10, height = 7, plot = p3)
 
 p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación Leave 1 out")) +
@@ -449,7 +449,7 @@ p4 <- ggplot(data = subset(df_crpss_avg, version_sampling == "Mejor combinación
 
 p4 = grid.arrange(p4,p_runoffratio,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-promedio_rr.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-promedio_rr.png",
        width = 10, height = 7, plot = p4)
 
 
@@ -474,7 +474,7 @@ p5 <- ggplot(data = df_crpss) +
 
 
 p5 = grid.arrange(p5,p_aridez,ncol =2,widths = c(3,1))
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_aridez.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-referencia_aridez.png",
        width = 10, height = 7, plot = p5)
 
 p6 <- ggplot(data = df_crpss) +
@@ -491,7 +491,7 @@ p6 <- ggplot(data = df_crpss) +
 
 p6 = grid.arrange(p6,p_hfd,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_hfd.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-referencia_hfd.png",
        width = 10, height = 7, plot = p6)
 
 p7 <- ggplot(data = df_crpss) +
@@ -508,7 +508,7 @@ p7 <- ggplot(data = df_crpss) +
 
 p7 = grid.arrange(p7,p_pmean,ncol =2,widths = c(3,1))
 
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_pmean.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-referencia_pmean.png",
        width = 10, height = 7, plot = p7)
 
 p8 <- ggplot(data = df_crpss) +
@@ -524,7 +524,7 @@ p8 <- ggplot(data = df_crpss) +
   guides(col = guide_legend(nrow = 2))
 
 p8 = grid.arrange(p8,p_runoffratio,ncol =2,widths = c(3,1))
-ggsave(filename = "data_output/figuras/scores/scatter_crpss-referencia_rr.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/scatter_crpss-referencia_rr.png",
        width = 10, height = 7, plot = p8)
 
 #############################################
@@ -551,7 +551,7 @@ p = ggplot(data = subset(df_avgens,metric_name == "accuracy_ens")%>%
 
 plot(p)
 
-ggsave(filename = "data_output/figuras/scores/accuracy_ensemble_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/accuracy_ensemble_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 
@@ -578,7 +578,7 @@ p = ggplot(data = subset(df_avgens,metric_name == "accuracy_uni")%>%
 
 plot(p)
 
-ggsave(filename = "data_output/figuras/scores/accuracy_uni_ref_best_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/accuracy_uni_ref_best_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 
@@ -606,7 +606,7 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("precision_humedo",
   ylim(NA,1)
 plot(p)
 
-ggsave(filename = "data_output/figuras/scores/precision_ens_typeyear_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/precision_ens_typeyear_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
 p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
@@ -633,7 +633,7 @@ p = ggplot(data = subset(df_avgens,metric_name %in% c("recall_humedo",
   ylim(NA,1)
 
 plot(p)
-ggsave(filename = "data_output/figuras/scores/recall_ens_typeyear_L1OCV.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/recall_ens_typeyear_L1OCV.png",
        width = 7,height = 4,dpi = 400, plot = p)
 
  #####################################################
@@ -715,7 +715,7 @@ cor_crpss_tile_plot <-
 
 # Display the plot
 plot(cor_crpss_tile_plot)
-ggsave(filename = "data_output/figuras/scores/cor_best_attributes.png",
+ggsave(filename = "data_output/figuras/informe_final/metricas_volumen/cor_best_attributes.png",
        width = 7,height = 4,dpi = 400, plot = cor_crpss_tile_plot)
 
 ####

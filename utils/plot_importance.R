@@ -4,14 +4,13 @@ library(tidyr)
 
 
 #all available catchments, no data 6008005, 7317005, 7355002, 8106001
-catchments_attributes_filename = "data_input/attributes/attributes_49catchments_ChileCentral.csv" 
+catchments_attributes_filename = "data_input/attributes/attributes_45catchments_ChileCentral.csv" 
 
 cod_cuencas = fread(catchments_attributes_filename) %>%
-  subset(!(cod_cuenca %in% c(6008005, 7317005, 7355002, 8106001))) %>% 
   select(cod_cuenca) %>% unlist()
 
 data_best_models = lapply(cod_cuencas, function(x)
-  readRDS(file = paste0("data_output/mejores_modelos_cuenca_mes/",x,"_may-mar.RDS"))$importance) %>% 
+  readRDS(file = paste0("data_input/mejores_predictores_cuenca_mes/",x,"_may-mar.RDS"))$importance) %>% 
   rbindlist()
 
 data_best_models$var = factor(data_best_models$var,
@@ -86,7 +85,7 @@ ggplot(data = merged_data2) +
   guides(colour=guide_legend(override.aes=list(fill="white"),title.vjust = 0))
 
 
-ggsave("data_output/figuras/importancia_predictores/importancia_predictores_geo_v3.png",
+ggsave("data_output/figuras/informe_final/importancia_predictores/importancia_predictores_espacialmente.png",
        width = 6,height = 6,dpi = 400)
 
 
@@ -117,5 +116,5 @@ ggplot(data = dataframe, aes(x = month_initialisation, y = percentage,fill = var
   )+
   facet_wrap(~catchment_code)
 
-ggsave("data_output/figuras/importancia_predictores/importancia_predictores_todascuencas.png",
+ggsave("data_output/figuras/informe_final/importancia_predictores/importancia_predictores_todascuencas.png",
        width = 10,height = 10,dpi = 400)
