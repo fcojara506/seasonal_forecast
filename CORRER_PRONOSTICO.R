@@ -46,7 +46,7 @@ if (descargar_nuevos_datos) {
 source("utils/correr_modelo/run_model_operativo.R")
 
 #carga los codigos y propiedades mas recientes (codigos_cuencas)
-source(file = "default_input_data.R")
+source(file = "utils/correr_modelo/parametros_defecto.R")
 codigos_cuencas = codigos_cuencas_subconjunto
 fecha_emision = fecha_emision_test
 
