@@ -11,7 +11,7 @@
 # ----------------------------------------------------------------------------
 
 
-# instalar paquetes escenciales
+# Instalar paquetes esenciales
 source(file = "base/Load_libraries.R")
 
 descargar_nuevos_datos = FALSE
@@ -20,8 +20,10 @@ if (descargar_nuevos_datos) {
   #descarga
   source(file = "base/MeteoPresente1_Request-CDO.R")
   descargar_era5(CDS_user = NULL,CDS_key = NULL)
+  
   #conversion a nivel de cuenca
   source(file = "base/MeteoPresente2_EscalaCuenca.R")
+  
   #encontrar dias similares meteorologicamente
   source(file = "base/MeteoPresente3_DiasSimilares.R")
   dias_similares_operativo(N = 30)
@@ -31,6 +33,7 @@ if (descargar_nuevos_datos) {
   
   # correr modelo hidrológico
   source(file = "base/SimulacionTUW1.R")
+  
   # preprocesar simulaciones del modelo hidrológico (diario a mensual)
   source(file = "utils/convert_daily_to_monthly_storage.R")
   
@@ -47,14 +50,15 @@ source(file = "default_input_data.R")
 codigos_cuencas = codigos_cuencas_subconjunto
 fecha_emision = fecha_emision_test
 
-
-
+# ejecutar pronostico para todas las cuencas seleccionadas
 resultados = 
 pronostico_operativo(
   codigos_cuencas = codigos_cuencas,
   fecha_emision_Y_M_D = fecha_emision,
   exportar_figuras = TRUE
 )
+
+
 # guardar en archivos
 write.csv(resultados$plataforma_volumen,
           file = glue("data_output/plataforma/volumen/volumen_estacional_{fecha_emision}_version{Sys.Date()}.csv"),
